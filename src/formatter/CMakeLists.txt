@@ -1,0 +1,5 @@
+include_directories(${BigTopicModel_SOURCE_DIR}/src/util)
+include_directories(${BigTopicModel_SOURCE_DIR}/src/model)
+include_directories(${BigTopicModel_SOURCE_DIR}/src/engine)
+add_executable(formatter formatter.cpp)
+target_link_libraries(formatter util ${MPI_LIBRARIES} ${ZLIB_LIBRARIES})
