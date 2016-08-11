@@ -22,19 +22,21 @@
 
 using std::vector;
 
-/*
+/**
  * ASSUMPTION
  *      each process invoke same number of threads for execution
  */
 // TODO: row sum should be size_t
 class DCMSparse {
 private:
-    /*
-     * @process_size    :   the number of process in MPI_COMM_WORLD
-     * @process_id      :   process id of MPI_COMM_WORLD
+    /**
+     * \var
+     * process_size    :   the number of process in MPI_COMM_WORLD
+     * process_id      :   process id of MPI_COMM_WORLD
      */
     int process_size, process_id;
-    /*
+    /**
+     * \var
      * schematic diagram for distributed count matrix, namely SD in following text
      * SD consists of 12 blocks. Each row is a partiton include 3 blocks, and each column is a copy include 4 blocks.
      *                   0       1       2       3
@@ -43,25 +45,25 @@ private:
      * 1    partition    p10     p11     p12     p13
      * 2    partition    p20     p21     p22     p23
      *
-     * @partition_type      :   how to split data matrix, vertically(row_partition) or horizontally(column_partition)
-     * @partition_size      :   the number of partitions. SD - partition_size = 3
-     * @partition_id        :   index of this partition among all partitions. SD - partition_id of block p10 is "1"
-     * @copy_size           :   the number of copy of each partition. SD - copy_size = 4
-     * @copy_id             :   index of this copy inside the partition. SD - copy_id of block p10 is "0"
+     * partition_type      :   how to split data matrix, vertically(row_partition) or horizontally(column_partition)
+     * partition_size      :   the number of partitions. SD - partition_size = 3
+     * partition_id        :   index of this partition among all partitions. SD - partition_id of block p10 is "1"
+     * copy_size           :   the number of copy of each partition. SD - copy_size = 4
+     * copy_id             :   index of this copy inside the partition. SD - copy_id of block p10 is "0"
      *
      * DCM create MPI communicators using above concepts. Most communication happens inside the partition,
      * occasionally some communicate happens inter partitions.
-     * @intra_partition     :   communicator used inside the partition. SD - communicate among p0x
-     * @inter_partition     :   communicator used inter partitions. SD - communicate among px0
+     * intra_partition     :   communicator used inside the partition. SD - communicate among p0x
+     * inter_partition     :   communicator used inter partitions. SD - communicate among px0
      */
     PartitionType partition_type;
     TCount partition_size, copy_size;
     int partition_id, copy_id;
     MPI_Comm intra_partition, inter_partition;
 
-    /*
-     * @row_size            :   number of rows of each block.
-     * @column_size         :   number of columns of each block.
+    /**
+     * row_size            :   number of rows of each block.
+     * column_size         :   number of columns of each block.
      */
     TCoord row_size, column_size;
     int thread_size;

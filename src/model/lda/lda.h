@@ -33,16 +33,16 @@ public:
     TTopic K;
     vector<TProb> alpha;
     TProb beta, alphaBar, betaBar;
-    double log_likelihood;
-    vector<double> llthread;
-    //TProb log_likelihood;
+    /// notice : log_likelihood need double precision to work correctly
+    TLikehood log_likelihood;
+    vector<TLikehood> llthread;
     ThreadLocal<xorshift> generators;
     ThreadLocal<vector<TProb>> phis;
 
     GuideTable prior1Table;
     std::vector<TProb> priorCwk;
     std::vector<TProb> prior1Prob;
-    double prior1Sum;
+    TProb prior1Sum;
 
     ThreadLocal<GuideTable> prior2Table;
     ThreadLocal<vector<TTopic>> prior2NNZ;
@@ -50,13 +50,13 @@ public:
 
     ThreadLocal<vector<TProb>> probs;
 
-    UniformRealDistribution<double> u01;
-    unsigned int iter;
+    UniformRealDistribution<TProb> u01;
+    TIter iter;
     CVA<int> &corpus;
 
     // MPI
-    int process_size, process_id;
-    unsigned int thread_size;
+    TId process_size, process_id, monitor_id;
+    TLen thread_size;
     TCount num_words, num_docs;
     vector<TCount> word_per_doc;
 
@@ -67,14 +67,14 @@ public:
     DCMSparse cdk;
 
     size_t global_token_number;
-    unsigned int global_word_number;
+    TCount global_word_number;
 
     // count the word frequency belong to this node
     vector<TCount> word_frequency;
     vector<TCount> local_word_frequency, global_word_frequency;
 
-    LDA(int iter, TTopic K, TProb alpha, TProb beta, CVA<int> &corpus,
-        const int process_size, const int process_id, const unsigned int thread_size,
+    LDA(TIter iter, TTopic K, TProb alpha, TProb beta, CVA<int> &corpus,
+        const TId process_size, const TId process_id, const TLen thread_size,
         const TCount num_docs, const TCount num_words, const TCount doc_split_size, const TCount word_split_size)
             : K(K), alpha(K, alpha), beta(beta), alphaBar(alpha * K), iter(iter),
               corpus(corpus),
@@ -94,7 +94,7 @@ public:
         MPI_Comm doc_partition;
         MPI_Comm_split(MPI_COMM_WORLD, process_id / word_split_size, process_id, &doc_partition);
 
-        unsigned int local_word_number = num_words;
+        TCount local_word_number = num_words;
         MPI_Allreduce(&local_word_number, &global_word_number, 1, MPI_INT, MPI_SUM, doc_partition);
 
         betaBar = beta * global_word_number;
@@ -116,6 +116,7 @@ public:
         word_frequency.resize(num_words);
         local_word_frequency.resize(num_words);
         global_word_frequency.resize(num_words);
+        monitor_id = 0;
     }
 
     virtual void Estimate();

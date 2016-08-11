@@ -8,8 +8,11 @@ typedef unsigned int TLen;
 typedef unsigned int TCount;
 typedef unsigned int TIndex;
 typedef unsigned int TCoord;
+typedef unsigned int TIter;
+typedef int TId;
 typedef long long TSize;
 typedef float TProb;
+typedef double TLikehood;
 typedef enum {
     row_partition,
     column_partition

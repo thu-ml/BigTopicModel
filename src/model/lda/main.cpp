@@ -30,6 +30,7 @@ int main(int argc, char **argv) {
     TProb alpha = atof(argv[3]);
     TProb beta = atof(argv[4]);
     int iter = atoi(argv[5]);
+    /// split corpus into doc_part * word_part
     int doc_part = atoi(argv[6]);
     int word_part = atoi(argv[7]);
     /// if thread_size was not given, max number threads will be invoked by default

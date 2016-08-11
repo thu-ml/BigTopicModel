@@ -14,7 +14,7 @@ void LDA::iterWord() {
     //printf("pid : %d thread : %d start\n", process_id, tid);
     auto start = std::chrono::system_clock::now();
 	#pragma omp parallel for schedule(dynamic, 10)
-    for (unsigned int local_w = 0; local_w < num_words; local_w ++) {
+    for (TWord local_w = 0; local_w < num_words; local_w ++) {
 		int tid = omp_get_thread_num();
 		auto &generator = generators.Get(tid);
         /*
@@ -142,21 +142,19 @@ void LDA::iterWord() {
     //printf("pid : %d - thread : %d, iter word done\n", process_id, tid);
 }
 
-/*!
+/**
  * @param corpus:	train corpus
- * @toCorpus	:	test observation corpus
- * @thCorpus	:	test hold corpus
+ * @param toCorpus	:	test observation corpus
+ * @param thCorpus	:	test hold corpus
  */
-void LDA::Estimate() {
+void LDA::Estimate()
+{
     //stat.CorpusStat(corpus);
     //printf("pid %d Start Estimate\n", process_id);
-    auto start = std::chrono::system_clock::now();
-    auto Now = [start]() -> double {
-        return std::chrono::duration<double>(std::chrono::system_clock::now() - start).count();
-    };
-    double t_init = Now();
+    Clock clk;
+    clk.tic();
 
-    // Randomly initialize topics
+    /// Randomly initialize topics for each token
     std::uniform_int_distribution<int> dice(0, K - 1);
     #pragma omp parallel for 
     for (TWord v = 0; v < num_words; v++) {
@@ -170,12 +168,11 @@ void LDA::Estimate() {
         }
     }
 
+    /// Calculate the average count of tokens belong to each (word, document) pair
     atomic<size_t> averageCount;
     #pragma omp parallel for 
-    for (TWord v = 0; v < num_words; v++) 
-    {
-        int last = -1;
-        int cnt = 0;
+    for (TWord v = 0; v < num_words; v++) {
+        int last = -1, cnt = 0;
         auto row = corpus.Get(v);
         for (auto d: row)
             if (d != last) {
@@ -184,18 +181,19 @@ void LDA::Estimate() {
             }
         averageCount += cnt;
     }
-    printf("pid : %d Initialized %lf s, avg_cnt = %f\n", process_id, Now() - t_init, 
+    printf("pid : %d Initialized %lf s, avg_cnt = %f\n", process_id, clk.toc(),
             (double)corpus.size()/sizeof(int) / averageCount);
-    // Sample
-    for (unsigned int iter = 0; iter < this->iter; iter++) {
-        auto iter_start = Now();
+
+    // The main iteration
+    for (TIter iter = 0; iter < this->iter; iter++) {
+        /// sync cdk
+        auto iter_start = clk.tic();
         std::fill(llthread.begin(), llthread.end(), 0);
         cdk.sync();
         if (iter == 0) {
             // Initialize word_per_doc
             #pragma omp parallel for
-            for (TDoc d = 0; d < num_docs; d++)
-            {
+            for (TDoc d = 0; d < num_docs; d++) {
                 auto row = cdk.row(d);
                 TLen L = 0;
                 for (auto &entry: row)
@@ -203,16 +201,18 @@ void LDA::Estimate() {
                 word_per_doc[d] = L;
             }
         }
-        auto cdk_sync = Now();
-        if (process_id == 0)
-            printf("\x1b[31mpid : %d - cdk sync : %f\x1b[0m\n", process_id, cdk_sync - iter_start);
-        cwk.sync();
-        auto cwk_sync = Now();
-        if (process_id == 0)
-            printf("\x1b[31mpid : %d - cwk sync : %f\x1b[0m\n", process_id, cwk_sync - cdk_sync);
-        auto *ck = cwk.rowMarginal();
+        if (process_id == monitor_id)
+            printf("\x1b[31mpid : %d - cdk sync : %f\x1b[0m\n", process_id, clk.toc());
 
-        // Initialize prior1
+        /// sync cwk
+        clk.tic();
+        cwk.sync();
+        if (process_id == monitor_id)
+            printf("\x1b[31mpid : %d - cwk sync : %f\x1b[0m\n", process_id, clk.toc());
+
+        /// sync ck and initialize prior1
+        clk.tic();
+        auto *ck = cwk.rowMarginal();
 		prior1Sum = 0;
         size_t num_tokens = 0;
         for (TIndex k = 0; k < K; ++k) {
@@ -221,29 +221,25 @@ void LDA::Estimate() {
 			priorCwk[k] = inv_ck[k] * beta;
 			prior1Prob[k] = prior1Sum += alpha[k] * priorCwk[k];
 		}
-       // std::cout << tokens  << std::endl;
 		for (auto &phi: phis)
 			phi = priorCwk;
 		prior1Prob[K-1] = prior1Sum * 2 + 1;
 		prior1Table.Build(prior1Prob.begin(), prior1Prob.end(), prior1Sum);
-
-        auto ck_sync = Now();
-        if (process_id == 0)
-            printf("\x1b[31mpid : %d - ck sync : %f\x1b[0m\n", process_id, ck_sync - cwk_sync);
+        if (process_id == monitor_id)
+            printf("\x1b[31mpid : %d - ck sync : %f\x1b[0m\n", process_id, clk.toc());
 
 		iterWord();
 
-        //stat.ThreadStat(thread_size);
         log_likelihood = 0;
         for (auto llvalue: llthread)
             log_likelihood += llvalue;
         double llreduce = 0;
         MPI_Allreduce(&log_likelihood, &llreduce, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        if (process_id == 0) {
+        if (process_id == monitor_id) {
             printf("\x1b[32mpid : %d Iteration %d, %f s, Kd = %f\tperplexity = %f\t%lf Mtoken/s\x1b[0m\n",
-                   process_id, iter, Now() - iter_start, cdk.averageColumnSize(), exp(-llreduce / global_token_number),
-                   global_token_number / (Now() - iter_start) / 1e6);
+                   process_id, iter, clk.timeSpan(iter_start), cdk.averageColumnSize(), exp(-llreduce / global_token_number),
+                   global_token_number / clk.timeSpan(iter_start) / 1e6);
         }
     }
 }
