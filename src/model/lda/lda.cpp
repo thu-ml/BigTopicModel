@@ -156,7 +156,7 @@ void LDA::Estimate()
 
     /// Randomly initialize topics for each token
     std::uniform_int_distribution<int> dice(0, K - 1);
-    #pragma omp parallel for 
+    #pragma omp parallel for
     for (TWord v = 0; v < num_words; v++) {
         int tid = omp_get_thread_num();
 		auto &generator = generators.Get();
@@ -170,15 +170,16 @@ void LDA::Estimate()
 
     /// Calculate the average count of tokens belong to each (word, document) pair
     atomic<size_t> averageCount;
-    #pragma omp parallel for 
+    #pragma omp parallel for
     for (TWord v = 0; v < num_words; v++) {
         int last = -1, cnt = 0;
         auto row = corpus.Get(v);
-        for (auto d: row)
+        for (auto d: row) {
             if (d != last) {
                 last = d;
                 cnt++;
             }
+        }
         averageCount += cnt;
     }
     printf("pid : %d Initialized %lf s, avg_cnt = %f\n", process_id, clk.toc(),

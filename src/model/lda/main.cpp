@@ -5,8 +5,6 @@
 #include "types.h"
 #include "lda.h"
 
-using namespace std;
-
 bool compareByCount(const SpEntry &a, const SpEntry &b) {
     return a.v > b.v;
 }
@@ -81,7 +79,7 @@ int main(int argc, char **argv) {
 
     /// count 10 most frequently word for each topic
     /// TODO : frequent_word_number should be configured by user
-    unsigned int frequent_word_number = 10;
+    TCount frequent_word_number = 20;
     vector<SpEntry> local_topic_word(K * frequent_word_number);
     std::fill(local_topic_word.begin(), local_topic_word.end(), SpEntry());
     lda.outputTopicWord(local_topic_word, wordmap, frequent_word_number);
@@ -94,7 +92,6 @@ int main(int argc, char **argv) {
     vector<SpEntry> sort_buff(frequent_word_number * word_part);
     MPI_Gather(local_topic_word.data(), local_topic_word.size() * 2, MPI_INT,
                 global_topic_word.data(), local_topic_word.size() * 2, MPI_INT, output_node, row_partition);
-
 
     /*
      * code backup for debug
@@ -137,6 +134,7 @@ int main(int argc, char **argv) {
     /// Notice : I don't know why, but without this barrier, or it will crash...
     MPI_Barrier(MPI_COMM_WORLD);
     showpid(process_id)
+    MPI_Comm_free(&row_partition);
 
     MPI_Finalize();
     return 0;

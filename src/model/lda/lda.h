@@ -126,25 +126,6 @@ public:
     void iterWord();
 
     void outputTopicWord(vector<SpEntry> &topic_word, vector<TIndex>wordmap, int frequent_word_number) {
-        vector<vector<SpEntry>> ltw(K);
-        for (TIndex local_w = 0; local_w < num_words; ++local_w) {
-            auto sparse_row = cwk.row(local_w);
-            for (auto entry: sparse_row) {
-                TTopic topic = entry.k;
-                TCount cnt = entry.v;
-                ltw[topic].push_back({local_w, cnt});
-            }
-        }
-        for (TTopic k = 0; k < K; ++k) {
-            for (TIndex i = 0; i < frequent_word_number; ++i) {
-                TTopic offset = k * frequent_word_number + i;
-                topic_word[offset].k = wordmap[ltw[k][i].k];
-                topic_word[offset].v = ltw[k][i].v;
-            }
-        }
-
-        /*
-         * TODO : get topic_word with small memory footprint, but it seems wrong...
         for (TIndex local_w = 0; local_w < num_words; ++local_w) {
             auto sparse_row = cwk.row(local_w);
             for (auto entry: sparse_row) {
@@ -160,7 +141,6 @@ public:
                 }
             }
         }
-         */
 
         /*
          * code backup for debug
@@ -178,7 +158,6 @@ public:
         }
         fout.close();
          */
-
     }
 
     void corpusStat(vector<TIndex>wordmap, string prefix) {
