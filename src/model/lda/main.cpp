@@ -4,6 +4,7 @@
 #include <mpi.h>
 #include "types.h"
 #include "lda.h"
+#include "glog/logging.h"
 
 bool compareByCount(const SpEntry &a, const SpEntry &b) {
     return a.v > b.v;
@@ -15,6 +16,9 @@ int main(int argc, char **argv) {
         cout << "usage : prefix K alpha beta iter doc_part word_part [thread_size]" << endl;
         return 0;
     }
+
+    google::InitGoogleLogging(argv[0]);
+    LOG(ERROR) << "using google log" << endl;
 
     int process_size, process_id;
     MPI_Init(NULL, NULL);

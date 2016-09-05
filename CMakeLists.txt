@@ -14,10 +14,12 @@ endif()
 
 include_directories(${MPI_INCLUDE_PATH})
 include_directories(${ZLIB_INCLUDE_PATH})
-include_directories(third_party/include)
+include_directories(third_party/BigMPI/src)
+include_directories(third_party/glog/src)
 
 # TODO check MPI_Count and MPI_Aint is 8 bytes
-set(THIRD_PARTY_LIBRARIES ${BigTopicModel_SOURCE_DIR}/third_party/lib/libbigmpi.so)
+set(BIGMPI ${BigTopicModel_SOURCE_DIR}/third_party/BigMPI/build/src/libbigmpi.so)
+set(GLOG ${BigTopicModel_SOURCE_DIR}/third_party/glog/build/libglog.a)
 
 add_subdirectory(src/util)
 add_subdirectory(src/engine)
@@ -29,6 +31,8 @@ configure_file(src/run.py run.py)
 configure_file(src/run_tianhe.py run_tianhe.py)
 configure_file(src/format.py format.py)
 
+#add_library(glog STATIC IMPORTED)
+#set_target_properties(glog PROPERTIES IMPORTED_LOCATION )
 
 #enable_testing()
 #add_test(unit_test ${PROJECT_BINARY_DIR}/src/test/unit_test)
