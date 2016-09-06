@@ -11,9 +11,9 @@ mpi_cmd = "mpirun -n 4"
 hosts = ""
 
 path = "../data/"
-dataset = path + "nips"
+prefix = path + "nips"
 
-k = 100.0
+k = 100
 alpha = 50.0 / k
 beta = 0.01
 iter_number = 100
@@ -24,7 +24,7 @@ doc_part = 2
 word_part = 2
 
 cmd  = "OMP_NUM_THREADS=%d "%thread_size + mpi_cmd + hosts + " ./src/model/lda/lda" 
-cmd += " " + dataset + " " + str(k) + " " + str(alpha) + " " + str(beta) + " " + str(iter_number) + " " + str(doc_part) + " " + str(word_part) + " " + str(thread_size)
+cmd += " -prefix=" + prefix+ " -K=" + str(k) + " -alpha=" + str(alpha) + " -beta=" + str(beta) + " -iter=" + str(iter_number) + " -doc_part=" + str(doc_part) + " -word_part=" + str(word_part)
 
 print cmd
 os.system(cmd)
