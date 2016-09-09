@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#get and enter current path
+CUR=`dirname "$0"`
+CUR=`cd "$CUR"; pwd`
+
 export CXX=icpc
 export CC=icc
 #export CXX=g++
