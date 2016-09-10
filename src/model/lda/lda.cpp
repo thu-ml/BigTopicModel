@@ -1,6 +1,7 @@
 #include "lda.h"
 #include <atomic>
 #include <omp.h>
+#include <glog/logging.h>
 #include "xmmintrin.h"
 using std::atomic;
 using std::sort;
@@ -182,8 +183,8 @@ void LDA::Estimate()
         }
         averageCount += cnt;
     }
-    printf("pid : %d Initialized %lf s, avg_cnt = %f\n", process_id, clk.toc(),
-            (double)corpus.size()/sizeof(int) / averageCount);
+    LOG(INFO) << "pid : " << process_id << " Initialized " << clk.toc()
+            << " s, avg_cnt = " << (double)corpus.size()/sizeof(int) / averageCount << endl;
 
     // The main iteration
     for (TIter iter = 0; iter < this->iter; iter++) {

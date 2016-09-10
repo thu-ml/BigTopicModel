@@ -40,8 +40,8 @@ public:
     ThreadLocal<vector<TProb>> phis;
 
     GuideTable prior1Table;
-    std::vector<TProb> priorCwk;
-    std::vector<TProb> prior1Prob;
+    vector<TProb> priorCwk;
+    vector<TProb> prior1Prob;
     TProb prior1Sum;
 
     ThreadLocal<GuideTable> prior2Table;

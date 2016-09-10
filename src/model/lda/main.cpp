@@ -24,6 +24,7 @@ bool compareByCount(const SpEntry &a, const SpEntry &b) {
 int main(int argc, char **argv) {
     // initialize and set google log
     google::InitGoogleLogging(argv[0]);
+    // output all logs to stderr
     FLAGS_stderrthreshold=google::INFO;
     FLAGS_colorlogtostderr=true;
     LOG(INFO) << "Initialize google log done" << endl;
@@ -47,21 +48,28 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
 
     /// split corpus into doc_part * word_part
-    if (FLAGS_doc_part * FLAGS_word_part != process_size)
+    if (FLAGS_doc_part * FLAGS_word_part != process_size) {
+        LOG(ERROR) << "FLAGS_doc_part * FLAGS_word_part != process_size" << endl;
+        LOG(ERROR) << "FLAGS_doc_part : " << FLAGS_doc_part
+                    << " FLAGS_word_part : " << FLAGS_word_part
+                    << " process_size : " << process_size << endl;
         throw runtime_error("Number of processes is incorrect");
+    }
 
     int num_docs, num_words;
     string train_path = FLAGS_prefix + ".bin." + to_string(process_id);
     ifstream fin(train_path.c_str(), ios::in | ios::binary);
-    if (!fin.is_open())
+    if (!fin.is_open()) {
+        LOG(ERROR) << train_path + " does not exist." << endl;
         throw runtime_error(train_path + " does not exist.");
+    }
 
     fin.read((char*)&num_docs, sizeof(num_docs));
     fin.read((char*)&num_words, sizeof(num_words));
     CVA<int> train_corpus(fin);
     fin.close();
 
-    cout << "Rank " << process_id << " has " << num_docs << " docs, " << num_words << " words, " << train_corpus.size() / sizeof(int) << " tokens." << endl;
+    LOG(INFO) << "Rank " << process_id << " has " << num_docs << " docs, " << num_words << " words, " << train_corpus.size() / sizeof(int) << " tokens." << endl;
 
     LDA lda(FLAGS_iter, FLAGS_K, FLAGS_alpha, FLAGS_beta, train_corpus, process_size, process_id, omp_get_max_threads(),
             num_docs, num_words, FLAGS_doc_part, FLAGS_word_part);
