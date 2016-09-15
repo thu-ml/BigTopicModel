@@ -4,6 +4,7 @@
 CUR=`dirname "$0"`
 CUR=`cd "$CUR"; pwd`
 
+# I should got some error test for each command
 if [ ! -d "$CUR/third_party" ]; then
 	# Control will enter here if $DIRECTORY doesn't exist.
 	echo "$CUR/third_party doesn't exist"
@@ -15,6 +16,7 @@ if [ ! -d "$CUR/third_party" ]; then
 		unzip glog.zip
 		mv glog-master glog
 		pushd glog
+		sed -i '1s/.*/cmake_minimum_required (VERSION 2.8.12)/' CMakeLists.txt
 		mkdir -p build
 		pushd build
 		cmake ..
