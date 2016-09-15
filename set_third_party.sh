@@ -4,9 +4,6 @@
 CUR=`dirname "$0"`
 CUR=`cd "$CUR"; pwd`
 
-# TODO : do I need to checkout to a given version of build a special repo like petuum?
-# the given version of BigMPI 7b84f352bddd48dbae630c1bd98fd04255602530
-
 if [ ! -d "$CUR/third_party" ]; then
 	# Control will enter here if $DIRECTORY doesn't exist.
 	echo "$CUR/third_party doesn't exist"
@@ -30,23 +27,6 @@ if [ ! -d "$CUR/third_party" ]; then
 		unzip gflags.zip
 		mv gflags-master gflags
 		pushd gflags
-		mkdir -p build
-		pushd build
-		cmake ..
-		make
-		popd
-		popd
-	fi
-	if [ ! -d "$DEP/BigMPI" ]; then
-		wget https://github.com/jeffhammond/BigMPI/archive/master.zip; mv master.zip BigMPI.zip
-		unzip BigMPI.zip
-		mv BigMPI-master BigMPI 
-		pushd BigMPI 
-		cp $CUR/resource/bigmpi.patch ./
-		cp $CUR/resource/CMakeLists.txt.BigMPI ./CMakeLists.txt
-		pushd src
-		patch -s -p1 < ../bigmpi.patch
-		popd
 		mkdir -p build
 		pushd build
 		cmake ..

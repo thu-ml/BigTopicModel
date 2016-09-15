@@ -19,7 +19,6 @@
 #include "distributions.h"
 #include "thread_local.h"
 #include "hash_table.h"
-#include "cva.h"
 
 using std::vector;
 using std::pair;

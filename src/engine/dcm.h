@@ -55,10 +55,11 @@ private:
      * occasionally some communicate happens inter partitions.
      * intra_partition     :   communicator used inside the partition. SD - communicate among p0x
      * inter_partition     :   communicator used inter partitions. SD - communicate among px0
+     * Respectively, Every process contain one only part of DCM, e.g. p00.
      */
     PartitionType partition_type;
     TCount partition_size, copy_size;
-    int partition_id, copy_id;
+    TId partition_id, copy_id;
     MPI_Comm intra_partition, inter_partition;
 
     /**
@@ -98,6 +99,7 @@ private:
         for (auto &t: wbuff_thread) total_size += t.size();
         wbuff_sorted.resize(total_size);
         total_size = 0;
+        /// Prepare wbuff_o for radix sort
         for (int tid = 0; tid < thread_size; tid++) {
             auto *wbuff_i = wbuff_thread[tid].data();
             auto *wbuff_o = wbuff_sorted.data() + total_size;
@@ -117,13 +119,15 @@ private:
 #define get_value(x) ((x)&value_mask)
 #define get_key(x) ((x)>>value_digits)
 
-        int omp_thread_size = omp_get_max_threads();
+        clk.tic();
+        TSize omp_thread_size = omp_get_max_threads();
         size_t interval = row_size / omp_thread_size;
         std::vector<size_t> offsets(row_size + 1);
 #pragma omp parallel for
-        for (int tid = 0; tid < omp_thread_size; tid++) {
+        for (TId tid = 0; tid < omp_thread_size; tid++) {
             size_t begin = interval * tid;
             size_t end = tid + 1 == omp_thread_size ? row_size : interval * (tid + 1);
+            // TODO replace it with std::lower_bound
             // Find first p such that key(wbuff_sorted[p]) >= begin
             size_t l_pos = 0;
             size_t count = total_size;
@@ -139,6 +143,7 @@ private:
                     count = count2;
             }
 
+            // TODO this iteration walk through all wbfff_sorted, maybe it is not necessory
             size_t current_pos = l_pos;
             for (int r = begin; r < end; r++) {
                 offsets[r] = current_pos;
@@ -151,7 +156,6 @@ private:
         }
         offsets.back() = total_size;
 
-        clk.tic();
 #pragma omp parallel for
         for (TIndex r = 0; r < row_size; r++) {
             int last = -1;
@@ -330,10 +334,10 @@ public:
         row_sum_read.resize(column_size);
 
         /*
-         * nytimes  : nytimes.libsvm.train, 293793 documents, 96904469 tokens = avg 329 tokens per doc
-         * nips     : nips.libsvm.train, 1422 documents, 1828206 tokens = avg 1285 tokens per doc
-         * notice that BTM split each doc into several part, so each doc may have less tokens than total
-         * by those statistics I just set those below numbers
+         *            documents words   tokens      token per doc
+         * nips     : 1422      12375   1828206     1285
+         * nytimes  : 293793    101635  96904469    329
+         * pubmed   : 8118463   141043  730529615   90
          */
     }
 

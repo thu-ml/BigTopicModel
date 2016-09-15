@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <omp.h>
 #include <iostream>
+#include "glog/logging.h"
 
 template <class TStream>
 class ReadBuf {
@@ -18,8 +19,10 @@ public:
 
     ReadBuf(const char *fileName, size_t capacity) : capacity(capacity), buff(capacity), fin(fileName),
                                                               size_processed(0) {
-        if (!fin)
+        if (!fin) {
+            LOG(FATAL) << "Cann't find " << fileName << std::endl;
             throw std::runtime_error(std::string("Fail opening file ") + fileName);
+        }
     }
 
     template<class T>
