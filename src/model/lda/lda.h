@@ -12,6 +12,8 @@
 #include <mpi.h>
 #include <fstream>
 
+#include "glog/logging.h"
+
 #include "types.h"
 #include "guide_table.h"
 #include "dcm.h"
@@ -116,6 +118,7 @@ public:
         local_word_frequency.resize(num_words);
         global_word_frequency.resize(num_words);
         monitor_id = 0;
+		LOG(INFO) << "Initialize LDA Successed!" << endl;
     }
 
     virtual void Estimate();

@@ -3,6 +3,9 @@
 #include <thread>
 #include <mpi.h>
 
+#include <unistd.h>
+#include <limits.h>
+
 #include "glog/logging.h"
 #include "gflags/gflags.h"
 
@@ -20,6 +23,8 @@ DEFINE_uint64(word_part, 2, "vocabulary partition number");
 bool compareByCount(const SpEntry &a, const SpEntry &b) {
     return a.v > b.v;
 }
+
+char hostname[HOST_NAME_MAX];
 
 int main(int argc, char **argv) {
     // initialize and set google log
@@ -43,9 +48,9 @@ int main(int argc, char **argv) {
 
     // initialize ans set MPI
     MPI_Init(NULL, NULL);
-    int process_size, process_id;
-    MPI_Comm_size(MPI_COMM_WORLD, &process_size);
+	int process_id, process_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
+    MPI_Comm_size(MPI_COMM_WORLD, &process_size);
 
     /// split corpus into doc_part * word_part
     if (FLAGS_doc_part * FLAGS_word_part != process_size) {
@@ -68,8 +73,9 @@ int main(int argc, char **argv) {
     fin.read((char*)&num_words, sizeof(num_words));
     CVA<int> train_corpus(fin);
     fin.close();
-
-    LOG(INFO) << "Rank " << process_id << " has " << num_docs << " docs, " << num_words << " words, " << train_corpus.size() / sizeof(int) << " tokens." << endl;
+	
+	gethostname(hostname, HOST_NAME_MAX);
+    LOG(INFO) << hostname << " : Rank " << process_id << " has " << num_docs << " docs, " << num_words << " words, " << train_corpus.size() / sizeof(int) << " tokens." << endl;
 
     LDA lda(FLAGS_iter, FLAGS_K, FLAGS_alpha, FLAGS_beta, train_corpus, process_size, process_id, omp_get_max_threads(),
             num_docs, num_words, FLAGS_doc_part, FLAGS_word_part);

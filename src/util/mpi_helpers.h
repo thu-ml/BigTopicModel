@@ -2,9 +2,10 @@
 #define __MPI_HELPERS
 
 #include <iostream>
-#include <mpi.h>
 #include <vector>
-//#include "bigmpi.h"
+
+#include <stdarg.h>
+#include <mpi.h>
 
 /* Likely/Unlikely macros borrowed from MPICH via ARMCI-MPI */
 
@@ -32,6 +33,13 @@
 #  define likely(x_)   (x_)
 #endif
 
+/* MPI_Count does not exist in MPI-2.  Our implementation
+ * does not require it and in any case uses MPI_Aint in
+ * place of MPI_Count in many places. */
+#if MPI_VERSION < 3
+typedef MPI_Aint MPI_Count;
+#endif
+
 #ifdef BIGMPI_MAX_INT
 static const MPI_Count bigmpi_int_max   = BIGMPI_MAX_INT;
 static const MPI_Count bigmpi_count_max = (MPI_Count)BIGMPI_MAX_INT*BIGMPI_MAX_INT;
@@ -41,13 +49,6 @@ static const MPI_Count bigmpi_count_max = (MPI_Count)BIGMPI_MAX_INT*BIGMPI_MAX_I
 static const MPI_Count bigmpi_int_max   = INT_MAX;
 /* SIZE_MAX corresponds to size_t, which should be what MPI_Aint is. */
 static const MPI_Count bigmpi_count_max = SIZE_MAX;
-#endif
-
-/* MPI_Count does not exist in MPI-2.  Our implementation
- * does not require it and in any case uses MPI_Aint in
- * place of MPI_Count in many places. */
-#if MPI_VERSION < 3
-typedef MPI_Aint MPI_Count;
 #endif
 
 /* MPI-3 added const to input arguments, which causes

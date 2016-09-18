@@ -1,11 +1,17 @@
 cmake_minimum_required (VERSION 2.6)
 project (BigTopicModel)
 
-set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native -inline-factor=400")
+# g++ doesn't support the -inline-factor option
+# g++: error: unrecognized command line option ‘-inline-factor=400’
+#set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native -inline-factor=400")
+# on juncluster, cmake find intel mpi by default, so we need to specify mpicxx to get mpicxx of openmpi
+# using intel mpi won't need this
+#set(MPI_CXX_COMPILER "mpicxx")
+set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native")
 
-find_package(OpenMP)
 find_package(MPI)
 find_package(ZLIB) 
+find_package(OpenMP)
 if(OPENMP_FOUND)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
