@@ -98,13 +98,13 @@ private:
         size_t total_size = 0;
         for (auto &t: wbuff_thread) total_size += t.size();
         wbuff_sorted.resize(total_size);
-        size_t offset = 0;
+        size_t wbuff_o_offset = 0;
         /// Prepare wbuff_o for radix sort
         for (int tid = 0; tid < thread_size; tid++) {
             auto *wbuff_i = wbuff_thread[tid].data();
-            auto *wbuff_o = wbuff_sorted.data() + offset;
+            auto *wbuff_o = wbuff_sorted.data() + wbuff_o_offset;
             size_t size = wbuff_thread[tid].size();
-            offset += size;
+            wbuff_o_offset += size;
 
             for (size_t i = 0; i < size; i++)
                 wbuff_o[i] = (((long long) wbuff_i[i].r) << value_digits) + wbuff_i[i].c;
@@ -125,26 +125,12 @@ private:
         std::vector<size_t> offsets(row_size + 1);
 #pragma omp parallel for
         for (TId tid = 0; tid < omp_thread_size; tid++) {
+            // Find first p such that key(wbuff_sorted[p]) >= begin
+            size_t current_pos = lower_bound(wbuff_sorted.begin(), wbuff_sorted.end(), begin << value_digits)
+                                 - wbuff_sorted.begin();
+            // TODO this iteration walk through all wbfff_sorted, maybe it is not necessory
             size_t begin = interval * tid;
             size_t end = tid + 1 == omp_thread_size ? row_size : interval * (tid + 1);
-            // TODO replace it with std::lower_bound
-            // Find first p such that key(wbuff_sorted[p]) >= begin
-            size_t l_pos = 0;
-            size_t count = total_size;
-            while (count > 0) {
-                size_t count2 = count / 2;
-                size_t mid_pos = l_pos + count2;
-                int mid_key = get_key(wbuff_sorted[mid_pos]);
-                if (mid_key < begin) {
-                    l_pos = mid_pos + 1;
-                    count -= count2 + 1;
-                }
-                else
-                    count = count2;
-            }
-
-            // TODO this iteration walk through all wbfff_sorted, maybe it is not necessory
-            size_t current_pos = l_pos;
             for (int r = begin; r < end; r++) {
                 offsets[r] = current_pos;
                 size_t next_pos = current_pos;
