@@ -130,30 +130,22 @@ private:
             size_t end = tid + 1 == omp_thread_size ? row_size : interval * (tid + 1);
             size_t current_pos = lower_bound(wbuff_sorted.begin(), wbuff_sorted.end(), begin << value_digits)
                                  - wbuff_sorted.begin();
-            // TODO this iteration walk through all wbfff_sorted, maybe it is not necessory
             for (int r = begin; r < end; r++) {
-                offsets[r] = current_pos;
-                size_t next_pos = current_pos;
-                while (next_pos < total_size &&
-                       get_key(wbuff_sorted[next_pos]) == r)
+                size_t next_pos = offsets[r] = current_pos;
+                int last = -1, Kd = 0;
+                while (next_pos < total_size && get_key(wbuff_sorted[next_pos]) == r) {
+                    int value = get_value(wbuff_sorted[next_pos]);
+                    Kd += last != value;
+                    last = value;
                     next_pos++;
+                }
                 current_pos = next_pos;
+                buff.SetSize(r, Kd);
             }
         }
         offsets.back() = total_size;
-
-#pragma omp parallel for
-        for (TIndex r = 0; r < row_size; r++) {
-            int last = -1;
-            int Kd = 0;
-            for (size_t i = offsets[r]; i < offsets[r + 1]; i++) {
-                int value = get_value(wbuff_sorted[i]);
-                Kd += last != value;
-                last = value;
-            }
-            buff.SetSize(r, Kd);
-        }
         buff.Init();
+
 #pragma omp parallel for
         for (TIndex r = 0; r < row_size; r++) {
             int last = -1;
