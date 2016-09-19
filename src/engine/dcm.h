@@ -126,11 +126,11 @@ private:
 #pragma omp parallel for
         for (TId tid = 0; tid < omp_thread_size; tid++) {
             // Find first p such that key(wbuff_sorted[p]) >= begin
+            size_t begin = interval * tid;
+            size_t end = tid + 1 == omp_thread_size ? row_size : interval * (tid + 1);
             size_t current_pos = lower_bound(wbuff_sorted.begin(), wbuff_sorted.end(), begin << value_digits)
                                  - wbuff_sorted.begin();
             // TODO this iteration walk through all wbfff_sorted, maybe it is not necessory
-            size_t begin = interval * tid;
-            size_t end = tid + 1 == omp_thread_size ? row_size : interval * (tid + 1);
             for (int r = begin; r < end; r++) {
                 offsets[r] = current_pos;
                 size_t next_pos = current_pos;
