@@ -98,13 +98,13 @@ private:
         size_t total_size = 0;
         for (auto &t: wbuff_thread) total_size += t.size();
         wbuff_sorted.resize(total_size);
-        total_size = 0;
+        size_t offset = 0;
         /// Prepare wbuff_o for radix sort
         for (int tid = 0; tid < thread_size; tid++) {
             auto *wbuff_i = wbuff_thread[tid].data();
-            auto *wbuff_o = wbuff_sorted.data() + total_size;
+            auto *wbuff_o = wbuff_sorted.data() + offset;
             size_t size = wbuff_thread[tid].size();
-            total_size += size;
+            offset += size;
 
             for (size_t i = 0; i < size; i++)
                 wbuff_o[i] = (((long long) wbuff_i[i].r) << value_digits) + wbuff_i[i].c;
@@ -114,7 +114,7 @@ private:
         }
         Sort::RadixSort(wbuff_sorted.data(), total_size, key_digits + value_digits);
         if (process_id == 0)
-            std::cout << "Bucket sort took " << clk.toc() << std::endl;
+            LOG(INFO) << "Bucket sort took " << clk.toc() << std::endl;
 
 #define get_value(x) ((x)&value_mask)
 #define get_key(x) ((x)>>value_digits)
@@ -187,7 +187,7 @@ private:
             buff.clear();
         vector<long long>().swap(wbuff_sorted);
         if (process_id == 0)
-            std::cout << "Count took " << clk.toc() << std::endl;
+            LOG(INFO) << "Count took " << clk.toc() << std::endl;
 //        auto row = buff.Get(0);
 //        for (auto entry: row)
 //            cout << entry.k << ':' << entry.v << ' ';
@@ -296,7 +296,7 @@ private:
         buff.Allgather(intra_partition, copy_size, merged);
         size_t totalAllgatherSize = buff.size();
         if (process_id == 0)
-            std::cout << "Allgather Communicated " << (double) totalAllgatherSize / 1048576 <<
+            LOG(INFO) << "Allgather Communicated " << (double) totalAllgatherSize / 1048576 <<
             " MB. Alltoall communicated " << alltoall_size / 1048576 << " MB." << std::endl;
         //       cout << "Allgather takes " << clk.toc() << endl; clk.tic();
         decltype(recv_buff)().swap(recv_buff);
@@ -374,13 +374,13 @@ public:
         clk.tic();
         localMerge();
         if (process_id == 0)
-            std::cout << "Local merge took " << clk.toc() << std::endl;
+            LOG(INFO) << "Local merge took " << clk.toc() << std::endl;
         //printf("pid : %d - local merge done\n", process_id);
         // merge DCMSparse among the intra-partition
         clk.tic();
         globalMerge();
         if (process_id == 0)
-            std::cout << "Global merge took " << clk.toc() << std::endl;
+            LOG(INFO) << "Global merge took " << clk.toc() << std::endl;
 
         for (int tid = 0; tid < thread_size; tid++)
             wbuff_thread[tid].reserve(last_wbuff_thread_size[tid] * 1.2);
@@ -389,9 +389,16 @@ public:
         size_t wbuff_thread_size = 0;
         for (auto &v: wbuff_thread) wbuff_thread_size += v.capacity();
         if (process_id == 0) {
+            LOG(INFO) << "wbuff_thread " << wbuff_thread_size * sizeof(Entry) / 1048576
+                    << ", buff " << buff.size() / 1048576
+                    << ", merged " << merged.size() / 1048576
+                    << ", recv_buff " << recv_buff.capacity() * sizeof(SpEntry) / 1048576
+                    << std::endl;
+            /*
             printf("wbuff_thread %llu, buff %llu, merged %llu, recv_buff %llu\n",
                    wbuff_thread_size * sizeof(Entry) / 1048576, buff.size() / 1048576,
                    merged.size() / 1048576, recv_buff.capacity() * sizeof(SpEntry) / 1048576);
+                   */
         }
     }
 

@@ -207,13 +207,13 @@ void LDA::Estimate() {
             }
         }
         if (process_id == monitor_id)
-            printf("\x1b[31mpid : %d - cdk sync : %f\x1b[0m\n", process_id, clk.toc());
+            LOG(INFO) << "\x1b[31mpid : " << process_id << " - cdk sync : " << clk.toc() << "\x1b[0m" << std::endl;
 
         /// sync cwk
         clk.tic();
         cwk.sync();
         if (process_id == monitor_id)
-            printf("\x1b[31mpid : %d - cwk sync : %f\x1b[0m\n", process_id, clk.toc());
+            LOG(INFO) << "\x1b[31mpid : " << process_id << " - cwk sync : " << clk.toc() << "\x1b[0m" << std::endl;
 
         /// sync ck and initialize prior1
         clk.tic();
@@ -231,7 +231,7 @@ void LDA::Estimate() {
         prior1Prob[K - 1] = prior1Sum * 2 + 1;
         prior1Table.Build(prior1Prob.begin(), prior1Prob.end(), prior1Sum);
         if (process_id == monitor_id)
-            printf("\x1b[31mpid : %d - ck sync : %f\x1b[0m\n", process_id, clk.toc());
+            LOG(INFO) << "\x1b[31mpid : " << process_id << " - ck sync : " << clk.toc() << "\x1b[0m" << std::endl;
 
         iterWord();
 
@@ -242,10 +242,13 @@ void LDA::Estimate() {
         MPI_Allreduce(&log_likelihood, &llreduce, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         if (process_id == monitor_id) {
-            printf("\x1b[32mpid : %d Iteration %d, %f s, Kd = %f\tperplexity = %f\t%lf Mtoken/s\x1b[0m\n",
-                   process_id, iter, clk.timeSpan(iter_start), cdk.averageColumnSize(),
-                   exp(-llreduce / global_token_number),
-                   global_token_number / clk.timeSpan(iter_start) / 1e6);
+            LOG(INFO) << "\x1b[32mpid : " << process_id
+                    << " Iteration " << iter
+                    << ", " << clk.timeSpan(iter_start)
+                    << " Kd = " <<  cdk.averageColumnSize()
+                    << "\tperplexity = " << exp(-llreduce / global_token_number)
+                    << "\t" << global_token_number / clk.timeSpan(iter_start) / 1e6
+                    << " Mtoken/s\x1b[0m" << std::endl;
         }
     }
 }

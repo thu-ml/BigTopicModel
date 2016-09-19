@@ -5,9 +5,9 @@ project (BigTopicModel)
 # g++: error: unrecognized command line option ‘-inline-factor=400’
 #set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native -inline-factor=400")
 # on juncluster, cmake find intel mpi by default, so we need to specify mpicxx to get mpicxx of openmpi
-# using intel mpi won't need this
+# using intel mpi won't need set MPI_CXX_COMPILER
 #set(MPI_CXX_COMPILER "mpicxx")
-set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native")
+set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native -inline-factor=400")
 
 find_package(MPI)
 find_package(ZLIB) 
