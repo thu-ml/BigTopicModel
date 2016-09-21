@@ -63,8 +63,6 @@ void LDA::iterWord() {
 
         auto wDoc = corpus.Get(local_w);
         size_t doc_per_word = wDoc.size();
-        // TODO : iEnd doesn't be initialized, is this a bug?
-        size_t iEnd;
         size_t iPrefetchStart = 0;
         // Advance PREFETCH_LENGTH tokens
         for (int i = 0; i < PREFETCH_LENGTH; i++) {
@@ -72,6 +70,7 @@ void LDA::iterWord() {
             while (iPrefetchEnd < doc_per_word && wDoc[iPrefetchStart] == wDoc[iPrefetchEnd]) iPrefetchEnd++;
             iPrefetchStart = iPrefetchEnd;
         }
+        size_t iEnd; // notice that iEnd was initialized in the inner loop
         for (size_t iStart = 0; iStart < doc_per_word; iStart = iEnd) {
             auto d = wDoc[iStart];
             for (iEnd = iStart; iEnd < doc_per_word && wDoc[iEnd] == d; iEnd++);
@@ -159,26 +158,19 @@ void LDA::Estimate() {
     clk.tic();
 
     /// Randomly initialize topics for each token
+    /// Calculate the average count of tokens belong to each (word, document) pair
     std::uniform_int_distribution<int> dice(0, K - 1);
+    atomic<size_t> averageCount{0};
 #pragma omp parallel for
     for (TWord v = 0; v < num_words; v++) {
         int tid = omp_get_thread_num();
+        int last = -1, cnt = 0;
         auto &generator = generators.Get();
         auto row = corpus.Get(v);
         for (auto d: row) {
             TTopic k = dice(generator);
             cwk.update(tid, v, k);
             cdk.update(tid, d, k);
-        }
-    }
-
-    /// Calculate the average count of tokens belong to each (word, document) pair
-    atomic<size_t> averageCount;
-#pragma omp parallel for
-    for (TWord v = 0; v < num_words; v++) {
-        int last = -1, cnt = 0;
-        auto row = corpus.Get(v);
-        for (auto d: row) {
             if (d != last) {
                 last = d;
                 cnt++;

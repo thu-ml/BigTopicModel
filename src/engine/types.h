@@ -17,6 +17,10 @@ typedef enum {
     row_partition,
     column_partition
 } PartitionType;
+typedef enum {
+    monolith,
+    separate
+} LocalMergeStyle;
 typedef struct {
     TCoord r, c;
 } Entry;

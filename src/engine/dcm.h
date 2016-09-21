@@ -72,6 +72,7 @@ private:
     vector<vector<Entry>> wbuff_thread;
     vector<long long> wbuff_sorted;
     vector<size_t> last_wbuff_thread_size;
+    LocalMergeStyle local_merge_style;
     CVA<SpEntry> buff, merged;
     vector<size_t> row_sum;
     vector<size_t> row_sum_read;
@@ -125,7 +126,6 @@ private:
         std::vector<size_t> offsets(row_size + 1);
 #pragma omp parallel for
         for (TId tid = 0; tid < omp_thread_size; tid++) {
-            // Find first p such that key(wbuff_sorted[p]) >= begin
             size_t begin = interval * tid;
             size_t end = tid + 1 == omp_thread_size ? row_size : interval * (tid + 1);
             size_t current_pos = lower_bound(wbuff_sorted.begin(), wbuff_sorted.end(), begin << value_digits)
@@ -161,16 +161,12 @@ private:
                 last = value;
             }
         }
+
         for (auto &buff: wbuff_thread)
             buff.clear();
         vector<long long>().swap(wbuff_sorted);
         if (process_id == 0)
             LOG(INFO) << "Count took " << clk.toc() << std::endl;
-//        auto row = buff.Get(0);
-//        for (auto entry: row)
-//            cout << entry.k << ':' << entry.v << ' ';
-//        cout << endl;
-//        exit(0);
     }
 
     void globalMerge() {
@@ -310,12 +306,13 @@ public:
         wbuff_sorted.resize(thread_size);
         row_sum.resize(column_size);
         row_sum_read.resize(column_size);
+        local_merge_style = monolith;
 
         /*
-         *            documents words   tokens      token per doc
-         * nips     : 1422      12375   1828206     1285
-         * nytimes  : 293793    101635  96904469    329
-         * pubmed   : 8118463   141043  730529615   90
+         *            documents words   tokens      token per doc   token per word
+         * nips     : 1422      12375   1828206     1285            148
+         * nytimes  : 293793    101635  96904469    329             953
+         * pubmed   : 8118463   141043  730529615   90              5179
          */
     }
 
