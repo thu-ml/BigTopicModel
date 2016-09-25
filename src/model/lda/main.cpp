@@ -75,10 +75,11 @@ int main(int argc, char **argv) {
     fin.close();
 	
 	gethostname(hostname, HOST_NAME_MAX);
-    LOG(INFO) << hostname << " : Rank " << process_id << " has " << num_docs << " docs, " << num_words << " words, " << train_corpus.size() / sizeof(int) << " tokens." << endl;
+    LOG(INFO) << hostname << " : Rank " << process_id << " has " << num_docs << " docs, "
+              << num_words << " words, " << train_corpus.size() / sizeof(int) << " tokens." << endl;
 
     LDA lda(FLAGS_iter, FLAGS_K, FLAGS_alpha, FLAGS_beta, train_corpus, process_size, process_id, omp_get_max_threads(),
-            num_docs, num_words, FLAGS_doc_part, FLAGS_word_part);
+            num_docs, num_words, FLAGS_doc_part, FLAGS_word_part, monolith);
     lda.Estimate();
 
     /// index -> string
@@ -102,7 +103,7 @@ int main(int argc, char **argv) {
     }
     assert(line_number == num_words);
 
-    /// count 10 most frequently word for each topic
+    /// count frequent_word_number most frequently words for each topic
     /// TODO : frequent_word_number should be configured by user
     TCount frequent_word_number = 20;
     vector<SpEntry> local_topic_word(FLAGS_K * frequent_word_number);
@@ -158,9 +159,9 @@ int main(int argc, char **argv) {
         // ftopic.close();
     }
     /// Notice : I don't know why, but without this barrier, or it will crash...
+    MPI_Comm_free(&row_partition);
     MPI_Barrier(MPI_COMM_WORLD);
     showpid(process_id)
-    MPI_Comm_free(&row_partition);
 
     MPI_Finalize();
     google::ShutdownGoogleLogging();

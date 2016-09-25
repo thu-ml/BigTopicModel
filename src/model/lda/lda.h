@@ -66,6 +66,7 @@ public:
     vector<TProb> inv_ck;
     DCMSparse cwk;
     DCMSparse cdk;
+    LocalMergeStyle local_merge_style;
 
     size_t global_token_number;
     TCount global_word_number;
@@ -76,16 +77,17 @@ public:
 
     LDA(TIter iter, TTopic K, TProb alpha, TProb beta, CVA<int> &corpus,
         const TId process_size, const TId process_id, const TLen thread_size,
-        const TCount num_docs, const TCount num_words, const TCount doc_split_size, const TCount word_split_size)
+        const TCount num_docs, const TCount num_words, const TCount doc_split_size,
+        const TCount word_split_size, LocalMergeStyle local_merge_style)
             : K(K), alpha(K, alpha), beta(beta), alphaBar(alpha * K), iter(iter),
               corpus(corpus),
               process_size(process_size), process_id(process_id), thread_size(thread_size),
               num_docs(num_docs), num_words(num_words), doc_split_size(doc_split_size),
-              word_split_size(word_split_size),
+              word_split_size(word_split_size), local_merge_style(local_merge_style),
               cwk(word_split_size, doc_split_size, num_words, K, column_partition, process_size,
-                  process_id, thread_size),
+                  process_id, thread_size, local_merge_style, 0),
               cdk(doc_split_size, word_split_size, num_docs, K, row_partition, process_size,
-                  process_id, thread_size) {
+                  process_id, thread_size, local_merge_style, 0) {
         /*
         printf("pid %d LDA constructor row_size : %d, column_size : %d, process_size : %d, process_id : %d, thread_size : %d\n",
                 process_id, cwk.row_size, cwk.column_size, cwk.process_size, cwk.process_id, cwk.thread_size);
@@ -118,7 +120,6 @@ public:
         local_word_frequency.resize(num_words);
         global_word_frequency.resize(num_words);
         monitor_id = 0;
-		LOG(INFO) << "Initialize LDA Successed!" << endl;
     }
 
     virtual void Estimate();
