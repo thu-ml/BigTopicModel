@@ -28,6 +28,18 @@ using std::vector;
  */
 // TODO: row sum should be size_t
 class DCMSparse {
+public:
+    struct Row {
+        SpEntry *_begin, *_end;
+
+        SpEntry *begin() { return _begin; }
+
+        SpEntry *end() { return _end; }
+
+        size_t size() { return _end - _begin; }
+
+        SpEntry &operator[](const size_t index) { return _begin[index]; }
+    };
 private:
     /**
      * \var
@@ -105,6 +117,9 @@ private:
 
     vector<SpEntry> recv_buff;
     vector<size_t> recv_offsets_buff;
+
+    vector<size_t> row_offset_global;
+    vector<SpEntry> data_global;
 
     //T rtest, wtest;
     void localMerge() {
@@ -418,6 +433,8 @@ public:
         for (auto &count: local_row_sum_s)
             for (int c = 0; c < column_size; c++)
                 row_sum_read[c] += count[c];
+        // TODO : note that here we use the original MPI_Allreduce,
+        // using BigMPI MPI_Allreduce instead
         MPI_Allreduce(row_sum_read.data(), row_sum.data(), column_size,
                       MPI_UNSIGNED_LONG_LONG, MPI_SUM, inter_partition);
         return row_sum.data();
@@ -453,6 +470,89 @@ public:
                 << ", merged " << merged.size()
                 << ", recv_buff " << recv_buff.capacity() * sizeof(SpEntry)
                 << std::endl;
+    }
+
+    // gather cdk/cwk from all nodes, do this for MedLDA
+    void aggrGlobal() {
+        /*!
+         * In following code, row number is a scalar, indicate how many rows there.
+         * row size is a vector, indicate the size of each row.
+         */
+        int inter_partition_size, inter_partition_id;
+        MPI_Comm_size(inter_partition, &inter_partition_size);
+        MPI_Comm_rank(inter_partition, &inter_partition_id);
+        LOG_IF(INFO, process_id == monitor_id) << "process_id : " << process_id  << " inter partition size : " << inter_partition_size
+                    << " inter partition id : " << inter_partition_id;
+
+        // gather data size from buff.offsets[buff.R]
+        vector<int> data_size_array, data_size_offset;
+        data_size_array.resize(inter_partition_size);
+        data_size_offset.resize(inter_partition_size + 1);
+        int buff_offsets = (int)buff.offsets[buff.R];
+        MPI_Allgather(&buff_offsets, 1, MPI_INT,
+                      data_size_array.data(), 1, MPI_INT, inter_partition);
+        transform(data_size_array.begin(), data_size_array.end(), data_size_array.begin(),
+                  [](size_t it) {return it * sizeof(SpEntry);});
+        data_size_offset[0] = 0;
+        partial_sum(data_size_array.begin(), data_size_array.end(), data_size_offset.begin() + 1);
+
+        // gather buff data by buff offsets
+        data_global.resize(data_size_offset.back() / sizeof(SpEntry));
+        MPI_Allgatherv(buff.data, buff_offsets * sizeof(SpEntry), MPI_CHAR,
+                       data_global.data(), data_size_array.data(), data_size_offset.data(), MPI_CHAR, inter_partition);
+        transform(data_size_offset.begin(), data_size_offset.end(), data_size_offset.begin(),
+                  [](size_t it) {return it / sizeof(SpEntry);});
+        LOG_IF(INFO, process_id == monitor_id) << "data_size_offset.back() : " << data_size_offset.back();
+
+        // gather row number
+        vector<int> row_number_array, row_number_offset;
+        row_number_array.resize(inter_partition_size);
+        row_number_offset.resize(inter_partition_size + 1);
+        int buff_R = (int)buff.R;
+        MPI_Allgather(&buff_R, 1, MPI_INT, row_number_array.data(), 1, MPI_INT, inter_partition);
+        row_number_offset[0] = 0;
+        partial_sum(row_number_array.begin(), row_number_array.end(), row_number_offset.begin() + 1);
+        LOG_IF(INFO, process_id == monitor_id) << "row_number_offset.back() : " << row_number_offset.back();
+
+        // gather row offset
+        row_offset_global.resize(row_number_offset[inter_partition_size] + 1);
+        MPI_Allgatherv(buff.offsets, buff_R, MPI_UNSIGNED_LONG_LONG,
+                        row_offset_global.data(), row_number_array.data(), row_number_offset.data(), MPI_UNSIGNED_LONG_LONG, inter_partition);
+        for (size_t i = 0; i < inter_partition_size; ++i) {
+            for (size_t j = row_number_offset[i]; j < row_number_offset[i + 1]; ++j) {
+                row_offset_global[j] += data_size_offset[i];
+            }
+        }
+        row_offset_global.back() = data_size_offset.back();
+        LOG_IF(INFO, process_id == monitor_id) << "row_offset_global.size() " << row_offset_global.size()
+                                                << " row_offset_global.back() " << row_offset_global.back();
+        /*
+        if (process_id % 2 == 0) {
+            int error_cnt = 0;
+            for (int i = 0; i < buff_R; ++i) {
+                if (row_size_global[i + row_number_offset[inter_partition_id]] != buff.sizes[i])
+                    error_cnt++;
+            }
+            LOG(INFO) << "process_id : " << process_id << " error_cnt : " << error_cnt;
+            LOG_IF(ERROR, buff_R != row_number_offset[inter_partition_id + 1] - row_number_offset[inter_partition_id])
+                   << "row_number_offset wrong";
+            int acc_cnt = 0;
+            for (int i = row_number_offset[inter_partition_id]; i < row_number_offset[inter_partition_id + 1]; ++i) {
+                int r_offset = i - row_number_offset[inter_partition_id];
+                for (int j = row_offset_global[i]; j < row_offset_global[i + 1]; ++j) {
+                    int c_offset = j - row_offset_global[i];
+                    if (data_global[j].k != buff.data[buff.offsets[r_offset] + c_offset].k)
+                        acc_cnt++;
+                }
+            }
+            LOG(INFO) << "process_id : " << process_id << " acc_cnt : " << acc_cnt;
+        }
+         */
+    }
+
+    Row rowGlobal(const int global_row_idx) {
+        return Row{data_global.data() + row_offset_global[global_row_idx],
+                   data_global.data() + row_offset_global[global_row_idx + 1]};
     }
 
     double averageColumnSize() {

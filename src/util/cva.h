@@ -28,12 +28,14 @@ public:
 
         T &operator[](const size_t index) { return _begin[index]; }
     };
-
-    //private:
 public:
     size_t R;
     size_t old_size;
     T *data;
+    /*!
+     * note : offsets is calculate from sizes in Init, but then changed in Allgatherv
+     * they are inconsistent after DCMSparse.global_merge()!
+     */
     size_t *offsets;
     size_t *sizes;
     bool should_delete;

@@ -73,6 +73,13 @@ void LDA::iterWord() {
             for (iEnd = iStart; iEnd < doc_per_word && wDoc[iEnd] == d; iEnd++);
             auto count = iEnd - iStart;
             auto c = cdk.row(d);
+            /*
+             * a show case for MedLDA debug
+            int cdk_offset = 0;
+            if (process_id == 2 || process_id == 3)
+                cdk_offset = 751;
+            DCMSparse::Row c = cdk.rowGlobal(d + cdk_offset);
+             */
             TTopic Kd = c.size();
             if (Kd == 0)
                 throw std::runtime_error("Kd is zero");
@@ -222,6 +229,8 @@ void LDA::Estimate() {
             LOG(INFO) << "cdk_size : " << cdk_size << std::endl;
             LOG(INFO) << "\x1b[31mpid : " << process_id << " - cdk sync : " << clk.toc() << "\x1b[0m" << std::endl;
         }
+        // note that aggrGlobal must be used after sync
+        // cdk.aggrGlobal();
 
         /// sync cwk
         clk.tic();
