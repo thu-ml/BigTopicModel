@@ -187,7 +187,7 @@ private:
                 vector<Entry>().swap(wbuff_thread[tid]);
             }
             Sort::RadixSort(wbuff_sorted.data(), total_size, key_digits + value_digits);
-            if (process_id == 0)
+            if (process_id == monitor_id)
                 LOG(INFO) << "Bucket sort took " << clk.toc() << std::endl;
 
 #define get_value(x) ((x)&value_mask)
@@ -238,7 +238,7 @@ private:
             for (auto &buff: wbuff_thread)
                 buff.clear();
             vector<long long>().swap(wbuff_sorted);
-            if (process_id == 0)
+            if (process_id == monitor_id)
                 LOG(INFO) << "Count took " << clk.toc() << std::endl;
         }
     }
@@ -334,7 +334,7 @@ private:
 
             // Sort
             //std::sort(b.begin(), b.end(),
-            //		[](const SpEntry &a, const SpEntry &b) { return a.v > b.v; });
+            //        [](const SpEntry &a, const SpEntry &b) { return a.v > b.v; });
         }
         //       cout << "Count2 takes " << clk.toc() << endl; clk.tic();
         decltype(recv_buff)().swap(recv_buff);
@@ -343,7 +343,7 @@ private:
         // Gather
         buff.Allgather(intra_partition, copy_size, merged);
         size_t totalAllgatherSize = buff.size();
-        if (process_id == 0)
+        if (process_id == monitor_id)
             LOG(INFO) << "Allgather Communicated " << (double) totalAllgatherSize / 1048576 <<
             " MB. Alltoall communicated " << alltoall_size / 1048576 << " MB." << std::endl;
         //       cout << "Allgather takes " << clk.toc() << endl; clk.tic();
@@ -368,8 +368,10 @@ public:
             partition_id = process_id / copy_size;
             copy_id = process_id % copy_size;
         }
-        MPI_Comm_split(MPI_COMM_WORLD, partition_id, process_id, &intra_partition);
-        MPI_Comm_split(MPI_COMM_WORLD, copy_id, process_id, &inter_partition);
+        if (process_size > 1) {
+            MPI_Comm_split(MPI_COMM_WORLD, partition_id, process_id, &intra_partition);
+            MPI_Comm_split(MPI_COMM_WORLD, copy_id, process_id, &inter_partition);
+        }
         /*
         printf("pid : %d - partition_size : %d, copy_size : %d, row_size : %d, column_size : %d, process_size : %d, thread_size : %d\n",
                process_id, partition_size, copy_size, row_size, column_size, process_size, thread_size);
@@ -454,22 +456,26 @@ public:
         LOG_IF(INFO, process_id == monitor_id) << "Local merge took " << clk.toc() << std::endl;
         local_merge_time_total += clk.toc();
 
-        clk.tic();
-        globalMerge();
-        LOG_IF(INFO, process_id == monitor_id) << "Global merge took " << clk.toc() << std::endl;
-        global_merge_time_total += clk.toc();
+        if (process_size > 1) {
+            clk.tic();
+            globalMerge();
+            LOG_IF(INFO, process_id == monitor_id) << "Global merge took " << clk.toc() << std::endl;
+            global_merge_time_total += clk.toc();
+        }
 
         for (int tid = 0; tid < thread_size; tid++)
             wbuff_thread[tid].reserve(last_wbuff_thread_size[tid] * 1.2);
 
-        //printf("pid : %d - global merge done\n", process_id);
-        size_t wbuff_thread_size = 0;
-        for (auto &v: wbuff_thread) wbuff_thread_size += v.capacity();
-        LOG_IF(INFO, process_id == monitor_id) << "wbuff_thread " << wbuff_thread_size * sizeof(Entry)
+        if (process_size > 1) {
+            //printf("pid : %d - global merge done\n", process_id);
+            size_t wbuff_thread_size = 0;
+            for (auto &v: wbuff_thread) wbuff_thread_size += v.capacity();
+            LOG_IF(INFO, process_id == monitor_id) << "wbuff_thread " << wbuff_thread_size * sizeof(Entry)
                 << ", buff " << buff.size()
                 << ", merged " << merged.size()
                 << ", recv_buff " << recv_buff.capacity() * sizeof(SpEntry)
                 << std::endl;
+        }
     }
 
     // gather cdk/cwk from all nodes, do this for MedLDA
