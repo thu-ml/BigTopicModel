@@ -1,6 +1,7 @@
 #include "lda.h"
 #include <atomic>
 #include <omp.h>
+#include <cmath>
 #include <glog/logging.h>
 #include "xmmintrin.h"
 
@@ -233,12 +234,39 @@ void LDA::Estimate() {
         double llreduce = 0;
         MPI_Allreduce(&log_likelihood, &llreduce, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+        /*
+         * Compute likelihood for Yahoo! LDA
+         */
+        double log_likelihood_2 = 0;
+        double log_likelihood_d = 0;
+        double log_likelihood_w = 0;
+        for (TDoc d = 0; d < num_docs; d++) {
+            auto row = cdk.row(d);
+            TTopic Kd = row.size();
+            for (TTopic i = 0; i < Kd; i++)
+                log_likelihood_d += lgamma(alpha[row[i].k] + row[i].v) - lgamma(alpha[row[i].k]);
+
+            log_likelihood_d -= lgamma(alphaBar + word_per_doc[d]) - lgamma(alphaBar);
+        }
+        for (TWord v = 0; v < num_words; v++) {
+            auto row = cwk.row(v);
+            for (TTopic i = 0; i < row.size(); i++)
+                log_likelihood_w += lgamma(beta + row[i].v) - lgamma(beta);            
+        }
+        for (TTopic k = 0; k < K; k++)
+            log_likelihood_w -= lgamma(betaBar + ck[k]) - lgamma(betaBar);
+
+        double ll2reduce = 0;
+        log_likelihood_2 = log_likelihood_d / word_split_size + log_likelihood_w / doc_split_size;
+        MPI_Allreduce(&log_likelihood_2, &ll2reduce, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
         if (process_id == monitor_id) {
             LOG(INFO) << "\x1b[32mpid : " << process_id
                     << " Iteration " << iter
                     << ", " << clk.timeSpan(iter_start)
                     << " Kd = " <<  cdk.averageColumnSize()
-                    << "\tperplexity = " << exp(-llreduce / global_token_number)
+                    << "\tlog_likelyhood = " << llreduce
+                    << "\tlog_likelyhood2 = " << ll2reduce
                     << "\t" << global_token_number / clk.timeSpan(iter_start) / 1e6
                     << " Mtoken/s\x1b[0m" << std::endl;
         }
