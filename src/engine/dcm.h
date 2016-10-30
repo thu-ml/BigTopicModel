@@ -397,8 +397,8 @@ public:
         mono_heads.resize(sizes.size() + 1);
         partial_sum(sizes.begin(), sizes.end(), mono_heads.begin() + 1);
         mono_heads[0] = 0;
-        mono_tails = (std::atomic_uintptr_t *)
-                _mm_malloc(mono_heads.size() * sizeof(std::atomic_uintptr_t), ALIGN_SIZE);
+        mono_tails = (std::atomic<std::uintptr_t> *)
+                _mm_malloc(mono_heads.size() * sizeof(std::atomic<std::uintptr_t>), ALIGN_SIZE);
         for (uintptr_t i = 0; i < mono_heads.size(); ++i)
             mono_tails[i] = mono_heads[i];
         mono_buff.resize(mono_heads.back());
