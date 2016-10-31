@@ -4,8 +4,8 @@
 CUR=`dirname "$0"`
 CUR=`cd "$CUR"; pwd`
 
-export CXX=icpc
-export CC=icc
+export CXX="icpc -wd780"
+export CC="icc -wd780"
 #export CXX=g++
 #export CC=gcc
 #export CMAKE_PREFIX_PATH=/apps/mpi/mvapich-2.1.7a-gnu/:~/local/bin/gcc

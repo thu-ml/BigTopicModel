@@ -29,6 +29,7 @@ if [ ! -d "$CUR/third_party" ]; then
 		unzip gflags.zip
 		mv gflags-master gflags
 		pushd gflags
+		sed -i '79i add_definitions(-DGFLAGS_NAMESPACE=google)' CMakeLists.txt
 		mkdir -p build
 		pushd build
 		cmake ..
