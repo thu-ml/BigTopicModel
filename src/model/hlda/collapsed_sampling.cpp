@@ -150,7 +150,7 @@ void CollapsedSampling::DFSSample(Document &doc) {
     // Warning: this is not thread safe
     for (int s = 0; s < S; s++) {
         // Resample Z
-        linear_discrete_distribution<double> mult(doc.theta);
+        linear_discrete_distribution<TProb> mult(doc.theta);
         if (mc_samples != -1) {
             for (auto &l: doc.z) l = (TTopic) mult(generator);
         }
