@@ -8,24 +8,19 @@
 #include <unordered_map>
 #include "types.h"
 
-using std::vector;
-using std::string;
-using std::unordered_map;
+class Corpus {
+public:
+	Corpus(const char *vocabPath, const char *dataPath);
 
-class Corpus 
-{
-	public:
-		Corpus(const char *vocabPath, const char *dataPath);
-        Corpus(const Corpus &from, int start, int end);
+	Corpus(const Corpus &from, int start, int end);
 
-        // this is wdn, store words in each document
-		vector<vector<TWord>> dw;
-		vector<string> vocab;
-		unordered_map<string, TWord> word2id;
+	std::vector<std::vector<TWord>> w;
+	std::vector<std::string> vocab;
+	std::unordered_map<std::string, TWord> word2id;
 
-		TDoc D;
-        TWord W;
-		TSize T;
+	TDoc D;
+	TWord V;
+	TSize T;
 };
 
 #endif

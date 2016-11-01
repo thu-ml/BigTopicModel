@@ -1,0 +1,5 @@
+include_directories(${BigTopicModel_SOURCE_DIR}/src/util)
+include_directories(${BigTopicModel_SOURCE_DIR}/src/model)
+include_directories(${BigTopicModel_SOURCE_DIR}/src/engine)
+add_executable(hlda main.cpp tree.cpp)
+target_link_libraries(hlda util ${MPI_LIBRARIES} ${GLOG} ${GFLAGS})
