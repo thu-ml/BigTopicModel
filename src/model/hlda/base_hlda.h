@@ -47,12 +47,12 @@ protected:
     std::vector<Document> docs;
 
     // For pcs and is
-    std::vector<Matrix<float> > phi;        // Depth * V * K
-    std::vector<Matrix<float> > log_phi;
+    std::vector<Matrix<TProb> > phi;        // Depth * V * K
+    std::vector<Matrix<TProb> > log_phi;
 
     std::vector<Matrix<TCount> > count;
 
-    Matrix<double> log_normalization;
+    Matrix<TProb> log_normalization;
 
     bool new_topic;
 };

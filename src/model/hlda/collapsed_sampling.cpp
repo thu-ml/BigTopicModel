@@ -242,7 +242,7 @@ std::vector<double> CollapsedSampling::WordScore(Document &doc, int l,
         if (c_offset < 1000)
             result.back() += log_normalization(l, c_offset);
         else
-            result.back() += log(c_offset + b);   
+            result.back() += logf(c_offset + b);
     }
 
     auto w_count = end - begin;

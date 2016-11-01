@@ -37,7 +37,7 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
 
     for (TLen l = 0; l < L; l++)
         for (int i = 0; i < 1000; i++)
-            log_normalization(l, i) = log(beta[l] + i);
+            log_normalization(l, i) = logf(beta[l] + i);
 }
 
 void BaseHLDA::Visualize(std::string fileName, int threshold) {
