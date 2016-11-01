@@ -173,9 +173,9 @@ void PartiallyCollapsedSampling::ComputePhi() {
             TTopic K = (TTopic) tree.NumNodes(l);
 
             for (TTopic k = 0; k < K; k++) {
-                double inv_sum = 1. / (beta[l] * corpus.V + ck[l][k]);
+                TProb inv_sum = 1.f / (beta[l] * corpus.V + ck[l][k]);
                 for (TWord v = 0; v < corpus.V; v++) {
-                    float prob = (float)((count[l](v, k) + beta[l]) * inv_sum);
+                    TProb prob = (count[l](v, k) + beta[l]) * inv_sum;
                     phi[l](v, k) = prob;
                     log_phi[l](v, k) = prob;
                 }
@@ -189,15 +189,15 @@ void PartiallyCollapsedSampling::ComputePhi() {
             TTopic K = (TTopic) tree.NumNodes(l);
 
             for (TTopic k = 0; k < K; k++) {
-                double sum = 0;
+                TProb sum = 0;
                 for (TWord v = 0; v < corpus.V; v++) {
-                    float concentration = (float)(count[l](v, k) + beta[l]);
-                    gamma_distribution<float> gammarnd(concentration);
-                    float p = gammarnd(generator);
+                    TProb concentration = (TProb)(count[l](v, k) + beta[l]);
+                    gamma_distribution<TProb> gammarnd(concentration);
+                    TProb p = gammarnd(generator);
                     phi[l](v, k) = p;
                     sum += p;
                 }
-                double inv_sum = 1.0f / sum;
+                TProb inv_sum = 1.0f / sum;
                 for (TWord v = 0; v < corpus.V; v++) {
                     phi[l](v, k) *= inv_sum;
                     log_phi[l](v, k) = phi[l](v, k);
