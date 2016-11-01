@@ -172,17 +172,17 @@ void PartiallyCollapsedSampling::ComputePhi() {
         for (TLen l = 0; l < L; l++) {
             TTopic K = (TTopic) tree.NumNodes(l);
 
-            for (TTopic k = 0; k < K; k++) {
-                TProb inv_sum = 1.f / (beta[l] * corpus.V + ck[l][k]);
-                for (TWord v = 0; v < corpus.V; v++) {
-                    TProb prob = (count[l](v, k) + beta[l]) * inv_sum;
+            vector<float> inv_normalization(K);
+            for (TTopic k = 0; k < K; k++)
+                inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck[l][k]);
+            for (TWord v = 0; v < corpus.V; v++) {
+                for (TTopic k = 0; k < K; k++) {
+                    TProb prob = (count[l](v, k) + beta[l]) * inv_normalization[k];
                     phi[l](v, k) = prob;
                     log_phi[l](v, k) = prob;
                 }
-            }
-
-            for (TWord v = 0; v < corpus.V; v++)
                 vsLn(K, &log_phi[l](v, 0), &log_phi[l](v, 0));
+            }
         }
     } else {
         for (TLen l = 0; l < L; l++) {
