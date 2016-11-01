@@ -30,7 +30,7 @@ public:
 
 protected:
     virtual std::vector<double>
-    WordScore(Document &doc, int l, int num_instantiated, int num_collapsed) = 0;
+    WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) = 0;
 
     virtual void InitializeTreeWeight();
 

@@ -11,7 +11,7 @@ using namespace std;
 std::vector<TTopic> Document::GetPos() {
     std::vector<TTopic> result(c.size());
     for (std::size_t l = 0; l < c.size(); l++)
-        result[l] = c[l]->pos;
+        result[l] = (TTopic)c[l]->pos;
     return move(result);
 }
 

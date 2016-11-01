@@ -6,6 +6,8 @@
 struct Clock {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start;
 
+	Clock() { tic(); }
+
 	std::chrono::time_point<std::chrono::high_resolution_clock> tic() {
 		return start = std::chrono::high_resolution_clock::now();
 	}
