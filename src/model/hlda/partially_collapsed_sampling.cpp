@@ -108,6 +108,18 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
     std::vector<bool> is_collapsed((size_t) L);
     for (int l = 0; l < L; l++) is_collapsed[l] = doc.c[l]->is_collapsed;
 
+    // TODO: the first few topics will have a huge impact...
+    // Read out all the required data
+    Matrix<TProb> prob_data((int)doc.z.size(), L);
+    for (TLen i = 0; i < L; i++)
+        if (is_collapsed[i])
+            for (int n = 0; n < (int)doc.z.size(); n++)
+                prob_data(n, i) = (count[i](doc.w[n], pos[i]) + beta[i]) /
+                                  (ck[i][pos[i]] + beta[i] * corpus.V);
+        else
+            for (int n = 0; n < (int)doc.z.size(); n++)
+                prob_data(n, i) = phi[i](doc.w[n], pos[i]);
+
     for (size_t n = 0; n < doc.z.size(); n++) {
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
@@ -117,7 +129,8 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
             --cdl[l];
         }
 
-        for (TLen i = 0; i < L; i++)
+        for (TLen i = 0; i < L; i++) {
+            //prob[i] = (alpha[i] + cdl[i]) * prob_data(n, i);
             if (is_collapsed[i])
                 prob[i] = (cdl[i] + alpha[i]) *
                           (count[i](v, pos[i]) + beta[i]) /
@@ -125,6 +138,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
             else {
                 prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
             }
+        }
 
         l = (TTopic) DiscreteSample(prob.begin(), prob.end(), generator);
         doc.z[n] = l;
