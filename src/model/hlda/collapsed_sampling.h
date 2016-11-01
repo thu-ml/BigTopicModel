@@ -29,6 +29,8 @@ protected:
     virtual std::vector<double>
     WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) override;
 
+    virtual void InitializeTreeWeight();
+
     double Perplexity();
 
     void Check();

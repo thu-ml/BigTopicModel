@@ -9,6 +9,7 @@
 #include "types.h"
 #include "tree.h"
 
+// Size a document = 3 ints / token
 struct Document {
     Path c;
     std::vector<TTopic> z;

@@ -81,23 +81,3 @@ std::string BaseHLDA::TopWords(int l, int id) {
 
     return out.str();
 }
-
-void BaseHLDA::InitializeTreeWeight() {
-    auto nodes = tree.GetAllNodes();
-    nodes[0]->sum_log_weight = 0;
-
-    for (auto *node: nodes)
-        if (!node->children.empty()) {
-            // Propagate
-            double sum_weight = gamma[node->depth];
-
-            for (auto *child: node->children)
-                sum_weight += child->num_docs;
-
-            for (auto *child: node->children)
-                child->sum_log_weight = node->sum_log_weight +
-                                        log((child->num_docs + 1e-10) / sum_weight);
-
-            node->sum_log_weight += log(gamma[node->depth] / sum_weight);
-        }
-}

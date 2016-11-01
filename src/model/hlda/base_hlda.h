@@ -32,8 +32,6 @@ protected:
     virtual std::vector<double>
     WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) = 0;
 
-    virtual void InitializeTreeWeight();
-
     std::string TopWords(int l, int id);
 
     Tree tree;
