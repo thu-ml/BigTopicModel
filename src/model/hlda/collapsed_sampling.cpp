@@ -145,7 +145,7 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count, bool increas
 void CollapsedSampling::DFSSample(Document &doc) {
     auto nodes = tree.GetAllNodes();
     int S = max(mc_samples, 1);
-    vector<float> prob(nodes.size() * S, -1e9f);
+    vector<TProb> prob(nodes.size() * S, -1e9f);
 
     // Warning: this is not thread safe
     for (int s = 0; s < S; s++) {
@@ -165,8 +165,8 @@ void CollapsedSampling::DFSSample(Document &doc) {
                 if (node->depth == l && !node->is_collapsed)
                     last_is_instantiated = max(last_is_instantiated, node->pos);
 
-            int num_instantiated = last_is_instantiated + 1;
-            int num_collapsed = K - num_instantiated;
+            TTopic num_instantiated = (TTopic)(last_is_instantiated + 1);
+            TTopic num_collapsed = K - num_instantiated;
 
             scores[l] = WordScore(doc, l, num_instantiated, num_collapsed);
         }
@@ -185,10 +185,10 @@ void CollapsedSampling::DFSSample(Document &doc) {
                 node->sum_log_prob = scores[node->depth][node->pos] + node->parent->sum_log_prob;
 
             if (node->depth + 1 == L) {
-                prob[i*S+s] = (float)(node->sum_log_prob + node->sum_log_weight);
+                prob[i*S+s] = (TProb)(node->sum_log_prob + node->sum_log_weight);
             } else {
                 if (new_topic)
-                    prob[i * S + s] = (float) (node->sum_log_prob + node->sum_log_weight +
+                    prob[i * S + s] = (TProb) (node->sum_log_prob + node->sum_log_weight +
                                           emptyProbability[node->depth]);
             }
         }
@@ -214,7 +214,7 @@ std::vector<double> CollapsedSampling::WordScore(Document &doc, int l,
 
     auto K = num_instantiated + num_collapsed;
     std::vector<double> result((size_t) (K + 1));
-    std::vector<float> log_work((size_t) (K + 1));
+    std::vector<TProb> log_work((size_t) (K + 1));
 
     auto begin = doc.BeginLevel(l);
     auto end = doc.EndLevel(l);
@@ -227,7 +227,7 @@ std::vector<double> CollapsedSampling::WordScore(Document &doc, int l,
         auto v = doc.reordered_w[i];
 
         for (TTopic k = num_instantiated; k < K; k++)
-            log_work[k] = (float) (local_count(v, k) + c_offset + b);
+            log_work[k] = (TProb) (local_count(v, k) + c_offset + b);
 
         // VML ln
         vsLn(num_collapsed, log_work.data() + num_instantiated,

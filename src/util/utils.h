@@ -122,7 +122,7 @@ public:
             cumsum[i] = sum += prob[i];
         cumsum.back() = sum * 2 + 1;
 
-        u = std::uniform_real_distribution<double>(0, 1./sum);
+        u = std::uniform_real_distribution<T>(0, 1./sum);
     }
 
     template <class TGenerator>
