@@ -6,6 +6,7 @@
 #include <vector>
 #include <cassert>
 #include <iostream>
+#include <stdexcept>
 
 #define show(x) printf("%s : %d\n", #x, x);
 #define showpid(x) printf("pid :\t%d | %s : %d\n", process_id, #x, x);
@@ -143,11 +144,13 @@ private:
 
 template<class T>
 void Permute(std::vector<T> &a, std::vector<int> perm) {
+    if (a.size() != perm.size())
+        throw std::runtime_error("Incorrect size");
+
     std::vector<T> original = a;
     std::fill(a.begin(), a.end(), 0);
-    for (size_t i = 0; i < perm.size(); i++)
-        if (perm[i] != -1)
-            a[perm[i]] = original[i];
+    for (size_t i = 0; i < a.size(); i++)
+        a[i] = original[perm[i]];
 }
 
 

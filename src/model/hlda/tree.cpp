@@ -78,6 +78,7 @@ void Tree::GetPath(Node *leaf, Path &path) {
 std::vector<int> Tree::Compress(int l) {
     auto nodes = GetAllNodes();
     std::vector<int> result((size_t) NumNodes(l), -1);
+    std::vector<int> perm; perm.reserve((size_t) NumNodes(l));
 
     // Sort according to 1. is_collapsed, 2. num_docs
     vector<pair<size_t, int>> rank;
@@ -90,8 +91,10 @@ std::vector<int> Tree::Compress(int l) {
     reverse(rank.begin(), rank.end());
 
     // Map the numbers
-    for (int i = 0; i < (int) rank.size(); i++)
+    for (int i = 0; i < (int) rank.size(); i++) {
         result[rank[i].second] = i;
+        perm.push_back(rank[i].second);
+    }
 
     // Change pos
     for (auto *node: nodes)
@@ -103,7 +106,7 @@ std::vector<int> Tree::Compress(int l) {
     for (size_t i = 0; i < rank.size(); i++)
         idpool[l].Allocate();
 
-    return result;
+    return perm;
 }
 
 int Tree::NumTopics() {
