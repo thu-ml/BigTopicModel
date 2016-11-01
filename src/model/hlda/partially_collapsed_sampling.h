@@ -29,6 +29,7 @@ protected:
     int threshold;
 
     bool sample_phi;
+    bool delayed_update;
 };
 
 

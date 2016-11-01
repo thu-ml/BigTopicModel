@@ -20,6 +20,7 @@ PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, ve
                           topic_limit),
         minibatch_size(minibatch_size), threshold(threshold), sample_phi(sample_phi) {
     current_it = -1;
+    delayed_update = false;
 }
 
 void PartiallyCollapsedSampling::Initialize() {
@@ -55,6 +56,7 @@ void PartiallyCollapsedSampling::Initialize() {
     cout << "Initialized with " << tree.NumTopics() << " topics." << endl;
 
     SamplePhi();
+    delayed_update = true;
 }
 
 void PartiallyCollapsedSampling::Estimate() {
@@ -129,16 +131,18 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
             --cdl[l];
         }
 
-        for (TLen i = 0; i < L; i++) {
-            //prob[i] = (alpha[i] + cdl[i]) * prob_data(n, i);
-            if (is_collapsed[i])
-                prob[i] = (cdl[i] + alpha[i]) *
-                          (count[i](v, pos[i]) + beta[i]) /
-                          (ck[i][pos[i]] + beta[i] * corpus.V);
-            else {
-                prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
-            }
-        }
+        if (delayed_update)
+            for (TLen i = 0; i < L; i++)
+                prob[i] = (alpha[i] + cdl[i]) * prob_data(n, i);
+        else
+            for (TLen i = 0; i < L; i++)
+                if (is_collapsed[i])
+                    prob[i] = (cdl[i] + alpha[i]) *
+                              (count[i](v, pos[i]) + beta[i]) /
+                              (ck[i][pos[i]] + beta[i] * corpus.V);
+                else {
+                    prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
+                }
 
         l = (TTopic) DiscreteSample(prob.begin(), prob.end(), generator);
         doc.z[n] = l;
