@@ -5,6 +5,7 @@
 #ifndef HLDA_BASEHLDA_H
 #define HLDA_BASEHLDA_H
 
+#include <atomic>
 #include <vector>
 #include <string>
 #include "matrix.h"
@@ -50,7 +51,8 @@ protected:
     std::vector<Matrix<TProb> > phi;        // Depth * V * K
     std::vector<Matrix<TProb> > log_phi;
 
-    std::vector<Matrix<TCount> > count;
+    //std::vector<Matrix<TCount> > count;
+    std::vector<Matrix<std::atomic<TCount>> > count;
 
     Matrix<TProb> log_normalization;
 
