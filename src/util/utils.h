@@ -34,124 +34,121 @@ do {
 } while(0);
  */
 
-/*class dirichlet_distribution {
+extern std::uniform_real_distribution<double> u01;
+
+template<class TIterator, class TGenerator>
+int DiscreteSample(TIterator begin, TIterator end, TGenerator &generator) {
+    if (begin == end)
+        throw std::runtime_error("Incorrect range for DiscreteSample");
+
+    double prob_sum = 0;
+    for (auto it = begin; it != end; it++) prob_sum += *it;
+
+    double u = u01(generator) * prob_sum;
+    for (auto it = begin; it != end; it++) {
+        u -= *it;
+        if (u <= 0)
+            return it - begin;
+    }
+    return (end - begin) - 1;
+};
+
+template<class TIterator>
+void Softmax(TIterator begin, TIterator end) {
+    double maximum = *std::max_element(begin, end);
+    double sum = 0;
+    for (auto it = begin; it != end; it++) {
+        *it = expf(*it - maximum);
+        sum += *it;
+    }
+    double inv_sum = 1. / sum;
+    for (auto it = begin; it != end; it++)
+        *it *= inv_sum;
+}
+
+// lgamma(start+len) - lgamma(start)
+extern double LogGammaDifference(double start, int len);
+
+extern double LogSum(double log_a, double log_b);
+
+template<class T>
+class beta_distribution {
 public:
-    dirichlet_distribution(TProb alpha, TTopic K) : alpha(alpha), K(K) { }
+    beta_distribution(T alpha, T beta) :
+            gam1(alpha), gam2(beta) {}
 
-    template<class T>
-    std::vector<TProb> operator()(T &generator) {
-        double sum = 0;
-        std::gamma_distribution<TProb> gamma(alpha);
-        std::vector<TProb> result(K);
-        for (TTopic k = 0; k < K; k++)
-            sum += (result[k] = gamma(generator));
-        for (TTopic k = 0; k < K; k++)
-            result[k] /= sum;
+    template<class TGenerator>
+    T operator()(TGenerator &generator) {
+        T a = gam1(generator);
+        T b = gam2(generator);
+        return a / (a + b);
+    }
 
+private:
+    std::gamma_distribution<T> gam1, gam2;
+};
+
+template<class T>
+class dirichlet_distribution {
+public:
+    dirichlet_distribution(std::vector<T> &prob) {
+        gammas.resize(prob.size());
+        for (size_t i = 0; i < prob.size(); i++)
+            gammas[i] = std::gamma_distribution<T>(prob[i]);
+    }
+
+    template<class TGenerator>
+    std::vector<T> operator()(TGenerator &generator) {
+        std::vector<T> result(gammas.size());
+        T sum = 0;
+        for (size_t n = 0; n < gammas.size(); n++)
+            sum += result[n] = gammas[n](generator);
+        for (auto &r: result)
+            r /= sum;
         return std::move(result);
     }
 
 private:
-    TProb alpha;
-    TTopic K;
-};*/
+    std::vector<std::gamma_distribution<T>> gammas;
+};
 
-/*
-void inplace_vector_add(std::vector<TProb> &a, const std::vector<TProb> &b) {
-    for (size_t i = 0; i < a.size(); i++)
-        a[i] += b[i];
+template <class T>
+class linear_discrete_distribution {
+public:
+    linear_discrete_distribution(std::vector<T> &prob) {
+        cumsum.resize(prob.size());
+        sum = 0;
+        for (size_t i=0; i<prob.size(); i++)
+            cumsum[i] = sum += prob[i];
+        cumsum.back() = sum * 2 + 1;
+
+        u = std::uniform_real_distribution<double>(0, 1./sum);
+    }
+
+    template <class TGenerator>
+    int operator() (TGenerator &generator) {
+        T pos = u(generator);
+        int i;
+        for (i = 0; i < (int)cumsum.size() && cumsum[i] < pos; i++);
+        return i;
+    }
+
+private:
+    T sum;
+    std::uniform_real_distribution<T> u;
+    std::vector<T> cumsum;
+};
+
+#define UNUSED(x) (void)(x)
+
+template<class T>
+void Permute(std::vector<T> &a, std::vector<int> perm) {
+    std::vector<T> original = a;
+    std::fill(a.begin(), a.end(), 0);
+    for (size_t i = 0; i < perm.size(); i++)
+        if (perm[i] != -1)
+            a[perm[i]] = original[i];
 }
 
-void normalize_by_column(std::vector<std::vector<TProb>> &a) {
-    size_t nrows = a.size();
-    if (nrows == 0) return;
-    size_t ncols = a[0].size();
-
-    for (size_t c = 0; c < ncols; c++) {
-        TProb sum = 0;
-        for (size_t r = 0; r < nrows; r++)
-            sum += a[r][c];
-        for (size_t r = 0; r < nrows; r++)
-            a[r][c] /= sum;
-    }
-}
-
-void normalize_by_row(std::vector<std::vector<TProb>> &a) {
-    for (auto &row: a) {
-        TProb sum = 0;
-        for (auto &elem: row)
-            sum += elem;
-        for (auto &elem: row)
-            elem /= sum;
-    }
-}
-
-double trigamma(double x) {
-    using namespace std;
-    double a = 0.0001;
-    double b = 5.0;
-    double b2 = 0.1666666667;
-    double b4 = -0.03333333333;
-    double b6 = 0.02380952381;
-    double b8 = -0.03333333333;
-    double value;
-    double y;
-    double z;
-//
-//  Check the input.
-//
-    assert(x > 0);
-    z = x;
-//
-//  Use small value approximation if X <= A.
-//
-    if (x <= a) {
-        value = 1.0 / x / x;
-        return value;
-    }
-//
-//  Increase argument to ( X + I ) >= B.
-//
-    value = 0.0;
-
-    while (z < b) {
-        value = value + 1.0 / z / z;
-        z = z + 1.0;
-    }
-//
-//  Apply asymptotic formula if argument is B or greater.
-//
-    y = 1.0 / z / z;
-
-    value = value + 0.5 *
-                    y + (1.0
-                         + y * (b2
-                                + y * (b4
-                                       + y * (b6
-                                              + y * b8)))) / z;
-
-    return value;
-}
-
-double digamma(double x) {
-    double r, f, t;
-
-    r = 0;
-
-    while (x <= 5) {
-        r -= 1 / x;
-        x += 1;
-    }
-
-    f = 1 / (x * x);
-
-    t = f * (-1 / 12.0 + f * (1 / 120.0 + f * (-1 / 252.0 + f * (1 / 240.0 + f * (-1 / 132.0
-                                                                                  + f * (691 / 32760.0 + f *
-                                                                                                         (-1 / 12.0 +
-                                                                                                          f * 3617 /
-                                                                                                          8160.0)))))));
-
-    return r + log(x) - 0.5 / x + t;
-}*/
 
 #endif
