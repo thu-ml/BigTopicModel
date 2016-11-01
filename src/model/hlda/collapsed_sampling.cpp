@@ -86,7 +86,7 @@ void CollapsedSampling::Estimate() {
 void CollapsedSampling::SampleZ(Document &doc, bool decrease_count, bool increase_count) {
     TLen N = (TLen) doc.z.size();
     auto pos = doc.GetPos();
-    std::vector<double> prob((size_t) L);
+    std::vector<TProb> prob((size_t) L);
     std::vector<TCount> cdl((size_t) L);
     for (auto l: doc.z) cdl[l]++;
 

@@ -101,7 +101,7 @@ void PartiallyCollapsedSampling::Estimate() {
 
 void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, bool increase_count) {
     std::vector<TCount> cdl((size_t) L);
-    std::vector<double> prob((size_t) L);
+    std::vector<TProb> prob((size_t) L);
     for (auto k: doc.z) cdl[k]++;
 
     auto pos = doc.GetPos();
@@ -126,7 +126,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
                 prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
             }
 
-        l = DiscreteSample(prob.begin(), prob.end(), generator);
+        l = (TTopic) DiscreteSample(prob.begin(), prob.end(), generator);
         doc.z[n] = l;
 
         if (increase_count) {
