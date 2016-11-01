@@ -171,7 +171,7 @@ void CollapsedSampling::DFSSample(Document &doc) {
             scores[l] = WordScore(doc, l, num_instantiated, num_collapsed);
         }
 
-        vector<double> emptyProbability((size_t) L, 0);
+        vector<TProb> emptyProbability((size_t) L, 0);
         for (int l = L - 2; l >= 0; l--)
             emptyProbability[l] = emptyProbability[l + 1] + scores[l + 1].back();
 
