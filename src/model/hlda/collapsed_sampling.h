@@ -10,7 +10,7 @@
 class CollapsedSampling : public BaseHLDA {
 public:
     CollapsedSampling(Corpus &corpus, int L,
-                      std::vector<double> alpha, std::vector<double> beta, std::vector<double> gamma,
+                      std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
                       int num_iters,
                       int mc_samples, int mc_iters,
                       int topic_limit);

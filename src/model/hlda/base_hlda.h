@@ -19,7 +19,7 @@ class BaseHLDA {
 
 public:
     BaseHLDA(Corpus &corpus, int L,
-             std::vector<double> alpha, std::vector<double> beta, std::vector<double> gamma,
+             std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
              int num_iters, int mc_samples);
 
     virtual void Initialize() = 0;
@@ -37,9 +37,9 @@ protected:
     Tree tree;
     Corpus &corpus;
     int L;
-    std::vector<double> alpha;
+    std::vector<TProb> alpha;
     double alpha_bar;
-    std::vector<double> beta;        // Beta for each layer
+    std::vector<TProb> beta;        // Beta for each layer
     std::vector<double> gamma;
     int num_iters, mc_samples;
     xorshift generator;

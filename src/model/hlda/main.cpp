@@ -81,8 +81,12 @@ int main(int argc, char **argv) {
     }
 
     // Parse alpha, beta and gamma
-    auto alpha = Parse(FLAGS_alpha, FLAGS_L, "alpha");
-    auto beta = Parse(FLAGS_beta, FLAGS_L, "beta");
+    auto alpha_double = Parse(FLAGS_alpha, FLAGS_L, "alpha");
+    auto beta_double = Parse(FLAGS_beta, FLAGS_L, "beta");
+    vector<TProb> alpha;
+    vector<TProb> beta;
+    for (size_t i = 0; i < alpha_double.size(); i++) alpha.push_back((TProb)alpha_double[i]);
+    for (size_t i = 0; i < beta_double.size(); i++) beta.push_back((TProb)beta_double[i]);
     auto gamma = Parse(FLAGS_gamma, FLAGS_L-1, "gamma");
 
     if (FLAGS_algo != "pcs" && FLAGS_algo != "cs" && FLAGS_algo != "es" && FLAGS_algo != "is")

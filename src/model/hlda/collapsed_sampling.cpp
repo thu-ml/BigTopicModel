@@ -13,7 +13,7 @@
 using namespace std;
 
 CollapsedSampling::CollapsedSampling(Corpus &corpus, int L,
-                                     std::vector<double> alpha, std::vector<double> beta, vector<double> gamma,
+                                     std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
                                      int num_iters, int mc_samples, int mc_iters,
                                      int topic_limit) :
         BaseHLDA(corpus, L, alpha, beta, gamma, num_iters, mc_samples), mc_iters(mc_iters),

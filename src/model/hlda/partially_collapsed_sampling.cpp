@@ -11,7 +11,7 @@
 
 using namespace std;
 
-PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, vector<double> alpha, vector<double> beta,
+PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, vector<TProb> alpha, vector<TProb> beta,
                                                        vector<double> gamma,
                                                        int num_iters, int mc_samples, int mc_iters,
                                                        size_t minibatch_size,

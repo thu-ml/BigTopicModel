@@ -10,7 +10,7 @@
 class PartiallyCollapsedSampling : public CollapsedSampling {
 public:
     PartiallyCollapsedSampling(Corpus &corpus, int L,
-                               std::vector<double> alpha, std::vector<double> beta, std::vector<double> gamma,
+                               std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
                                int num_iters, int mc_samples, int mc_iters, size_t minibatch_size,
                                int topic_limit, int threshold, bool sample_phi);
 

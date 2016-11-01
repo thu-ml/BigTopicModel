@@ -10,7 +10,7 @@
 using namespace std;
 
 BaseHLDA::BaseHLDA(Corpus &corpus, int L,
-                   std::vector<double> alpha, std::vector<double> beta, vector<double> gamma,
+                   std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
                    int num_iters, int mc_samples) :
         tree(L, gamma),
         corpus(corpus), L(L), alpha(alpha), beta(beta), gamma(gamma),
