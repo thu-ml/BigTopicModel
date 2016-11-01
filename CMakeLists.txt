@@ -21,12 +21,12 @@ endif()
 include_directories(${MPI_INCLUDE_PATH})
 include_directories(${ZLIB_INCLUDE_PATH})
 #include_directories(third_party/BigMPI/src)
-include_directories(third_party/glog/src)
+include_directories(third_party/glog/build/include)
 include_directories(third_party/gflags/build/include)
 
 # TODO check MPI_Count and MPI_Aint is 8 bytes
 #set(BIGMPI ${BigTopicModel_SOURCE_DIR}/third_party/BigMPI/build/src/libbigmpi.so)
-set(GLOG ${BigTopicModel_SOURCE_DIR}/third_party/glog/build/libglog.a)
+set(GLOG ${BigTopicModel_SOURCE_DIR}/third_party/glog/build/lib/libglog.a)
 set(GFLAGS ${BigTopicModel_SOURCE_DIR}/third_party/gflags/build/lib/libgflags.a)
 
 add_subdirectory(src/util)

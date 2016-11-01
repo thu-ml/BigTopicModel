@@ -12,28 +12,24 @@ if [ ! -d "$CUR/third_party" ]; then
 	pushd third_party
 	DEP=$CUR/third_party
 	if [ ! -d "$DEP/glog" ]; then
-		wget https://github.com/google/glog/archive/master.zip; mv master.zip glog.zip
-		unzip glog.zip
-		mv glog-master glog
+		wget https://github.com/google/glog/archive/v0.3.4.zip
+		unzip v0.3.4.zip
+		ln -s glog-0.3.4 glog
 		pushd glog
-		sed -i '1s/.*/cmake_minimum_required (VERSION 2.8.12)/' CMakeLists.txt
 		mkdir -p build
-		pushd build
-		cmake ..
-		make
-		popd
+		./configure --prefix=$PWD/build
+		make -j install
 		popd
 	fi
 	if [ ! -d "$DEP/gflags" ]; then
-		wget https://github.com/gflags/gflags/archive/master.zip; mv master.zip gflags.zip
-		unzip gflags.zip
-		mv gflags-master gflags
+		wget https://github.com/gflags/gflags/archive/v2.1.2.zip
+		unzip v2.1.2.zip
+		ln -s gflags-2.1.2 gflags
 		pushd gflags
-		sed -i '79i add_definitions(-DGFLAGS_NAMESPACE=google)' CMakeLists.txt
 		mkdir -p build
 		pushd build
 		cmake ..
-		make
+		make -j
 		popd
 		popd
 	fi
