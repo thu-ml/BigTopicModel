@@ -26,7 +26,7 @@ protected:
 
     void DFSSample(Document &doc);
 
-    virtual std::vector<double>
+    virtual std::vector<TProb>
     WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) override;
 
     virtual void InitializeTreeWeight();

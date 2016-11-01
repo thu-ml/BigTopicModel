@@ -156,7 +156,7 @@ void CollapsedSampling::DFSSample(Document &doc) {
         }
         doc.PartitionWByZ(L);
 
-        vector<vector<double> > scores((size_t) L);
+        vector<vector<TProb> > scores((size_t) L);
         for (TLen l = 0; l < L; l++) {
             // Figure out how many collapsed and how many instantiated
             TTopic K = (TTopic) tree.NumNodes(l);
@@ -207,13 +207,13 @@ void CollapsedSampling::DFSSample(Document &doc) {
     tree.GetPath(current, doc.c);
 }
 
-std::vector<double> CollapsedSampling::WordScore(Document &doc, int l,
+std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
                                                 TTopic num_instantiated, TTopic num_collapsed) {
     auto b = beta[l];
     auto b_bar = b * corpus.V;
 
     auto K = num_instantiated + num_collapsed;
-    std::vector<double> result((size_t) (K + 1));
+    std::vector<TProb> result((size_t) (K + 1));
     std::vector<TProb> log_work((size_t) (K + 1));
 
     auto begin = doc.BeginLevel(l);
@@ -250,7 +250,7 @@ std::vector<double> CollapsedSampling::WordScore(Document &doc, int l,
         result[k] -= lgamma(ck[l][k] + b_bar + w_count) - lgamma(ck[l][k] + b_bar);
 
     result.back() -= lgamma(b_bar + w_count) - lgamma(b_bar);
-    return result;
+    return std::move(result);
 }
 
 double CollapsedSampling::Perplexity() {
