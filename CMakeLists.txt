@@ -7,11 +7,11 @@ project (BigTopicModel)
 # on juncluster, cmake find intel mpi by default, so we need to specify mpicxx to get mpicxx of openmpi
 # using intel mpi won't need set MPI_CXX_COMPILER
 #set(MPI_CXX_COMPILER "mpicxx")
-set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native -inline-factor=400")
 
-#add_subdirectory(third_party/googletest)
-#enable_testing()
-#include_directories(${googletest_SOURCE_DIR}/include ${googletest_SOURCE_DIR})
+add_subdirectory(third_party/googletest)
+enable_testing()
+
+set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native -inline-factor=400")
 
 find_package(MPI)
 find_package(ZLIB) 
@@ -27,6 +27,7 @@ include_directories(${ZLIB_INCLUDE_PATH})
 #include_directories(third_party/BigMPI/src)
 include_directories(third_party/glog/build/include)
 include_directories(third_party/gflags/build/include)
+include_directories(${googletest_SOURCE_DIR}/include ${googletest_SOURCE_DIR})
 
 # TODO check MPI_Count and MPI_Aint is 8 bytes
 #set(BIGMPI ${BigTopicModel_SOURCE_DIR}/third_party/BigMPI/build/src/libbigmpi.so)
@@ -38,7 +39,7 @@ add_subdirectory(src/engine)
 add_subdirectory(src/model)
 add_subdirectory(src/formatter)
 add_subdirectory(src/benchmark)
-#add_subdirectory(test)
+add_subdirectory(test)
 #add_subdirectory(src/test)
 configure_file(src/run.py run.py)
 configure_file(src/run_tianhe.py run_tianhe.py)
