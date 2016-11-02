@@ -87,8 +87,16 @@ public:
         _data[r*_c_capacity + c]++;
     }
 
+    void Inc(int r, int c, T delta) {
+        _data[r*_c_capacity + c] += delta;
+    }
+
     void Dec(int r, int c) {
         _data[r*_c_capacity + c]--;
+    }
+
+    void Dec(int r, int c, T delta) {
+        _data[r*_c_capacity + c] -= delta;
     }
 
 private:

@@ -33,7 +33,7 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
 
     for (auto &m: phi) m.SetR(corpus.V, true);
     for (auto &m: log_phi) m.SetR(corpus.V, true);
-    for (auto &m: count) m.SetR(corpus.V, true);
+    for (auto &m: count) m.SetR(corpus.V);
 
     for (TLen l = 0; l < L; l++)
         for (int i = 0; i < 1000; i++)
@@ -68,7 +68,7 @@ std::string BaseHLDA::TopWords(int l, int id) {
     vector<pair<int, int>> rank((size_t) V);
     long long sum = 0;
     for (int v = 0; v < V; v++) {
-        int c = count[l](v, id);
+        auto c = count[l].Get(v, id);
         rank[v] = make_pair(-c, v);
         sum += c;
     }

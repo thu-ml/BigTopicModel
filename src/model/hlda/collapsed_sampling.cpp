@@ -95,20 +95,20 @@ void CollapsedSampling::SampleZ(Document &doc, bool decrease_count, bool increas
         TTopic l = doc.z[n];
 
         if (decrease_count) {
-            --count[l](v, pos[l]);
+            count[l].Dec(v, pos[l]);
             --ck[l][pos[l]];
             --cdl[l];
         }
 
         for (TTopic i = 0; i < L; i++)
             prob[i] = (cdl[i] + alpha[i]) *
-                      (count[i](v, pos[i]) + beta[i]) /
+                      (count[i].Get(v, pos[i]) + beta[i]) /
                       (ck[i][pos[i]] + beta[i] * corpus.V);
 
         l = (TTopic)DiscreteSample(prob.begin(), prob.end(), generator);
 
         if (increase_count) {
-            ++count[l](v, pos[l]);
+            count[l].Inc(v, pos[l]);
             ++ck[l][pos[l]];
             ++cdl[l];
         }
@@ -227,7 +227,7 @@ std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
         auto v = doc.reordered_w[i];
 
         for (TTopic k = num_instantiated; k < K; k++)
-            log_work[k] = (TProb) (local_count(v, k) + c_offset + b);
+            log_work[k] = (TProb) (local_count.Get(v, k) + c_offset + b);
 
         // VML ln
         vsLn(num_collapsed, log_work.data() + num_instantiated,
@@ -277,7 +277,7 @@ double CollapsedSampling::Perplexity() {
             double prob = 0;
             TWord v = doc.w[n];
             for (int l = 0; l < L; l++) {
-                double phi = (count[l](v, pos[l]) + beta[l]) /
+                double phi = (count[l].Get(v, pos[l]) + beta[l]) /
                              (ck[l][pos[l]] + beta[l] * corpus.V);
 
                 prob += theta[l] * phi;
@@ -297,9 +297,9 @@ void CollapsedSampling::Check() {
     for (TLen l = 0; l < L; l++) {
         for (TTopic k = 0; k < tree.NumNodes(l); k++)
             for (TWord v = 0; v < corpus.V; v++) {
-                if (count[l](v, k) < 0)
+                if (count[l].Get(v, k) < 0) // TODO
                     throw runtime_error("Error!");
-                sum += count[l](v, k);
+                sum += count[l].Get(v, k);
             }
     }
     if (sum != corpus.T)
@@ -321,7 +321,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
         TLen l = doc.z[n];
         TTopic k = pos[l];
         TWord v = doc.w[n];
-        count[l](v, k) += delta;
+        count[l].Inc(v, k, delta); // TODO: correct?
         ck[l][k] += delta;
     }
 }

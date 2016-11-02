@@ -116,7 +116,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
     for (TLen i = 0; i < L; i++)
         if (is_collapsed[i])
             for (int n = 0; n < (int)doc.z.size(); n++)
-                prob_data(n, i) = (count[i](doc.w[n], pos[i]) + beta[i]) /
+                prob_data(n, i) = (count[i].Get(doc.w[n], pos[i]) + beta[i]) /
                                   (ck[i][pos[i]] + beta[i] * corpus.V);
         else
             for (int n = 0; n < (int)doc.z.size(); n++)
@@ -126,7 +126,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
         if (decrease_count) {
-            --count[l](v, pos[l]);
+            count[l].Dec(v, pos[l]);
             --ck[l][pos[l]];
             --cdl[l];
         }
@@ -138,7 +138,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
             for (TLen i = 0; i < L; i++)
                 if (is_collapsed[i])
                     prob[i] = (cdl[i] + alpha[i]) *
-                              (count[i](v, pos[i]) + beta[i]) /
+                              (count[i].Get(v, pos[i]) + beta[i]) /
                               (ck[i][pos[i]] + beta[i] * corpus.V);
                 else {
                     prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
@@ -148,7 +148,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
         doc.z[n] = l;
 
         if (increase_count) {
-            ++count[l](v, pos[l]);
+            count[l].Inc(v, pos[l]);
             ++ck[l][pos[l]];
             ++cdl[l];
         }
@@ -195,7 +195,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
                 inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck[l][k]);
             for (TWord v = 0; v < corpus.V; v++) {
                 for (TTopic k = 0; k < K; k++) {
-                    TProb prob = (count[l](v, k) + beta[l]) * inv_normalization[k];
+                    TProb prob = (count[l].Get(v, k) + beta[l]) * inv_normalization[k];
                     phi[l](v, k) = prob;
                     log_phi[l](v, k) = prob;
                 }
@@ -209,7 +209,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
             for (TTopic k = 0; k < K; k++) {
                 TProb sum = 0;
                 for (TWord v = 0; v < corpus.V; v++) {
-                    TProb concentration = (TProb)(count[l](v, k) + beta[l]);
+                    TProb concentration = (TProb)(count[l].Get(v, k) + beta[l]);
                     gamma_distribution<TProb> gammarnd(concentration);
                     TProb p = gammarnd(generator);
                     phi[l](v, k) = p;

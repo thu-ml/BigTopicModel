@@ -13,6 +13,8 @@
 #include "xorshift.h"
 #include "types.h"
 #include "document.h"
+#include "atomic_matrix.h"
+#include "atomic_vector.h"
 
 class Corpus;
 
@@ -51,8 +53,7 @@ protected:
     std::vector<Matrix<TProb> > phi;        // Depth * V * K
     std::vector<Matrix<TProb> > log_phi;
 
-    //std::vector<Matrix<TCount> > count;
-    std::vector<Matrix<TCount> > count;
+    std::vector<AtomicMatrix<TCount>> count;
 
     Matrix<TProb> log_normalization;
 
