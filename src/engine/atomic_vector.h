@@ -57,13 +57,13 @@ public:
 	}
 
     void Permute(std::vector<int> permutation) {
-        if (_size != permutation.size())
+        if (_size < permutation.size())
             throw std::runtime_error("Incorrect size");
 
         auto *old_data = _data;
         _data = new std::atomic<T>[_capacity];
         memset(_data, 0, sizeof(std::atomic<T>)*_capacity);
-        for (size_t i = 0; i < _size; i++)
+        for (size_t i = 0; i < permutation.size(); i++)
             _data[i].store(old_data[permutation[i]].load(
                     std::memory_order_relaxed),
                     std::memory_order_relaxed);

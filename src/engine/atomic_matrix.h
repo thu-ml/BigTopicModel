@@ -60,8 +60,11 @@ public:
     }
 
     void PermuteColumns(std::vector<int> permutation) {
-        if (permutation.size() != _c_size)
+        if (permutation.size() > _c_size)
             throw std::runtime_error("Incorrect permutation");
+        for (auto k: permutation)
+            if (k >= _c_size)
+                throw std::runtime_error("Incorrect permutation");
 
         auto *old_data = _data;
 
@@ -69,7 +72,7 @@ public:
         memset(_data, 0, sizeof(std::atomic<T>) * _r_capacity * _c_capacity);
 
         for (int r = 0; r < _r_size; r++)
-            for (int c = 0; c < _c_size; c++)
+            for (int c = 0; c < (int)permutation.size(); c++)
                 _data[r*_c_capacity+c].store(
                         old_data[r*_c_capacity+permutation[c]].load(
                                 std::memory_order_relaxed),

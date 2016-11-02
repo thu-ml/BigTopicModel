@@ -123,11 +123,8 @@ void CollapsedSampling::SampleZ(Document &doc, bool decrease_count, bool increas
 }
 
 void CollapsedSampling::SampleC(Document &doc, bool decrease_count, bool increase_count) {
-    // Try delayed update for SampleC
-    if (decrease_count) {
-        UpdateDocCount(doc, -1);
-        tree.UpdateNumDocs(doc.c.back(), -1);
-    }
+    if (decrease_count) UpdateDocCount(doc, -1);
+    auto old_c = doc.c;
 
     // Compute NCRP probability
     InitializeTreeWeight();
@@ -140,6 +137,9 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count, bool increas
         UpdateDocCount(doc, 1);
         tree.UpdateNumDocs(doc.c.back(), 1);
     }
+
+    if (decrease_count)
+        tree.UpdateNumDocs(old_c.back(), -1);
 }
 
 void CollapsedSampling::DFSSample(Document &doc) {
