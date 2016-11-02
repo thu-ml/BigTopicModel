@@ -37,7 +37,7 @@ protected:
 
     void UpdateDocCount(Document &doc, int delta);
 
-    std::vector<std::vector<TCount>> ck;
+    std::vector<AtomicVector<TCount>> ck;
 
     int current_it, mc_iters, topic_limit;
 

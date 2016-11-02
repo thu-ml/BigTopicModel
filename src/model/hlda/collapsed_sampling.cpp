@@ -21,7 +21,7 @@ CollapsedSampling::CollapsedSampling(Corpus &corpus, int L,
 
 void CollapsedSampling::Initialize() {
     ck.resize((size_t) L);
-    ck[0].push_back(0);
+    ck[0].EmplaceBack(0);
     current_it = -1;
 
     cout << "Start initialize..." << endl;
@@ -54,7 +54,7 @@ void CollapsedSampling::Estimate() {
         for (TLen l = 0; l < L; l++) {
             auto perm = tree.Compress(l);
             count[l].PermuteColumns(perm);
-            Permute(ck[l], perm);
+            ck[l].Permute(perm);
         }
 
         double time = clk.toc();
@@ -96,20 +96,20 @@ void CollapsedSampling::SampleZ(Document &doc, bool decrease_count, bool increas
 
         if (decrease_count) {
             count[l].Dec(v, pos[l]);
-            --ck[l][pos[l]];
+            ck[l].Dec(pos[l]);
             --cdl[l];
         }
 
         for (TTopic i = 0; i < L; i++)
             prob[i] = (cdl[i] + alpha[i]) *
                       (count[i].Get(v, pos[i]) + beta[i]) /
-                      (ck[i][pos[i]] + beta[i] * corpus.V);
+                      (ck[i].Get(pos[i]) + beta[i] * corpus.V);
 
         l = (TTopic)DiscreteSample(prob.begin(), prob.end(), generator);
 
         if (increase_count) {
             count[l].Inc(v, pos[l]);
-            ++ck[l][pos[l]];
+            ck[l].Inc(pos[l]);
             ++cdl[l];
         }
         doc.z[n] = l;
@@ -247,7 +247,8 @@ std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
 
     auto w_count = end - begin;
     for (TTopic k = num_instantiated; k < K; k++)
-        result[k] -= lgamma(ck[l][k] + b_bar + w_count) - lgamma(ck[l][k] + b_bar);
+        result[k] -= lgamma(ck[l].Get(k) + b_bar + w_count) -
+                lgamma(ck[l].Get(k) + b_bar);
 
     result.back() -= lgamma(b_bar + w_count) - lgamma(b_bar);
     return std::move(result);
@@ -278,7 +279,7 @@ double CollapsedSampling::Perplexity() {
             TWord v = doc.w[n];
             for (int l = 0; l < L; l++) {
                 double phi = (count[l].Get(v, pos[l]) + beta[l]) /
-                             (ck[l][pos[l]] + beta[l] * corpus.V);
+                             (ck[l].Get(pos[l]) + beta[l] * corpus.V);
 
                 prob += theta[l] * phi;
             }
@@ -312,7 +313,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     for (TLen l = 0; l < L; l++) {
         TTopic K = (TTopic) tree.NumNodes(l);
         count[l].SetC(K);
-        while (ck[l].size() < (size_t) K) ck[l].push_back(0);
+        ck[l].Resize((size_t) K);
     }
 
     auto pos = doc.GetPos();
@@ -322,7 +323,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
         TTopic k = pos[l];
         TWord v = doc.w[n];
         count[l].Inc(v, k, delta); // TODO: correct?
-        ck[l][k] += delta;
+        ck[l].Inc(k, delta);
     }
 }
 

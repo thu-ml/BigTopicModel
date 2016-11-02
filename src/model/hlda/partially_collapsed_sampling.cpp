@@ -26,7 +26,7 @@ PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, ve
 void PartiallyCollapsedSampling::Initialize() {
     //CollapsedSampling::Initialize();
     ck.resize((size_t) L);
-    ck[0].push_back(0);
+    ck[0].EmplaceBack(0);
     current_it = -1;
 
     cout << "Start initialize..." << endl;
@@ -117,7 +117,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
         if (is_collapsed[i])
             for (int n = 0; n < (int)doc.z.size(); n++)
                 prob_data(n, i) = (count[i].Get(doc.w[n], pos[i]) + beta[i]) /
-                                  (ck[i][pos[i]] + beta[i] * corpus.V);
+                                  (ck[i].Get(pos[i]) + beta[i] * corpus.V);
         else
             for (int n = 0; n < (int)doc.z.size(); n++)
                 prob_data(n, i) = phi[i](doc.w[n], pos[i]);
@@ -127,7 +127,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
         TTopic l = doc.z[n];
         if (decrease_count) {
             count[l].Dec(v, pos[l]);
-            --ck[l][pos[l]];
+            ck[l].Dec(pos[l]);
             --cdl[l];
         }
 
@@ -139,7 +139,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
                 if (is_collapsed[i])
                     prob[i] = (cdl[i] + alpha[i]) *
                               (count[i].Get(v, pos[i]) + beta[i]) /
-                              (ck[i][pos[i]] + beta[i] * corpus.V);
+                              (ck[i].Get(pos[i]) + beta[i] * corpus.V);
                 else {
                     prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
                 }
@@ -149,7 +149,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc, bool decrease_count, boo
 
         if (increase_count) {
             count[l].Inc(v, pos[l]);
-            ++ck[l][pos[l]];
+            ck[l].Inc(pos[l]);
             ++cdl[l];
         }
     }
@@ -175,7 +175,7 @@ void PartiallyCollapsedSampling::SamplePhi() {
 
         count[l].PermuteColumns(perm);
 
-        Permute(ck[l], perm);
+        ck[l].Permute(perm);
     }
 
     for (auto *node: nodes)
@@ -192,7 +192,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
 
             vector<float> inv_normalization(K);
             for (TTopic k = 0; k < K; k++)
-                inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck[l][k]);
+                inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck[l].Get(k));
             for (TWord v = 0; v < corpus.V; v++) {
                 for (TTopic k = 0; k < K; k++) {
                     TProb prob = (count[l].Get(v, k) + beta[l]) * inv_normalization[k];
