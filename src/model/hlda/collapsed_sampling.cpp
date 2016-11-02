@@ -318,13 +318,24 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
 
     auto pos = doc.GetPos();
     TLen N = (TLen) doc.z.size();
-    for (TLen n = 0; n < N; n++) {
-        TLen l = doc.z[n];
-        TTopic k = pos[l];
-        TWord v = doc.w[n];
-        count[l].Inc(v, k, delta); // TODO: correct?
-        ck[l].Inc(k, delta);
-    }
+    if (delta == 1)
+        for (TLen n = 0; n < N; n++) {
+            TLen l = doc.z[n];
+            TTopic k = pos[l];
+            TWord v = doc.w[n];
+            count[l].Inc(v, k);
+            ck[l].Inc(k);
+        }
+    else if (delta == -1)
+        for (TLen n = 0; n < N; n++) {
+            TLen l = doc.z[n];
+            TTopic k = pos[l];
+            TWord v = doc.w[n];
+            count[l].Dec(v, k);
+            ck[l].Dec(k);
+        }
+    else
+        throw std::runtime_error("Invalid delta");
 }
 
 void CollapsedSampling::InitializeTreeWeight() {
