@@ -31,9 +31,9 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
 
     alpha_bar = accumulate(alpha.begin(), alpha.end(), 0.0);
 
-    for (auto &m: phi) m.SetR(corpus.V);
-    for (auto &m: log_phi) m.SetR(corpus.V);
-    for (auto &m: count) m.SetR(corpus.V);
+    for (auto &m: phi) m.SetR(corpus.V, true);
+    for (auto &m: log_phi) m.SetR(corpus.V, true);
+    for (auto &m: count) m.SetR(corpus.V, true);
 
     for (TLen l = 0; l < L; l++)
         for (int i = 0; i < 1000; i++)

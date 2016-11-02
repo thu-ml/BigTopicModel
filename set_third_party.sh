@@ -33,6 +33,11 @@ if [ ! -d "$CUR/third_party" ]; then
 		popd
 		popd
 	fi
+	if [ ! -d "$DEP/googletest" ]; then
+		wget https://github.com/google/googletest/archive/release-1.8.0.zip
+		unzip release-1.8.0.zip
+		ln -s googletest-release-1.8.0 googletest
+	fi
 	popd
 else
 	echo "$CUR/third_party already exists, please make sure the code is set up correctlly!"

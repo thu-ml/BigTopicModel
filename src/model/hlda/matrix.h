@@ -15,25 +15,30 @@ class Matrix {
 public:
     Matrix(int R = 1, int C = 1) : R(R), C(C), data(R * C) {}
 
-    void SetR(int new_R) {
-        Resize(new_R, C);
+    void SetR(int new_R, bool fit = false) {
+        Resize(new_R, C, fit);
     }
 
-    void SetC(int new_C) {
-        Resize(R, new_C);
+    void SetC(int new_C, bool fit = false) {
+        Resize(R, new_C, fit);
     }
 
     int GetR() { return R; }
 
     int GetC() { return C; }
 
-    void Resize(int new_R, int new_C) {
+    void Resize(int new_R, int new_C, bool fit = false) {
         if (new_R > R || new_C > C) {
             int old_R = R;
             int old_C = C;
 
-            while (R < new_R) R = R * 2 + 1;
-            while (C < new_C) C = C * 2 + 1;
+            if (fit) {
+                R = new_R;
+                C = new_C;
+            } else {
+                while (R < new_R) R = R * 2 + 1;
+                while (C < new_C) C = C * 2 + 1;
+            }
 
             std::vector<T> old_data = std::move(data);
 
