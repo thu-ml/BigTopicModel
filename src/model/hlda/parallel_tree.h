@@ -5,6 +5,7 @@
 #ifndef BIGTOPICMODEL_PARALLELTREE_H
 #define BIGTOPICMODEL_PARALLELTREE_H
 
+#include <iostream>
 #include <vector>
 #include <mutex>
 #include "id_pool.h"
@@ -83,5 +84,6 @@ private:
     std::mutex tree_mutex;
 };
 
+std::ostream& operator << (std::ostream &out, const ParallelTree::RetTree &tree);
 
 #endif //BIGTOPICMODEL_PARALLELTREE_H

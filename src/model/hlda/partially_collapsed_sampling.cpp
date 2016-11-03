@@ -48,8 +48,16 @@ void PartiallyCollapsedSampling::Initialize() {
             ParallelTree::RetTree ret;
             SampleC(doc, false, true, ret);
             SampleZ(doc, true, true, ret);
+            /*printf("%d\n", d);
+            for (size_t n=0; n<doc.z.size(); n++)
+                printf("%d:%d ", doc.w[n], doc.z[n]);
+            printf("\n");*/
+            //Check(d + 1);
         }
+        Check(d_end);
         SamplePhi();
+        puts("SamplePhi");
+        Check(d_end);
 
         printf("Processed %lu documents, %d topics\n", d_end,
                (int)tree.GetTree().nodes.size());
@@ -67,6 +75,7 @@ void PartiallyCollapsedSampling::Estimate() {
         current_it = it;
         Clock clk;
 
+        Check();
         if (current_it >= mc_iters)
             mc_samples = -1;
 
@@ -76,9 +85,12 @@ void PartiallyCollapsedSampling::Estimate() {
             SampleZ(doc, true, true, ret);
         }
 
+        Check();
         SamplePhi();
+        puts("SamplePhi");
 
         tree.Check();
+        Check();
 
         auto ret = tree.GetTree();
         int num_big_nodes = 0;
@@ -169,11 +181,19 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
 }
 
 void PartiallyCollapsedSampling::SamplePhi() {
+    //cout << tree.GetTree() << endl;
     auto perm = tree.Compress();
     auto ret = tree.GetTree();
+    /*cout << ret << endl;
+    for (int l = 0; l < L; l++) {
+        cout << "row ";
+        for (auto p: perm[l])
+            cout << p << ' ';
+        cout << " c " << count[l].GetC() << endl;
+    }*/
+    PermuteC(perm);
 
     for (TLen l = 0; l < L; l++) {
-
         phi[l].SetC(ret.num_nodes[l]);
         log_phi[l].SetC(ret.num_nodes[l]);
 

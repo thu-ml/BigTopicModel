@@ -26,12 +26,14 @@ protected:
 
     int DFSSample(Document &doc, ParallelTree::RetTree &ret);
 
+    void PermuteC(std::vector<std::vector<int>> &perm);
+
     virtual std::vector<TProb>
     WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) override;
 
     double Perplexity();
 
-    void Check();
+    void Check(int D = -1);
 
     void UpdateDocCount(Document &doc, int delta);
 

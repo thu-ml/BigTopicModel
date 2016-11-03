@@ -120,7 +120,7 @@ std::vector<std::vector<int>> ParallelTree::Compress() {
         num_instantiated[l] = 0;
         for (auto p: rank) {
             pos_map[l].push_back(nodes[p.second]->pos);
-            nodes[p.second]->pos = (int)pos_map[l].size();
+            nodes[p.second]->pos = (int)pos_map[l].size() - 1;
             if (-p.first > threshold)
                 num_instantiated[l]++;
         }
@@ -152,4 +152,19 @@ void ParallelTree::Remove(ParallelTree::Node *node) {
         throw std::runtime_error("Invalid node to remove");
     pchildren.erase(it);
     delete node;
+}
+
+std::ostream& operator << (std::ostream &out, const ParallelTree::RetTree &tree) {
+    for (auto &node: tree.nodes) {
+        out << "id: " << node.id
+            << " parent: " << node.parent
+            << " pos: " << node.pos
+            << " num_docs: " << node.num_docs
+            << " depth: " << node.depth << std::endl;
+    }
+    for (size_t l = 0; l < tree.num_instantiated.size(); l++) {
+        out << "num instantiated " << tree.num_instantiated[l]
+            << " num nodes " << tree.num_nodes[l] << std::endl;
+    }
+    return out;
 }

@@ -11,7 +11,7 @@ project (BigTopicModel)
 add_subdirectory(third_party/googletest)
 enable_testing()
 
-set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -march=native -inline-factor=400")
+set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -g -pthread -Ofast -inline-factor=400")
 
 find_package(MPI)
 find_package(ZLIB) 

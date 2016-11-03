@@ -55,6 +55,7 @@ void CollapsedSampling::Estimate() {
         }
 
         auto perm = tree.Compress();
+        PermuteC(perm);
         for (TLen l = 0; l < L; l++) {
             count[l].PermuteColumns(perm[l]);
             ck[l].Permute(perm[l]);
@@ -85,6 +86,18 @@ void CollapsedSampling::Estimate() {
                it, (int)ret.nodes.size(), num_big_nodes,
                num_docs_big, time, throughput, perplexity);
     }
+}
+
+void CollapsedSampling::PermuteC(std::vector<std::vector<int>> &perm) {
+    std::vector<std::vector<int>> inv_perm(L);
+    for (int l=0; l<L; l++) {
+        inv_perm[l].resize((size_t)*std::max_element(perm[l].begin(), perm[l].end())+1);
+        for (size_t i=0; i<perm[l].size(); i++)
+            inv_perm[l][perm[l][i]] = (int)i;
+    }
+    for (auto &doc: docs)
+        for (int l = 0; l < L; l++)
+            doc.c[l] = inv_perm[l][doc.c[l]];
 }
 
 void CollapsedSampling::SampleZ(Document &doc,
@@ -141,10 +154,13 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
 
     // Increase num_docs
     if (increase_count) {
-        UpdateDocCount(doc, 1);
         auto ret = tree.IncNumDocs(leaf_id);
         doc.leaf_id = ret.id;
         doc.c = ret.pos;
+        UpdateDocCount(doc, 1);
+        /*for (auto p: doc.c)
+            printf("%d ", p);
+        printf(", %d\n", doc.leaf_id);*/
     }
 }
 
@@ -289,7 +305,8 @@ double CollapsedSampling::Perplexity() {
     return exp(-log_likelihood / T);
 }
 
-void CollapsedSampling::Check() {
+void CollapsedSampling::Check(int D) {
+    if (D == -1) D = corpus.D;
     int sum = 0;
     for (TLen l = 0; l < L; l++) {
         for (TTopic k = 0; k < count[l].GetC(); k++)
@@ -299,9 +316,43 @@ void CollapsedSampling::Check() {
                 sum += count[l].Get(v, k);
             }
     }
-    if (sum != corpus.T)
+    /*if (sum != corpus.T)
         throw runtime_error("Total token error! expected " +
-                            to_string(corpus.T) + ", got " + to_string(sum));
+                            to_string(corpus.T) + ", got " + to_string(sum));*/
+
+    // Deep check
+    std::vector<Matrix<int>> count2(L);
+    std::vector<std::vector<int>> ck2(L);
+    for (int l=0; l<L; l++) {
+        count2[l].SetR(corpus.V);
+        count2[l].SetC(count[l].GetC());
+        ck2[l].resize(count[l].GetC());
+    }
+    for (int d=0; d<D; d++) {
+        auto &doc = docs[d];
+        for (size_t n = 0; n < doc.z.size(); n++) {
+            auto z = doc.z[n];
+            auto v = doc.w[n];
+            auto c = doc.c[z];
+            if (c >= count2[z].GetC())
+                throw std::runtime_error("Range error");
+            if (v >= count2[z].GetR())
+                throw std::runtime_error("R error " + std::to_string(v));
+            count2[z](v, c)++;
+            ck2[z][c]++;
+        }
+    }
+    for (int l=0; l<L; l++) {
+        for (int r = 0; r < corpus.V; r++)
+            for (int c = 0; c < count[l].GetC(); c++)
+                if (count[l].Get(r, c) != count2[l](r, c))
+                    throw std::runtime_error("Count error at " + std::to_string(l) + "," + std::to_string(r)
+                    + "," + std::to_string(c) + " expected " + std::to_string(count2[l](r, c))
+                    + " get " + std::to_string(count[l].Get(r, c)));
+        for (int c = 0; c < count[l].GetC(); c++)
+            if (ck[l].Get(c) != ck2[l][c])
+                throw std::runtime_error("Ck error");
+    }
 }
 
 void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
