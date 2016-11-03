@@ -158,9 +158,6 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
         doc.leaf_id = ret.id;
         doc.c = ret.pos;
         UpdateDocCount(doc, 1);
-        /*for (auto p: doc.c)
-            printf("%d ", p);
-        printf(", %d\n", doc.leaf_id);*/
     }
 }
 
