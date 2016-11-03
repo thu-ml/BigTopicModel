@@ -187,7 +187,7 @@ private:
                 vector<Entry>().swap(wbuff_thread[tid]);
             }
             Sort::RadixSort(wbuff_sorted.data(), total_size, key_digits + value_digits);
-            if (process_id == 0)
+            if (process_id == monitor_id)
                 LOG(INFO) << "Bucket sort took " << clk.toc() << std::endl;
 
 #define get_value(x) ((x)&value_mask)
@@ -238,7 +238,7 @@ private:
             for (auto &buff: wbuff_thread)
                 buff.clear();
             vector<long long>().swap(wbuff_sorted);
-            if (process_id == 0)
+            if (process_id == monitor_id)
                 LOG(INFO) << "Count took " << clk.toc() << std::endl;
         }
     }
@@ -334,7 +334,7 @@ private:
 
             // Sort
             //std::sort(b.begin(), b.end(),
-            //		[](const SpEntry &a, const SpEntry &b) { return a.v > b.v; });
+            //        [](const SpEntry &a, const SpEntry &b) { return a.v > b.v; });
         }
         //       cout << "Count2 takes " << clk.toc() << endl; clk.tic();
         decltype(recv_buff)().swap(recv_buff);
@@ -343,7 +343,7 @@ private:
         // Gather
         buff.Allgather(intra_partition, copy_size, merged);
         size_t totalAllgatherSize = buff.size();
-        if (process_id == 0)
+        if (process_id == monitor_id)
             LOG(INFO) << "Allgather Communicated " << (double) totalAllgatherSize / 1048576 <<
             " MB. Alltoall communicated " << alltoall_size / 1048576 << " MB." << std::endl;
         //       cout << "Allgather takes " << clk.toc() << endl; clk.tic();
@@ -442,11 +442,11 @@ public:
 
     void sync() {
         /*
-        for (int i = 0; i < mono_heads.size() - 1; ++i) {
-            LOG_IF(ERROR, mono_tails[i] != mono_heads[i + 1])
-            << "i : " << i << " head " << mono_heads[i + 1] << " tail " << mono_tails[i];
-        }
-         */
+           for (int i = 0; i < mono_heads.size() - 1; ++i) {
+           LOG_IF(ERROR, mono_tails[i] != mono_heads[i + 1])
+           << "i : " << i << " head " << mono_heads[i + 1] << " tail " << mono_tails[i];
+           }
+           */
         Clock clk;
         // merge inside single node
         clk.tic();
@@ -466,10 +466,10 @@ public:
         size_t wbuff_thread_size = 0;
         for (auto &v: wbuff_thread) wbuff_thread_size += v.capacity();
         LOG_IF(INFO, process_id == monitor_id) << "wbuff_thread " << wbuff_thread_size * sizeof(Entry)
-                << ", buff " << buff.size()
-                << ", merged " << merged.size()
-                << ", recv_buff " << recv_buff.capacity() * sizeof(SpEntry)
-                << std::endl;
+            << ", buff " << buff.size()
+            << ", merged " << merged.size()
+            << ", recv_buff " << recv_buff.capacity() * sizeof(SpEntry)
+            << std::endl;
     }
 
     // gather cdk/cwk from all nodes, do this for MedLDA

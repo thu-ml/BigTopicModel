@@ -24,6 +24,10 @@ public:
 
         T *end() { return _end; }
 
+        const T *begin() const { return _begin; }
+
+        const T *end() const { return _end; }
+
         size_t size() { return _end - _begin; }
 
         T &operator[](const size_t index) { return _begin[index]; }

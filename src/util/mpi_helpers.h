@@ -281,7 +281,7 @@ inline int BigMPI_Create_graph_comm(MPI_Comm comm_old, int root, MPI_Comm * comm
         destinations[i] = (root == -1 || root==rank) ? i : root;
     }
 
-//	BTM rewrite
+//    BTM rewrite
 //    int rc = MPI_Dist_graph_create_adjacent(comm_old,
 //                indegree,  sources,      indegree==0  ? MPI_WEIGHTS_EMPTY : MPI_UNWEIGHTED,
 //                outdegree, destinations, outdegree==0 ? MPI_WEIGHTS_EMPTY : MPI_UNWEIGHTED,
@@ -776,6 +776,37 @@ public:
         MPIX_Allgatherv_x((char*)send_buffer, send_count * sizeof(T), MPI_CHAR,
                           (char*)recv_buffer, recv_counts.data(), recv_displs.data(), MPI_CHAR,
                           comm);
+    }
+
+    // Send `blk_local_first` to worker `proc_id_m1`, and `blk_local_last` to
+    // `proc_id_p1`; and receive block of the same size from proc_id_{p,m}1. 
+    // Can used to synchronize $\Phi^{t\pm 1}$ in DTM.
+    template <typename T>
+    static void CircularBlock(const T *blk_local_first, const T *blk_local_last, 
+            T *blk_tm1, T *blk_tp1, size_t size_,
+            int proc_id_m1, int proc_id_p1, int code_)
+    {
+        if (proc_id_m1 < 0 && proc_id_p1 < 0) {
+            return;
+        }
+        int size = (int)size_ * sizeof(T);
+        auto send = [size](const T *buf_out, T *buf_in, int recv_from, int send_to, int code) {
+            MPI_Status status;
+            int e;
+            if (recv_from == -1) {
+                e = MPI_Send(buf_out, size, MPI_CHAR, send_to, code, MPI_COMM_WORLD);
+            }
+            else if (send_to == -1) {
+                e = MPI_Recv(buf_in, size, MPI_CHAR, recv_from, code, MPI_COMM_WORLD, &status);
+            }
+            else {
+                e = MPI_Sendrecv(buf_out, size, MPI_CHAR, send_to, code,
+                        buf_in, size, MPI_CHAR, recv_from, code, MPI_COMM_WORLD, &status);
+            }
+            assert(e == MPI_SUCCESS);
+        };
+        send(blk_local_last, blk_tm1, proc_id_m1, proc_id_p1, code_);
+        send(blk_local_first, blk_tp1, proc_id_p1, proc_id_m1, code_ + 1);
     }
 };
 
