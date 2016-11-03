@@ -43,7 +43,7 @@ public:
                 : id(id), pos(L) {}
     };
 
-    ParallelTree(int L, std::vector<double> gamma, int threshold);
+    ParallelTree(int L, std::vector<double> gamma);
 
     ~ParallelTree();
 
@@ -57,6 +57,10 @@ public:
     // Sync operations
 
     // Global operations
+    void SetThreshold(int threshold) {
+        this->threshold = threshold;
+    }
+
     void Check();
 
     std::vector<std::vector<int>> Compress();

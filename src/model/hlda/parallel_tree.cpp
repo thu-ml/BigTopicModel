@@ -6,8 +6,8 @@
 #include <cmath>
 #include "parallel_tree.h"
 
-ParallelTree::ParallelTree(int L, std::vector<double> gamma, int threshold)
-        : L(L), gamma(gamma), threshold(threshold),
+ParallelTree::ParallelTree(int L, std::vector<double> gamma)
+        : L(L), gamma(gamma), threshold(100000000), //Collapsed sampling by default
           num_nodes(L), num_instantiated(L), max_id(0) {
     root = new Node(nullptr, max_id++, num_nodes[0]++, 0);
     nodes.push_back(root);

@@ -11,7 +11,8 @@ protected:
     ParallelTree *tree;
 
     virtual void SetUp() {
-        tree = new ParallelTree(3, std::vector<double>{1.0, 0.5}, 1);
+        tree = new ParallelTree(3, std::vector<double>{1.0, 0.5});
+        tree->SetThreshold(1);
     }
 
     virtual void TearDown() {
@@ -70,4 +71,8 @@ TEST_F(ParallelTreeTest, basic) {
     EXPECT_EQ(ret.nodes[2].id, 3);
     EXPECT_EQ(ret.nodes[3].id, 4);
     EXPECT_EQ(ret.nodes[4].id, 5);
+
+    EXPECT_EQ(ret.num_instantiated[0], 1);
+    EXPECT_EQ(ret.num_instantiated[1], 1);
+    EXPECT_EQ(ret.num_instantiated[2], 1);
 }
