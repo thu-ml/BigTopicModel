@@ -67,7 +67,6 @@ void PartiallyCollapsedSampling::Estimate() {
         current_it = it;
         Clock clk;
 
-        Check();
         if (current_it >= mc_iters)
             mc_samples = -1;
 
@@ -77,12 +76,9 @@ void PartiallyCollapsedSampling::Estimate() {
             SampleZ(doc, true, true, ret);
         }
 
-        Check();
         SamplePhi();
-        puts("SamplePhi");
 
         tree.Check();
-        Check();
 
         auto ret = tree.GetTree();
         int num_big_nodes = 0;
@@ -107,6 +103,8 @@ void PartiallyCollapsedSampling::Estimate() {
         printf("Iteration %d, %d topics (%d, %d), %.2f seconds (%.2fMtoken/s), perplexity = %.2f\n",
                it, (int)ret.nodes.size(), num_big_nodes,
                num_docs_big, time, throughput, perplexity);
+
+        Check();
     }
 }
 
