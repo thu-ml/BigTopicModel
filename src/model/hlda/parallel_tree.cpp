@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include <cmath>
+#include <map>
 #include "parallel_tree.h"
 
 ParallelTree::ParallelTree(int L, std::vector<double> gamma)
@@ -50,29 +51,40 @@ ParallelTree::IncResult ParallelTree::IncNumDocs(int new_node_id) {
 }
 
 ParallelTree::RetTree ParallelTree::GetTree() {
-    std::lock_guard<std::mutex> guard(tree_mutex);
-
     RetTree result;
-    for (auto *node: nodes) {
-        int parent_id;
-        if (node == root) {
-            parent_id = -1;
-            node->log_path_weight = 0;
-        } else {
-            parent_id = node->parent->id;
-            node->log_path_weight = node->parent->log_path_weight +
-                                    log(node->num_docs) -
-                                    log(node->parent->num_docs + gamma[node->parent->depth]);
+    {
+        std::lock_guard<std::mutex> guard(tree_mutex);
+
+        for (auto *node: nodes) {
+            int parent_id;
+            if (node == root) {
+                parent_id = -1;
+                node->log_path_weight = 0;
+            } else {
+                parent_id = node->parent->id;
+                node->log_path_weight = node->parent->log_path_weight +
+                                        log(node->num_docs) -
+                                        log(node->parent->num_docs + gamma[node->parent->depth]);
+            }
+            double log_path_weight = node->depth + 1 == L ?
+                                     node->log_path_weight :
+                                     node->log_path_weight + log(gamma[node->depth]) -
+                                     log(node->num_docs + gamma[node->depth]);
+            result.nodes.push_back(RetNode{parent_id, node->id,
+                                           node->pos, node->num_docs, node->depth,
+                                           log_path_weight});
         }
-        double log_path_weight = node->depth + 1 == L ?
-                                 node->log_path_weight :
-                                 node->log_path_weight + log(gamma[node->depth]) -
-                                         log(node->num_docs + gamma[node->depth]);
-        result.nodes.push_back(RetNode{parent_id, node->id,
-                                       node->pos, log_path_weight});
+        result.num_instantiated = num_instantiated;
+        result.num_nodes = num_nodes;
     }
-    result.num_instantiated = num_instantiated;
-    result.num_nodes = num_nodes;
+
+    // Change parent_id to position in array
+    std::map<int, int> id_to_pos;
+    for (int i = 0; i < (int)result.nodes.size(); i++)
+        id_to_pos[result.nodes[i].id] = i;
+    for (auto &node: result.nodes)
+        if (node.parent != -1)
+            node.parent = id_to_pos[node.parent];
 
     return std::move(result);
 }

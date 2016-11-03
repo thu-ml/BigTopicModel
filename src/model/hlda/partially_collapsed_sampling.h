@@ -19,7 +19,7 @@ public:
     virtual void Estimate() override;
 
 protected:
-    void SampleZ(Document &doc, bool decrease_count, bool increase_count) override;
+    void SampleZ(Document &doc, bool decrease_count, bool increase_count, ParallelTree::RetTree &ret) override;
 
     virtual void SamplePhi();
 

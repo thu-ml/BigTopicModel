@@ -8,13 +8,6 @@
 
 using namespace std;
 
-std::vector<TTopic> Document::GetPos() {
-    std::vector<TTopic> result(c.size());
-    for (std::size_t l = 0; l < c.size(); l++)
-        result[l] = (TTopic)c[l]->pos;
-    return move(result);
-}
-
 void Document::PartitionWByZ(int L) {
     Check();
     offsets.resize((std::size_t) L + 1);

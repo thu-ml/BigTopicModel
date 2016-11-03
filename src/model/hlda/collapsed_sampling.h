@@ -20,16 +20,14 @@ public:
     virtual void Estimate() override;
 
 protected:
-    virtual void SampleZ(Document &doc, bool decrease_count, bool increase_count);
+    virtual void SampleZ(Document &doc, bool decrease_count, bool increase_count, ParallelTree::RetTree &ret);
 
-    virtual void SampleC(Document &doc, bool decrease_count, bool increase_count);
+    virtual void SampleC(Document &doc, bool decrease_count, bool increase_count, ParallelTree::RetTree &ret);
 
-    void DFSSample(Document &doc);
+    int DFSSample(Document &doc, ParallelTree::RetTree &ret);
 
     virtual std::vector<TProb>
     WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) override;
-
-    virtual void InitializeTreeWeight();
 
     double Perplexity();
 

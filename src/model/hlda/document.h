@@ -11,7 +11,8 @@
 
 // Size a document = 3 ints / token
 struct Document {
-    Path c;
+    std::vector<int> c;
+    int leaf_id;
     std::vector<TTopic> z;
     std::vector<TWord> w;
 
@@ -20,8 +21,6 @@ struct Document {
     std::vector<TWord> reordered_w;
     std::vector<int> c_offsets;    // offset for log gamma
     std::vector<TLen> offsets;
-
-    std::vector<TTopic> GetPos();
 
     void PartitionWByZ(int L);
 

@@ -8,8 +8,9 @@
 #include <atomic>
 #include <vector>
 #include <string>
+#include <mutex>
 #include "matrix.h"
-#include "tree.h"
+#include "parallel_tree.h"
 #include "xorshift.h"
 #include "types.h"
 #include "document.h"
@@ -37,7 +38,7 @@ protected:
 
     std::string TopWords(int l, int id);
 
-    Tree tree;
+    ParallelTree tree;
     Corpus &corpus;
     int L;
     std::vector<TProb> alpha;
@@ -58,6 +59,8 @@ protected:
     Matrix<TProb> log_normalization;
 
     bool new_topic;
+
+    std::mutex model_mutex;
 };
 
 

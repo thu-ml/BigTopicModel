@@ -9,8 +9,6 @@
 #include <mutex>
 #include "id_pool.h"
 
-#define Path std::vector<ParallelTree::Node*>
-
 class ParallelTree {
 public:
     struct Node {
@@ -26,7 +24,7 @@ public:
     };
 
     struct RetNode {
-        int parent_id, id, pos;
+        int parent, id, pos, num_docs, depth;
         double log_path_weight;
     };
 

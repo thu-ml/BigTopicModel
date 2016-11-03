@@ -46,19 +46,21 @@ void BaseHLDA::Visualize(std::string fileName, int threshold) {
     ofstream fout(dotFileName.c_str());
     fout << "graph tree {";
     // Output nodes
-    auto nodes = tree.GetAllNodes();
-    for (auto *node: nodes)
-        if (node->num_docs > threshold)
-            fout << "Node" << node->id << " [label=\""
-                 << node->id << ' ' << node->pos << '\n'
-                 << node->num_docs << "\n"
-                 << TopWords(node->depth, node->pos) << "\"]\n";
+    auto ret = tree.GetTree();
+    for (auto &node: ret.nodes)
+        if (node.num_docs > threshold)
+            fout << "Node" << node.id << " [label=\""
+                 << node.id << ' ' << node.pos << '\n'
+                 << node.num_docs << "\n"
+                 << TopWords(node.depth, node.pos) << "\"]\n";
 
     // Output edges
-    for (auto *node: nodes)
-        if (node->depth != 0)
-            if (node->num_docs > threshold && node->parent->num_docs > threshold)
-                fout << "Node" << node->parent->id << " -- Node" << node->id << "\n";
+    for (auto node: ret.nodes)
+        if (node.depth != 0)
+            if (node.num_docs > threshold &&
+                    ret.nodes[node.parent].num_docs > threshold)
+                fout << "Node" << ret.nodes[node.parent].id
+                     << " -- Node" << node.id << "\n";
 
     fout << "}";
 }

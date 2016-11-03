@@ -29,13 +29,15 @@ void CollapsedSampling::Initialize() {
         for (auto &k: doc.z)
             k = generator() % L;
 
-        SampleC(doc, false, true);
-        SampleZ(doc, true, true);
+        ParallelTree::RetTree ret;
+        SampleC(doc, false, true, ret);
+        SampleZ(doc, true, true, ret);
 
-        if (tree.GetAllNodes().size() > (size_t) topic_limit)
+        if (tree.GetTree().nodes.size() > (size_t) topic_limit)
             throw runtime_error("There are too many topics");
     }
-    cout << "Initialized with " << tree.GetAllNodes().size() << " topics." << endl;
+    cout << "Initialized with " << tree.GetTree().nodes.size()
+         << " topics." << endl;
 }
 
 void CollapsedSampling::Estimate() {
@@ -47,45 +49,49 @@ void CollapsedSampling::Estimate() {
             mc_samples = -1;
 
         for (auto &doc: docs) {
-            SampleC(doc, true, true);
-            SampleZ(doc, true, true);
+            ParallelTree::RetTree ret;
+            SampleC(doc, true, true, ret);
+            SampleZ(doc, true, true, ret);
         }
 
+        auto perm = tree.Compress();
         for (TLen l = 0; l < L; l++) {
-            auto perm = tree.Compress(l);
-            count[l].PermuteColumns(perm);
-            ck[l].Permute(perm);
+            count[l].PermuteColumns(perm[l]);
+            ck[l].Permute(perm[l]);
         }
 
         double time = clk.toc();
         double throughput = corpus.T / time / 1048576;
         double perplexity = Perplexity();
-        auto nodes = tree.GetAllNodes();
 
+        auto ret = tree.GetTree();
         int num_big_nodes = 0;
         int num_docs_big = 0;
-        for (auto *node: nodes)
-            if (node->num_docs > 5) {
+        for (auto &node: ret.nodes)
+            if (node.num_docs > 5) {
                 num_big_nodes++;
-                if (node->depth + 1 == L)
-                    num_docs_big += node->num_docs;
+                if (node.depth + 1 == L)
+                    num_docs_big += node.num_docs;
             }
 
         std::vector<int> cl((size_t) L);
-        for (auto *node: nodes)
-            cl[node->depth]++;
+        for (auto &node: ret.nodes)
+            cl[node.depth]++;
         for (int l=0; l<L; l++)
             printf("%d ", cl[l]);
         printf("\n");
 
         printf("Iteration %d, %d topics (%d, %d), %.2f seconds (%.2fMtoken/s), perplexity = %.2f\n",
-               it, tree.NumTopics(), num_big_nodes, num_docs_big, time, throughput, perplexity);
+               it, (int)ret.nodes.size(), num_big_nodes,
+               num_docs_big, time, throughput, perplexity);
     }
 }
 
-void CollapsedSampling::SampleZ(Document &doc, bool decrease_count, bool increase_count) {
+void CollapsedSampling::SampleZ(Document &doc,
+                                bool decrease_count, bool increase_count,
+                                ParallelTree::RetTree &ret) {
     TLen N = (TLen) doc.z.size();
-    auto pos = doc.GetPos();
+    auto &pos = doc.c;
     std::vector<TProb> prob((size_t) L);
     std::vector<TCount> cdl((size_t) L);
     for (auto l: doc.z) cdl[l]++;
@@ -96,20 +102,20 @@ void CollapsedSampling::SampleZ(Document &doc, bool decrease_count, bool increas
 
         if (decrease_count) {
             count[l].Dec(v, pos[l]);
-            ck[l].Dec(pos[l]);
+            ck[l].Dec((size_t)pos[l]);
             --cdl[l];
         }
 
         for (TTopic i = 0; i < L; i++)
             prob[i] = (cdl[i] + alpha[i]) *
                       (count[i].Get(v, pos[i]) + beta[i]) /
-                      (ck[i].Get(pos[i]) + beta[i] * corpus.V);
+                      (ck[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
 
         l = (TTopic)DiscreteSample(prob.begin(), prob.end(), generator);
 
         if (increase_count) {
             count[l].Inc(v, pos[l]);
-            ck[l].Inc(pos[l]);
+            ck[l].Inc((size_t)pos[l]);
             ++cdl[l];
         }
         doc.z[n] = l;
@@ -122,30 +128,32 @@ void CollapsedSampling::SampleZ(Document &doc, bool decrease_count, bool increas
         doc.theta[l] /= sum;*/
 }
 
-void CollapsedSampling::SampleC(Document &doc, bool decrease_count, bool increase_count) {
-    if (decrease_count) UpdateDocCount(doc, -1);
-    auto old_c = doc.c;
-
-    // Compute NCRP probability
-    InitializeTreeWeight();
+void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
+                                bool increase_count,
+                                ParallelTree::RetTree &ret) {
+    if (decrease_count) {
+        UpdateDocCount(doc, -1);
+        tree.DecNumDocs(doc.leaf_id);
+    }
 
     // Sample
-    DFSSample(doc);
+    auto leaf_id = DFSSample(doc, ret);
 
     // Increase num_docs
     if (increase_count) {
         UpdateDocCount(doc, 1);
-        tree.UpdateNumDocs(doc.c.back(), 1);
+        auto ret = tree.IncNumDocs(leaf_id);
+        doc.leaf_id = ret.id;
+        doc.c = ret.pos;
     }
-
-    if (decrease_count)
-        tree.UpdateNumDocs(old_c.back(), -1);
 }
 
-void CollapsedSampling::DFSSample(Document &doc) {
-    auto nodes = tree.GetAllNodes();
+int CollapsedSampling::DFSSample(Document &doc, ParallelTree::RetTree &ret) {
+    ret = tree.GetTree();
+    auto &nodes = ret.nodes;
     int S = max(mc_samples, 1);
     vector<TProb> prob(nodes.size() * S, -1e9f);
+    std::vector<TProb> sum_log_prob(nodes.size());
 
     // Warning: this is not thread safe
     for (int s = 0; s < S; s++) {
@@ -158,15 +166,8 @@ void CollapsedSampling::DFSSample(Document &doc) {
 
         vector<vector<TProb> > scores((size_t) L);
         for (TLen l = 0; l < L; l++) {
-            // Figure out how many collapsed and how many instantiated
-            TTopic K = (TTopic) tree.NumNodes(l);
-            int last_is_instantiated = -1;
-            for (auto *node: nodes)
-                if (node->depth == l && !node->is_collapsed)
-                    last_is_instantiated = max(last_is_instantiated, node->pos);
-
-            TTopic num_instantiated = (TTopic)(last_is_instantiated + 1);
-            TTopic num_collapsed = K - num_instantiated;
+            TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
+            TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
 
             scores[l] = WordScore(doc, l, num_instantiated, num_collapsed);
         }
@@ -177,19 +178,20 @@ void CollapsedSampling::DFSSample(Document &doc) {
 
         // Propagate the score
         for (size_t i = 0; i < nodes.size(); i++) {
-            auto *node = nodes[i];
+            auto &node = nodes[i];
 
-            if (node->depth == 0)
-                node->sum_log_prob = scores[node->depth][node->pos];
+            if (node.depth == 0)
+                sum_log_prob[i] = scores[node.depth][node.pos];
             else
-                node->sum_log_prob = scores[node->depth][node->pos] + node->parent->sum_log_prob;
+                sum_log_prob[i] = scores[node.depth][node.pos]
+                        + sum_log_prob[node.parent];
 
-            if (node->depth + 1 == L) {
-                prob[i*S+s] = (TProb)(node->sum_log_prob + node->sum_log_weight);
+            if (node.depth + 1 == L) {
+                prob[i*S+s] = (TProb)(sum_log_prob[i] + node.log_path_weight);
             } else {
                 if (new_topic)
-                    prob[i * S + s] = (TProb) (node->sum_log_prob + node->sum_log_weight +
-                                          emptyProbability[node->depth]);
+                    prob[i * S + s] = (TProb)(sum_log_prob[i] +
+                            node.log_path_weight + emptyProbability[node.depth]);
             }
         }
     }
@@ -199,12 +201,8 @@ void CollapsedSampling::DFSSample(Document &doc) {
     int node_number = DiscreteSample(prob.begin(), prob.end(), generator) / S;
     if (node_number < 0 || node_number >= (int) nodes.size())
         throw runtime_error("Invalid node number");
-    auto *current = nodes[node_number];
 
-    while (current->depth + 1 < L)
-        current = tree.AddChildren(current);
-
-    tree.GetPath(current, doc.c);
+    return nodes[node_number].id;
 }
 
 std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
@@ -272,14 +270,12 @@ double CollapsedSampling::Perplexity() {
         for (TLen l = 0; l < L; l++)
             theta[l] = (theta[l] + alpha[l]) * inv_sum;
 
-        auto pos = doc.GetPos();
-
         for (size_t n = 0; n < doc.z.size(); n++) {
             double prob = 0;
             TWord v = doc.w[n];
             for (int l = 0; l < L; l++) {
-                double phi = (count[l].Get(v, pos[l]) + beta[l]) /
-                             (ck[l].Get(pos[l]) + beta[l] * corpus.V);
+                double phi = (count[l].Get(v, doc.c[l]) + beta[l]) /
+                             (ck[l].Get((size_t)doc.c[l]) + beta[l] * corpus.V);
 
                 prob += theta[l] * phi;
             }
@@ -296,7 +292,7 @@ double CollapsedSampling::Perplexity() {
 void CollapsedSampling::Check() {
     int sum = 0;
     for (TLen l = 0; l < L; l++) {
-        for (TTopic k = 0; k < tree.NumNodes(l); k++)
+        for (TTopic k = 0; k < count[l].GetC(); k++)
             for (TWord v = 0; v < corpus.V; v++) {
                 if (count[l].Get(v, k) < 0) // TODO
                     throw runtime_error("Error!");
@@ -311,17 +307,15 @@ void CollapsedSampling::Check() {
 void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     // Update number of topics
     for (TLen l = 0; l < L; l++) {
-        TTopic K = (TTopic) tree.NumNodes(l);
-        count[l].SetC(K);
-        ck[l].Resize((size_t) K);
+        count[l].IncreaseC(doc.c[l] + 1);
+        ck[l].IncreaseSize((size_t)(doc.c[l] + 1));
     }
 
-    auto pos = doc.GetPos();
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
             TLen l = doc.z[n];
-            TTopic k = pos[l];
+            TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
             count[l].Inc(v, k);
             ck[l].Inc(k);
@@ -329,31 +323,11 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     else if (delta == -1)
         for (TLen n = 0; n < N; n++) {
             TLen l = doc.z[n];
-            TTopic k = pos[l];
+            TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
             count[l].Dec(v, k);
             ck[l].Dec(k);
         }
     else
         throw std::runtime_error("Invalid delta");
-}
-
-void CollapsedSampling::InitializeTreeWeight() {
-    auto nodes = tree.GetAllNodes();
-    nodes[0]->sum_log_weight = 0;
-
-    for (auto *node: nodes)
-        if (!node->children.empty()) {
-            // Propagate
-            double sum_weight = gamma[node->depth];
-
-            for (auto *child: node->children)
-                sum_weight += child->num_docs;
-
-            for (auto *child: node->children)
-                child->sum_log_weight = node->sum_log_weight +
-                                        log((child->num_docs + 1e-10) / sum_weight);
-
-            node->sum_log_weight += log(gamma[node->depth] / sum_weight);
-        }
 }

@@ -19,17 +19,24 @@ public:
 		t._data = nullptr;
        	}
 
+    void InternalResize(size_t size) {
+        while (_capacity < size) _capacity = _capacity * 2 + 1;
+        auto *old_data = _data;
+        _data = new std::atomic<T>[_capacity];
+        memset(_data, 0, sizeof(std::atomic<T>)*_capacity);
+        memcpy(_data, old_data, sizeof(std::atomic<T>)*_size);
+        delete[] old_data;
+    }
+
 	void Resize(size_t size) {
-		if (size > _capacity) {
-			while (_capacity < size) _capacity = _capacity * 2 + 1;
-			auto *old_data = _data;
-			_data = new std::atomic<T>[_capacity];
-            memset(_data, 0, sizeof(std::atomic<T>)*_capacity);
-			memcpy(_data, old_data, sizeof(std::atomic<T>)*_size);
-			delete[] old_data;
-		}
+		if (size > _capacity) InternalResize(size);
 		_size = size;
 	}
+
+    void IncreaseSize(size_t size) {
+        if (size > _capacity) InternalResize(size);
+        if (size > _size) _size = size;
+    }
 
 	/*std::atomic<T>& operator[] (size_t index) {
 		return _data[index];
@@ -69,6 +76,7 @@ public:
                     std::memory_order_relaxed);
 
         delete[] old_data;
+        _size = permutation.size();
     }
 
 	size_t Size() { return _size; }

@@ -75,4 +75,10 @@ TEST_F(ParallelTreeTest, basic) {
     EXPECT_EQ(ret.num_instantiated[0], 1);
     EXPECT_EQ(ret.num_instantiated[1], 1);
     EXPECT_EQ(ret.num_instantiated[2], 1);
+
+    EXPECT_EQ(ret.nodes[0].parent, -1);
+    EXPECT_EQ(ret.nodes[1].parent, 0);
+    EXPECT_EQ(ret.nodes[2].parent, 1);
+    EXPECT_EQ(ret.nodes[3].parent, 0);
+    EXPECT_EQ(ret.nodes[4].parent, 3);
 }
