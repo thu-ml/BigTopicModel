@@ -42,7 +42,7 @@ class PDTM {
         int N_glob_vocab, N_topics, N_local_vocab;
         PDTM &p;
         DCMSparse cdk;
-        CMSparse cwk;                                                   // 2G / cols (train&test)
+        DCMSparse cwk;                                                   // 2G / cols (train&test)
         Arr ck; // row marginal for cwk, (n_row_ep, n_topics)
         Arr localEta;
         vector<pair<int, size_t>> batch;

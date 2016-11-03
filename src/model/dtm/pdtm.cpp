@@ -50,7 +50,11 @@ PDTM::BatchState::BatchState(LocalCorpus &corpus_, int n_max_batch, PDTM &p_):
     p(p_), corpus(corpus_),
     cdk(1, p.nProcCols, n_max_batch, p.N_topics, row_partition, p.nProcCols, 
             p.procId, FLAGS_n_threads, LocalMergeStyle::separate, FLAGS_dcm_monitor_id),
-    cwk((int)corpus_.docs.size() * p.N_topics, corpus_.vocab_e - corpus_.vocab_s, FLAGS_n_threads)
+//    cwk((int)corpus_.docs.size() * p.N_topics, corpus_.vocab_e - corpus_.vocab_s, FLAGS_n_threads)
+    cwk(p.nProcRows * p.nProcCols, 1, 
+            (int)corpus_.docs.size() * p.N_topics, corpus_.vocab_e - corpus_.vocab_s,
+            PartitionType::row_partition, p.nProcRows * p.nProcCols, p.procId, 
+            FLAGS_n_threads, LocalMergeStyle::separate, -1)
 {
     N_glob_vocab = p.N_glob_vocab; // Having problem putting them in the initializer list
     N_local_vocab = corpus.vocab_e - corpus.vocab_s;
