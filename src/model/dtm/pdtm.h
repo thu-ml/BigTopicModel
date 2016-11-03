@@ -10,31 +10,30 @@
 #include "lcorpus.h"
 #include "random.h"
 #include "dcm.h"
-#include "cm.h"
 #include "aliastable.h"
 
 class PDTM {
     static const int MAX_THREADS = 64;
 
-	MPI_Comm commRow;
-	int procId, nProcRows, nProcCols, pRowId, pColId;
-	int N_glob_vocab, N_topics, N_batch, N_local_vocab;
+    MPI_Comm commRow;
+    int procId, nProcRows, nProcCols, pRowId, pColId;
+    int N_glob_vocab, N_topics, N_batch, N_local_vocab;
 
     vector<thread> threads;
 
-	vector<size_t> nEpDocs;
-	LocalCorpus c_train, c_test_observed, c_test_held;
+    vector<size_t> nEpDocs;
+    LocalCorpus c_train, c_test_observed, c_test_held;
     Dict dict;
 
-	vector<Arr> localPhi, localPhiAux;                                  // Vl * K * Nep * 2 * 8 = 15M * 160 = 2G / cols
-	Arr localPhiZ;
-	Arr phiTm1, phiTp1;
+    vector<Arr> localPhi, localPhiAux;                                  // Vl * K * Nep * 2 * 8 = 15M * 160 = 2G / cols
+    Arr localPhiZ;
+    Arr phiTm1, phiTp1;
 
     vector<Arr> localPhiNormalized, localPhiSoftmax, localPhiBak;       // Vl * K * 8 * 3 = 3G / cols
-	vector<Arr> globEta;                                                // N_row_doc * K * 8 = 0.6M * 1K * 8 = 4.8G
-	Arr sumEta, alpha;
+    vector<Arr> globEta;                                                // N_row_doc * K * 8 = 0.6M * 1K * 8 = 4.8G
+    Arr sumEta, alpha;
     // Sampling eta requires same random settings in a row
-	vector<rand_data> rd_data, rd_data_eta;
+    vector<rand_data> rd_data, rd_data_eta;
 
     struct BatchState {
         BatchState(LocalCorpus &corpus, int n_max_batch, PDTM &par);
@@ -57,19 +56,19 @@ class PDTM {
     } b_train, b_test;
 
     void _SyncPhi();
-	void IterInit(int t);
-	void UpdatePhi(int n_iter);
+    void IterInit(int t);
+    void UpdatePhi(int n_iter);
     void UpdatePhi_th(int phi_iter, int kTh, int nTh);
-	void UpdateAlpha(int n_iter);
+    void UpdateAlpha(int n_iter);
     void EstimateLL();
     void DumpParams();
 
 public:
 
-	PDTM(LocalCorpus &&c_train, LocalCorpus &&c_test_held, LocalCorpus &&c_test_observed, Dict &&dict,
+    PDTM(LocalCorpus &&c_train, LocalCorpus &&c_test_held, LocalCorpus &&c_test_observed, Dict &&dict,
          int n_vocab_, int procId_, int nProcRows_, int nProcCols_);
 
-	void Infer();
+    void Infer();
     void ShowTopics(int iter);
 };
 
