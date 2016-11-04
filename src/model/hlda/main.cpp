@@ -35,7 +35,7 @@ DEFINE_int32(minibatch_size, 1000, "Minibatch size for initialization (for pcs)"
 DEFINE_int32(topic_limit, 300, "Upper bound of number of topics to terminate.");
 DEFINE_string(model_path, "../hlda-c/out/run014", "Path of model for es");
 DEFINE_string(vis_prefix, "../vis_result/tree", "Path of visualization");
-DEFINE_int32(threshold, 5, "Threshold for a topic to be instantiated.");
+DEFINE_int32(threshold, 50, "Threshold for a topic to be instantiated.");
 DEFINE_int32(branching_factor, 2, "Branching factor for instantiated weight sampler.");
 DEFINE_bool(sample_phi, false, "Whether to sample phi or update it with expectation");
 

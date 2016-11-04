@@ -74,7 +74,7 @@ void CollapsedSampling::Estimate() {
         int num_big_nodes = 0;
         int num_docs_big = 0;
         for (auto &node: ret.nodes)
-            if (node.num_docs > 5) {
+            if (node.num_docs > 50) {
                 num_big_nodes++;
                 if (node.depth + 1 == L)
                     num_docs_big += node.num_docs;

@@ -112,6 +112,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
 }
 
 void PartiallyCollapsedSampling::SamplePhi() {
+    // Output the tree and the assignment for every document
     auto perm = tree.Compress();
     auto ret = tree.GetTree();
     PermuteC(perm);
