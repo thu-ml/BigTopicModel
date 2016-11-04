@@ -10,8 +10,9 @@ TEST(AtomicVector, EmplaceBack) {
     a.EmplaceBack(3);
     a.EmplaceBack(4);
 
-    for (size_t i = 0; i < a.Size(); i++)
-        EXPECT_EQ(a.Get(i), i+1);
+    auto a_sess = a.GetSession();
+    for (size_t i = 0; i < a_sess.Size(); i++)
+        EXPECT_EQ(a_sess.Get(i), i+1);
 }
 
 TEST(AtomicMatrix, Basic) {

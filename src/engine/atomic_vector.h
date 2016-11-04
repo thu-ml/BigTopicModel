@@ -4,10 +4,25 @@
 #include <atomic>
 #include <stdexcept>
 #include <memory.h>
+#include <shared_mutex>
 
 template <class T>
 class AtomicVector{
 public:
+    struct Session {
+        Session(AtomicVector &v):
+                v(v), lock(new std::shared_lock<std::shared_timed_mutex>(v.mutex_)) { }
+
+        AtomicVector &v;
+        std::unique_ptr<std::shared_lock<std::shared_timed_mutex>> lock;
+
+        void Inc(size_t index) { v.Inc(index); }
+        void Inc(size_t index, T delta) { v.Inc(index, delta); }
+        void Dec(size_t index) { v.Dec(index); }
+        T Get(size_t index) { return v.Get(index); }
+        size_t Size() { return v.Size(); }
+    };
+
     AtomicVector(size_t size = 0) :
 		_data(new std::atomic<T>[size]), _size(size), _capacity(size) {
 
@@ -17,31 +32,48 @@ public:
 
     AtomicVector(AtomicVector &&t)noexcept : _data(t._data) {
 		t._data = nullptr;
-       	}
+    }
 
-    void InternalResize(size_t size) {
-        while (_capacity < size) _capacity = _capacity * 2 + 1;
-        auto *old_data = _data;
-        _data = new std::atomic<T>[_capacity];
-        memset(_data, 0, sizeof(std::atomic<T>)*_capacity);
-        memcpy(_data, old_data, sizeof(std::atomic<T>)*_size);
-        delete[] old_data;
+    Session GetSession() {
+        return Session(*this);
     }
 
 	void Resize(size_t size) {
+        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
 		if (size > _capacity) InternalResize(size);
 		_size = size;
 	}
 
     void IncreaseSize(size_t size) {
+        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
         if (size > _capacity) InternalResize(size);
         if (size > _size) _size = size;
     }
 
-	/*std::atomic<T>& operator[] (size_t index) {
-		return _data[index];
-	}*/
+    // Guartanteed to be serial
+	void EmplaceBack(T value) {
+		Resize(_size + 1);
+		_data[_size - 1].store(value);
+	}
 
+    void Permute(std::vector<int> permutation) {
+        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+        if (_size < permutation.size())
+            throw std::runtime_error("Incorrect size");
+
+        auto *old_data = _data;
+        _data = new std::atomic<T>[_capacity];
+        memset(_data, 0, sizeof(std::atomic<T>)*_capacity);
+        for (size_t i = 0; i < permutation.size(); i++)
+            _data[i].store(old_data[permutation[i]].load(
+                    std::memory_order_relaxed),
+                    std::memory_order_relaxed);
+
+        delete[] old_data;
+        _size = permutation.size();
+    }
+
+private:
     void Inc(size_t index) {
         _data[index].fetch_add(1);
     }
@@ -58,33 +90,23 @@ public:
         return _data[index].load(std::memory_order_relaxed);
     }
 
-	void EmplaceBack(T value) {
-		Resize(_size + 1);
-		_data[_size - 1].store(value);
-	}
+    size_t Size() { return _size; }
 
-    void Permute(std::vector<int> permutation) {
-        if (_size < permutation.size())
-            throw std::runtime_error("Incorrect size");
-
+    void InternalResize(size_t size) {
         auto *old_data = _data;
+        if (_capacity < size) _capacity = _capacity * 2 + 1;
+        if (_capacity < size) _capacity = size;
         _data = new std::atomic<T>[_capacity];
         memset(_data, 0, sizeof(std::atomic<T>)*_capacity);
-        for (size_t i = 0; i < permutation.size(); i++)
-            _data[i].store(old_data[permutation[i]].load(
-                    std::memory_order_relaxed),
-                    std::memory_order_relaxed);
-
+        memcpy(_data, old_data, sizeof(std::atomic<T>)*_size);
         delete[] old_data;
-        _size = permutation.size();
     }
 
-	size_t Size() { return _size; }
-
-private:
 	std::atomic<T> *_data;
 	size_t _size;
 	size_t _capacity;
+
+    std::shared_timed_mutex mutex_;
 };
 
 #endif

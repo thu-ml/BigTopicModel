@@ -100,6 +100,13 @@ void CollapsedSampling::PermuteC(std::vector<std::vector<int>> &perm) {
             doc.c[l] = inv_perm[l][doc.c[l]];
 }
 
+std::vector<AtomicVector<TCount>::Session> CollapsedSampling::GetCkSessions() {
+    std::vector<AtomicVector<TCount>::Session> sessions;
+    for (int l=0; l<L; l++)
+        sessions.emplace_back(std::move(ck[l].GetSession()));
+    return sessions;
+}
+
 void CollapsedSampling::SampleZ(Document &doc,
                                 bool decrease_count, bool increase_count,
                                 ParallelTree::RetTree &ret) {
@@ -109,26 +116,27 @@ void CollapsedSampling::SampleZ(Document &doc,
     std::vector<TCount> cdl((size_t) L);
     for (auto l: doc.z) cdl[l]++;
 
+    auto ck_sess = GetCkSessions();
     for (TLen n = 0; n < N; n++) {
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
 
         if (decrease_count) {
             count[l].Dec(v, pos[l]);
-            ck[l].Dec((size_t)pos[l]);
+            ck_sess[l].Dec((size_t)pos[l]);
             --cdl[l];
         }
 
         for (TTopic i = 0; i < L; i++)
             prob[i] = (cdl[i] + alpha[i]) *
                       (count[i].Get(v, pos[i]) + beta[i]) /
-                      (ck[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
+                      (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
 
         l = (TTopic)DiscreteSample(prob.begin(), prob.end(), generator);
 
         if (increase_count) {
             count[l].Inc(v, pos[l]);
-            ck[l].Inc((size_t)pos[l]);
+            ck_sess[l].Inc((size_t)pos[l]);
             ++cdl[l];
         }
         doc.z[n] = l;
@@ -256,10 +264,11 @@ std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
             result.back() += logf(c_offset + b);
     }
 
+    auto ck_sess = ck[l].GetSession();
     auto w_count = end - begin;
     for (TTopic k = num_instantiated; k < K; k++)
-        result[k] -= lgamma(ck[l].Get(k) + b_bar + w_count) -
-                lgamma(ck[l].Get(k) + b_bar);
+        result[k] -= lgamma(ck_sess.Get(k) + b_bar + w_count) -
+                lgamma(ck_sess.Get(k) + b_bar);
 
     result.back() -= lgamma(b_bar + w_count) - lgamma(b_bar);
     return std::move(result);
@@ -273,6 +282,7 @@ double CollapsedSampling::Perplexity() {
     std::vector<double> theta((size_t) L);
 
     size_t T = 0;
+    auto ck_sess = GetCkSessions();
     for (auto &doc: docs) {
         double old_log_likelihood = log_likelihood;
 
@@ -288,7 +298,7 @@ double CollapsedSampling::Perplexity() {
             TWord v = doc.w[n];
             for (int l = 0; l < L; l++) {
                 double phi = (count[l].Get(v, doc.c[l]) + beta[l]) /
-                             (ck[l].Get((size_t)doc.c[l]) + beta[l] * corpus.V);
+                             (ck_sess[l].Get((size_t)doc.c[l]) + beta[l] * corpus.V);
 
                 prob += theta[l] * phi;
             }
@@ -318,6 +328,7 @@ void CollapsedSampling::Check(int D) {
                             to_string(corpus.T) + ", got " + to_string(sum));*/
 
     // Deep check
+    auto ck_sess = GetCkSessions();
     std::vector<Matrix<int>> count2(L);
     std::vector<std::vector<int>> ck2(L);
     for (int l=0; l<L; l++) {
@@ -347,7 +358,7 @@ void CollapsedSampling::Check(int D) {
                     + "," + std::to_string(c) + " expected " + std::to_string(count2[l](r, c))
                     + " get " + std::to_string(count[l].Get(r, c)));
         for (int c = 0; c < count[l].GetC(); c++)
-            if (ck[l].Get(c) != ck2[l][c])
+            if (ck_sess[l].Get(c) != ck2[l][c])
                 throw std::runtime_error("Ck error");
     }
 }
@@ -359,6 +370,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
         ck[l].IncreaseSize((size_t)(doc.c[l] + 1));
     }
 
+    auto ck_sess = GetCkSessions();
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
@@ -366,7 +378,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
             TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
             count[l].Inc(v, k);
-            ck[l].Inc(k);
+            ck_sess[l].Inc(k);
         }
     else if (delta == -1)
         for (TLen n = 0; n < N; n++) {
@@ -374,7 +386,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
             TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
             count[l].Dec(v, k);
-            ck[l].Dec(k);
+            ck_sess[l].Dec(k);
         }
     else
         throw std::runtime_error("Invalid delta");

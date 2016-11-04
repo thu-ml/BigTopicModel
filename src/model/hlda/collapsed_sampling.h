@@ -37,6 +37,8 @@ protected:
 
     void UpdateDocCount(Document &doc, int delta);
 
+    std::vector<AtomicVector<TCount>::Session> GetCkSessions();
+
     std::vector<AtomicVector<TCount>> ck;
 
     int current_it, mc_iters, topic_limit;
