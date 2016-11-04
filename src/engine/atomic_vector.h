@@ -40,15 +40,22 @@ public:
 
     // Parallel and exclusive
 	void Resize(size_t size) {
-        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
-		if (size > _capacity) InternalResize(size);
+		if (size > _capacity) {
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            if (size > _capacity) InternalResize(size);
+        }
 		_size = size;
 	}
 
     void IncreaseSize(size_t size) {
-        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
-        if (size > _capacity) InternalResize(size);
-        if (size > _size) _size = size;
+        if (size > _capacity) {
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            if (size > _capacity) InternalResize(size);
+        }
+        if (size > _size) {
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            if (size > _size) _size = size;
+        }
     }
 
     // Guaranteed to be serial

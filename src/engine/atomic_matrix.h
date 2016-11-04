@@ -59,15 +59,22 @@ public:
     }
 
     void SetC(int newC) {
-        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
-        if (newC > _c_capacity) ResizeC(newC);
+        if (newC > _c_capacity) {
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            if (newC > _c_capacity) ResizeC(newC);
+        }
         _c_size = newC;
     }
 
     void IncreaseC(int newC) {
-        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
-        if (newC > _c_capacity) ResizeC(newC);
-        if (_c_size < newC) _c_size = newC;
+        if (newC > _c_capacity) {
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            if (newC > _c_capacity) ResizeC(newC);
+        }
+        if (_c_size < newC) {
+            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            if (_c_size < newC) _c_size = newC;
+        }
     }
 
     // Serial

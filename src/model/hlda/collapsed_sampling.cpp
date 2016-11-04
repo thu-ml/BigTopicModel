@@ -46,7 +46,7 @@ void CollapsedSampling::Estimate() {
         if (current_it >= mc_iters)
             mc_samples = -1;
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
             auto &doc = docs[d];
             ParallelTree::RetTree ret;
@@ -267,7 +267,7 @@ double CollapsedSampling::Perplexity() {
     decltype(doc_avg_likelihood) new_dal;
 
     double log_likelihood = 0;
-    
+
     size_t T = 0;
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
