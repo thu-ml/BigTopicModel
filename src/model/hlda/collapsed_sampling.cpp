@@ -267,13 +267,15 @@ double CollapsedSampling::Perplexity() {
     decltype(doc_avg_likelihood) new_dal;
 
     double log_likelihood = 0;
-    std::vector<double> theta((size_t) L);
-
+    
     size_t T = 0;
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
-    for (auto &doc: docs) {
-        double old_log_likelihood = log_likelihood;
+#pragma omp parallel for
+    for (int d = 0; d < corpus.D; d++) {
+        std::vector<double> theta((size_t) L);
+        auto &doc = docs[d];
+        double doc_log_likelihood = 0;
 
         T += doc.z.size();
         // Compute theta
@@ -291,11 +293,10 @@ double CollapsedSampling::Perplexity() {
 
                 prob += theta[l] * phi;
             }
-            log_likelihood += log(prob);
+            doc_log_likelihood += log(prob);
         }
-
-        double new_doc_avg_likelihood = (log_likelihood - old_log_likelihood) / doc.z.size();
-        new_dal.push_back(new_doc_avg_likelihood);
+#pragma omp critical
+        log_likelihood += doc_log_likelihood;
     }
 
     return exp(-log_likelihood / T);

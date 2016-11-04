@@ -152,6 +152,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
             vector<float> inv_normalization(K);
             for (TTopic k = 0; k < K; k++)
                 inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck_sess[l].Get(k));
+#pragma omp parallel for
             for (TWord v = 0; v < corpus.V; v++) {
                 for (TTopic k = 0; k < K; k++) {
                     TProb prob = (count_sess[l].Get(v, k) + beta[l]) * inv_normalization[k];
