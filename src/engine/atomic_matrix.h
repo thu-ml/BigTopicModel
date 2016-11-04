@@ -13,6 +13,22 @@
 template <class T>
 class AtomicMatrix {
 public:
+    struct Session {
+        Session(AtomicMatrix &m):
+                m(m), lock(new std::shared_lock<std::shared_timed_mutex>(m.mutex_)) {}
+
+        AtomicMatrix &m;
+        std::unique_ptr<std::shared_lock<std::shared_timed_mutex>> lock;
+
+        T Get(int r, int c) { return m.Get(r, c); }
+        void Inc(int r, int c) { m.Inc(r, c); }
+        void Inc(int r, int c, T delta) { m.Inc(r, c, delta); }
+        void Dec(int r, int c) { m.Dec(r, c); }
+        void Dec(int r, int c, T delta) { m.Dec(r, c, delta); }
+        int GetR() { return m.GetR(); }
+        int GetC() { return m.GetC(); }
+    };
+
     AtomicMatrix(int R = 0, int C = 0)
             : _r_size(R), _c_size(C), _r_capacity(R), _c_capacity(C),
               _data(new std::atomic<T> [R*C]) {
@@ -20,6 +36,10 @@ public:
 
     ~AtomicMatrix() {
         delete[] _data;
+    }
+
+    Session GetSession() {
+        return Session(*this);
     }
 
     // Parallel and exclusive
@@ -75,6 +95,24 @@ public:
         _c_size = permutation.size();
     }
 
+private:
+    void ResizeC(int newC) {
+        auto old_c_capacity = _c_capacity;
+        _c_capacity = _c_capacity * 2 + 1;
+        if (_c_capacity < newC) _c_capacity = newC;
+
+        auto *old_data = _data;
+        _data = new std::atomic<T>[_r_capacity * _c_capacity];
+        memset(_data, 0, sizeof(std::atomic<T>) * _r_capacity * _c_capacity);
+
+        for (int r = 0; r < _r_size; r++)
+            memcpy(_data + r*_c_capacity,
+                   old_data + r*old_c_capacity,
+                   sizeof(std::atomic<T>) * _c_size);
+
+        delete[] old_data;
+    }
+
     // Parallel and shared
     T Get(int r, int c) {
         return _data[r*_c_capacity + c].load(std::memory_order_relaxed);
@@ -99,24 +137,6 @@ public:
     int GetR() { return _r_size; }
 
     int GetC() { return _c_size; }
-
-private:
-    void ResizeC(int newC) {
-        auto old_c_capacity = _c_capacity;
-        _c_capacity = _c_capacity * 2 + 1;
-        if (_c_capacity < newC) _c_capacity = newC;
-
-        auto *old_data = _data;
-        _data = new std::atomic<T>[_r_capacity * _c_capacity];
-        memset(_data, 0, sizeof(std::atomic<T>) * _r_capacity * _c_capacity);
-
-        for (int r = 0; r < _r_size; r++)
-            memcpy(_data + r*_c_capacity,
-                   old_data + r*old_c_capacity,
-                   sizeof(std::atomic<T>) * _c_size);
-
-        delete[] old_data;
-    }
 
     int _r_size, _c_size, _r_capacity, _c_capacity;
     std::atomic<T> *_data;

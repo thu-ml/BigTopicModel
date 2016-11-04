@@ -38,6 +38,10 @@ protected:
 
     std::string TopWords(int l, int id);
 
+    std::vector<AtomicVector<TCount>::Session> GetCkSessions();
+
+    std::vector<AtomicMatrix<TCount>::Session> GetCountSessions();
+
     ParallelTree tree;
     Corpus &corpus;
     int L;
@@ -55,6 +59,8 @@ protected:
     std::vector<Matrix<TProb> > log_phi;
 
     std::vector<AtomicMatrix<TCount>> count;
+
+    std::vector<AtomicVector<TCount>> ck;
 
     Matrix<TProb> log_normalization;
 

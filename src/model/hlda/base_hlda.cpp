@@ -69,8 +69,9 @@ std::string BaseHLDA::TopWords(int l, int id) {
     TWord V = corpus.V;
     vector<pair<int, int>> rank((size_t) V);
     long long sum = 0;
+    auto count_sess = GetCountSessions();
     for (int v = 0; v < V; v++) {
-        auto c = count[l].Get(v, id);
+        auto c = count_sess[l].Get(v, id);
         rank[v] = make_pair(-c, v);
         sum += c;
     }
@@ -82,4 +83,18 @@ std::string BaseHLDA::TopWords(int l, int id) {
         out << -rank[v].first << ' ' << corpus.vocab[rank[v].second] << "\n";
 
     return out.str();
+}
+
+std::vector<AtomicVector<TCount>::Session> BaseHLDA::GetCkSessions() {
+    std::vector<AtomicVector<TCount>::Session> sessions;
+    for (int l=0; l<L; l++)
+        sessions.emplace_back(std::move(ck[l].GetSession()));
+    return sessions;
+}
+
+std::vector<AtomicMatrix<TCount>::Session> BaseHLDA::GetCountSessions() {
+    std::vector<AtomicMatrix<TCount>::Session> sessions;
+    for (int l=0; l<L; l++)
+        sessions.emplace_back(std::move(count[l].GetSession()));
+    return sessions;
 }

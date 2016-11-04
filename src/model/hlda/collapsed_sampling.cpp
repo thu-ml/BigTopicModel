@@ -100,13 +100,6 @@ void CollapsedSampling::PermuteC(std::vector<std::vector<int>> &perm) {
             doc.c[l] = inv_perm[l][doc.c[l]];
 }
 
-std::vector<AtomicVector<TCount>::Session> CollapsedSampling::GetCkSessions() {
-    std::vector<AtomicVector<TCount>::Session> sessions;
-    for (int l=0; l<L; l++)
-        sessions.emplace_back(std::move(ck[l].GetSession()));
-    return sessions;
-}
-
 void CollapsedSampling::SampleZ(Document &doc,
                                 bool decrease_count, bool increase_count,
                                 ParallelTree::RetTree &ret) {
@@ -117,25 +110,26 @@ void CollapsedSampling::SampleZ(Document &doc,
     for (auto l: doc.z) cdl[l]++;
 
     auto ck_sess = GetCkSessions();
+    auto count_sess = GetCountSessions();
     for (TLen n = 0; n < N; n++) {
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
 
         if (decrease_count) {
-            count[l].Dec(v, pos[l]);
+            count_sess[l].Dec(v, pos[l]);
             ck_sess[l].Dec((size_t)pos[l]);
             --cdl[l];
         }
 
         for (TTopic i = 0; i < L; i++)
             prob[i] = (cdl[i] + alpha[i]) *
-                      (count[i].Get(v, pos[i]) + beta[i]) /
+                      (count_sess[i].Get(v, pos[i]) + beta[i]) /
                       (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
 
         l = (TTopic)DiscreteSample(prob.begin(), prob.end(), generator);
 
         if (increase_count) {
-            count[l].Inc(v, pos[l]);
+            count_sess[l].Inc(v, pos[l]);
             ck_sess[l].Inc((size_t)pos[l]);
             ++cdl[l];
         }
@@ -238,7 +232,7 @@ std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
     auto begin = doc.BeginLevel(l);
     auto end = doc.EndLevel(l);
 
-    auto &local_count = count[l];
+    auto local_count_sess = count[l].GetSession();
     auto &local_log_phi = log_phi[l];
 
     for (auto i = begin; i < end; i++) {
@@ -246,7 +240,7 @@ std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
         auto v = doc.reordered_w[i];
 
         for (TTopic k = num_instantiated; k < K; k++)
-            log_work[k] = (TProb) (local_count.Get(v, k) + c_offset + b);
+            log_work[k] = (TProb) (local_count_sess.Get(v, k) + c_offset + b);
 
         // VML ln
         vsLn(num_collapsed, log_work.data() + num_instantiated,
@@ -283,6 +277,7 @@ double CollapsedSampling::Perplexity() {
 
     size_t T = 0;
     auto ck_sess = GetCkSessions();
+    auto count_sess = GetCountSessions();
     for (auto &doc: docs) {
         double old_log_likelihood = log_likelihood;
 
@@ -297,7 +292,7 @@ double CollapsedSampling::Perplexity() {
             double prob = 0;
             TWord v = doc.w[n];
             for (int l = 0; l < L; l++) {
-                double phi = (count[l].Get(v, doc.c[l]) + beta[l]) /
+                double phi = (count_sess[l].Get(v, doc.c[l]) + beta[l]) /
                              (ck_sess[l].Get((size_t)doc.c[l]) + beta[l] * corpus.V);
 
                 prob += theta[l] * phi;
@@ -313,14 +308,16 @@ double CollapsedSampling::Perplexity() {
 }
 
 void CollapsedSampling::Check(int D) {
+    auto count_sess = GetCountSessions();
+    auto ck_sess = GetCkSessions();
     if (D == -1) D = corpus.D;
     int sum = 0;
     for (TLen l = 0; l < L; l++) {
-        for (TTopic k = 0; k < count[l].GetC(); k++)
+        for (TTopic k = 0; k < count_sess[l].GetC(); k++)
             for (TWord v = 0; v < corpus.V; v++) {
-                if (count[l].Get(v, k) < 0) // TODO
+                if (count_sess[l].Get(v, k) < 0) // TODO
                     throw runtime_error("Error!");
-                sum += count[l].Get(v, k);
+                sum += count_sess[l].Get(v, k);
             }
     }
     /*if (sum != corpus.T)
@@ -328,13 +325,12 @@ void CollapsedSampling::Check(int D) {
                             to_string(corpus.T) + ", got " + to_string(sum));*/
 
     // Deep check
-    auto ck_sess = GetCkSessions();
     std::vector<Matrix<int>> count2(L);
     std::vector<std::vector<int>> ck2(L);
     for (int l=0; l<L; l++) {
         count2[l].SetR(corpus.V);
-        count2[l].SetC(count[l].GetC());
-        ck2[l].resize(count[l].GetC());
+        count2[l].SetC(count_sess[l].GetC());
+        ck2[l].resize(count_sess[l].GetC());
     }
     for (int d=0; d<D; d++) {
         auto &doc = docs[d];
@@ -352,12 +348,12 @@ void CollapsedSampling::Check(int D) {
     }
     for (int l=0; l<L; l++) {
         for (int r = 0; r < corpus.V; r++)
-            for (int c = 0; c < count[l].GetC(); c++)
-                if (count[l].Get(r, c) != count2[l](r, c))
+            for (int c = 0; c < count_sess[l].GetC(); c++)
+                if (count_sess[l].Get(r, c) != count2[l](r, c))
                     throw std::runtime_error("Count error at " + std::to_string(l) + "," + std::to_string(r)
                     + "," + std::to_string(c) + " expected " + std::to_string(count2[l](r, c))
-                    + " get " + std::to_string(count[l].Get(r, c)));
-        for (int c = 0; c < count[l].GetC(); c++)
+                    + " get " + std::to_string(count_sess[l].Get(r, c)));
+        for (int c = 0; c < count_sess[l].GetC(); c++)
             if (ck_sess[l].Get(c) != ck2[l][c])
                 throw std::runtime_error("Ck error");
     }
@@ -371,13 +367,14 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     }
 
     auto ck_sess = GetCkSessions();
+    auto count_sess = GetCountSessions();
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
             TLen l = doc.z[n];
             TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
-            count[l].Inc(v, k);
+            count_sess[l].Inc(v, k);
             ck_sess[l].Inc(k);
         }
     else if (delta == -1)
@@ -385,7 +382,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
             TLen l = doc.z[n];
             TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
-            count[l].Dec(v, k);
+            count_sess[l].Dec(v, k);
             ck_sess[l].Dec(k);
         }
     else

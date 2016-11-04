@@ -123,11 +123,12 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
     // TODO: the first few topics will have a huge impact...
     // Read out all the required data
     auto ck_sess = GetCkSessions();
+    auto count_sess = GetCountSessions();
     Matrix<TProb> prob_data((int)doc.z.size(), L);
     for (TLen i = 0; i < L; i++)
         if (is_collapsed[i])
             for (int n = 0; n < (int)doc.z.size(); n++)
-                prob_data(n, i) = (count[i].Get(doc.w[n], pos[i]) + beta[i]) /
+                prob_data(n, i) = (count_sess[i].Get(doc.w[n], pos[i]) + beta[i]) /
                                   (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
         else
             for (int n = 0; n < (int)doc.z.size(); n++)
@@ -137,7 +138,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
         if (decrease_count) {
-            count[l].Dec(v, pos[l]);
+            count_sess[l].Dec(v, pos[l]);
             ck_sess[l].Dec((size_t)pos[l]);
             --cdl[l];
         }
@@ -149,7 +150,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
             for (TLen i = 0; i < L; i++)
                 if (is_collapsed[i])
                     prob[i] = (cdl[i] + alpha[i]) *
-                              (count[i].Get(v, pos[i]) + beta[i]) /
+                              (count_sess[i].Get(v, pos[i]) + beta[i]) /
                               (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
                 else {
                     prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
@@ -159,7 +160,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
         doc.z[n] = l;
 
         if (increase_count) {
-            count[l].Inc(v, pos[l]);
+            count_sess[l].Inc(v, pos[l]);
             ck_sess[l].Inc((size_t)pos[l]);
             ++cdl[l];
         }
@@ -191,6 +192,7 @@ void PartiallyCollapsedSampling::SamplePhi() {
 void PartiallyCollapsedSampling::ComputePhi() {
     auto ret = tree.GetTree();
     auto ck_sess = GetCkSessions();
+    auto count_sess = GetCountSessions();
     if (!sample_phi) {
         for (TLen l = 0; l < L; l++) {
             TTopic K = (TTopic) ret.num_nodes[l];
@@ -200,7 +202,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
                 inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck_sess[l].Get(k));
             for (TWord v = 0; v < corpus.V; v++) {
                 for (TTopic k = 0; k < K; k++) {
-                    TProb prob = (count[l].Get(v, k) + beta[l]) * inv_normalization[k];
+                    TProb prob = (count_sess[l].Get(v, k) + beta[l]) * inv_normalization[k];
                     phi[l](v, k) = prob;
                     log_phi[l](v, k) = prob;
                 }
@@ -214,7 +216,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
             for (TTopic k = 0; k < K; k++) {
                 TProb sum = 0;
                 for (TWord v = 0; v < corpus.V; v++) {
-                    TProb concentration = (TProb)(count[l].Get(v, k) + beta[l]);
+                    TProb concentration = (TProb)(count_sess[l].Get(v, k) + beta[l]);
                     gamma_distribution<TProb> gammarnd(concentration);
                     TProb p = gammarnd(generator);
                     phi[l](v, k) = p;
