@@ -24,6 +24,8 @@ protected:
 
     virtual void SampleC(Document &doc, bool decrease_count, bool increase_count, ParallelTree::RetTree &ret);
 
+    virtual void SamplePhi();
+
     int DFSSample(Document &doc, ParallelTree::RetTree &ret);
 
     void PermuteC(std::vector<std::vector<int>> &perm);

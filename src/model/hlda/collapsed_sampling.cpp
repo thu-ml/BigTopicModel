@@ -42,7 +42,7 @@ void CollapsedSampling::Estimate() {
     for (int it = 0; it < num_iters; it++) {
         current_it = it;
         Clock clk;
-        Check();
+
         if (current_it >= mc_iters)
             mc_samples = -1;
 
@@ -52,16 +52,7 @@ void CollapsedSampling::Estimate() {
             SampleZ(doc, true, true, ret);
         }
 
-        auto perm = tree.Compress();
-        PermuteC(perm);
-        for (TLen l = 0; l < L; l++) {
-            count[l].PermuteColumns(perm[l]);
-            ck[l].Permute(perm[l]);
-        }
-
-        double time = clk.toc();
-        double throughput = corpus.T / time / 1048576;
-        double perplexity = Perplexity();
+        SamplePhi();
 
         auto ret = tree.GetTree();
         int num_big_nodes = 0;
@@ -80,9 +71,15 @@ void CollapsedSampling::Estimate() {
             printf("%d ", cl[l]);
         printf("\n");
 
+        double time = clk.toc();
+        double throughput = corpus.T / time / 1048576;
+        double perplexity = Perplexity();
         printf("Iteration %d, %d topics (%d, %d), %.2f seconds (%.2fMtoken/s), perplexity = %.2f\n",
                it, (int)ret.nodes.size(), num_big_nodes,
                num_docs_big, time, throughput, perplexity);
+
+        Check();
+        tree.Check();
     }
 }
 
@@ -264,6 +261,15 @@ std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
 
     result.back() -= lgamma(b_bar + w_count) - lgamma(b_bar);
     return std::move(result);
+}
+
+void CollapsedSampling::SamplePhi() {
+    auto perm = tree.Compress();
+    PermuteC(perm);
+    for (TLen l = 0; l < L; l++) {
+        count[l].PermuteColumns(perm[l]);
+        ck[l].Permute(perm[l]);
+    }
 }
 
 double CollapsedSampling::Perplexity() {

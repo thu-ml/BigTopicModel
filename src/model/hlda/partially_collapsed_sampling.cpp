@@ -60,52 +60,6 @@ void PartiallyCollapsedSampling::Initialize() {
     delayed_update = true;
 }
 
-void PartiallyCollapsedSampling::Estimate() {
-    for (int it = 0; it < num_iters; it++) {
-        current_it = it;
-        Clock clk;
-
-        if (current_it >= mc_iters)
-            mc_samples = -1;
-
-        for (auto &doc: docs) {
-            ParallelTree::RetTree ret;
-            SampleC(doc, true, true, ret);
-            SampleZ(doc, true, true, ret);
-        }
-
-        SamplePhi();
-
-        tree.Check();
-
-        auto ret = tree.GetTree();
-        int num_big_nodes = 0;
-        int num_docs_big = 0;
-        for (auto &node: ret.nodes)
-            if (node.num_docs > 5) {
-                num_big_nodes++;
-                if (node.depth + 1 == L)
-                    num_docs_big += node.num_docs;
-            }
-
-        std::vector<int> cl((size_t) L);
-        for (auto &node: ret.nodes)
-            cl[node.depth]++;
-        for (int l=0; l<L; l++)
-            printf("%d ", cl[l]);
-        printf("\n");
-
-        double time = clk.toc();
-        double throughput = corpus.T / time / 1048576;
-        double perplexity = Perplexity();
-        printf("Iteration %d, %d topics (%d, %d), %.2f seconds (%.2fMtoken/s), perplexity = %.2f\n",
-               it, (int)ret.nodes.size(), num_big_nodes,
-               num_docs_big, time, throughput, perplexity);
-
-        Check();
-    }
-}
-
 void PartiallyCollapsedSampling::SampleZ(Document &doc,
                                          bool decrease_count, bool increase_count,
                                          ParallelTree::RetTree &ret) {
