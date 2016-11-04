@@ -26,8 +26,6 @@ PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, ve
 
 void PartiallyCollapsedSampling::Initialize() {
     //CollapsedSampling::Initialize();
-    ck.resize((size_t) L);
-    ck[0].EmplaceBack(0);
     current_it = -1;
 
     cout << "Start initialize..." << endl;

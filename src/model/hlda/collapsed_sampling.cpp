@@ -20,8 +20,6 @@ CollapsedSampling::CollapsedSampling(Corpus &corpus, int L,
         topic_limit(topic_limit) {}
 
 void CollapsedSampling::Initialize() {
-    ck.resize((size_t) L);
-    ck[0].EmplaceBack(0);
     current_it = -1;
 
     cout << "Start initialize..." << endl;
