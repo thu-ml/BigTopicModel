@@ -6,7 +6,8 @@
 #define BIGTOPICMODEL_ATOMIC_MATRIX_H
 
 #include <atomic>
-#include <shared_mutex>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <stdexcept>
 #include <memory.h>
 
@@ -15,10 +16,10 @@ class AtomicMatrix {
 public:
     struct Session {
         Session(AtomicMatrix &m):
-                m(m), lock(new std::shared_lock<std::shared_timed_mutex>(m.mutex_)) {}
+                m(m), lock(new boost::shared_lock<boost::shared_mutex>(m.mutex_)) {}
 
         AtomicMatrix &m;
-        std::unique_ptr<std::shared_lock<std::shared_timed_mutex>> lock;
+        std::unique_ptr<boost::shared_lock<boost::shared_mutex>> lock;
 
         T Get(int r, int c) { return m.Get(r, c); }
         void Inc(int r, int c) { m.Inc(r, c); }
@@ -44,7 +45,7 @@ public:
 
     // Parallel and exclusive
     void SetR(int newR) {
-        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+        boost::unique_lock<boost::shared_mutex> lock(mutex_);
         if (newR > _r_capacity) {
             _r_capacity = _r_capacity * 2 + 1;
             if (_r_capacity < newR) _r_capacity = newR;
@@ -60,7 +61,7 @@ public:
 
     void SetC(int newC) {
         if (newC > _c_capacity) {
-            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            boost::unique_lock<boost::shared_mutex> lock(mutex_);
             if (newC > _c_capacity) ResizeC(newC);
         }
         _c_size = newC;
@@ -68,11 +69,11 @@ public:
 
     void IncreaseC(int newC) {
         if (newC > _c_capacity) {
-            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            boost::unique_lock<boost::shared_mutex> lock(mutex_);
             if (newC > _c_capacity) ResizeC(newC);
         }
         if (_c_size < newC) {
-            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            boost::unique_lock<boost::shared_mutex> lock(mutex_);
             if (_c_size < newC) _c_size = newC;
         }
     }
@@ -148,7 +149,7 @@ private:
     int _r_size, _c_size, _r_capacity, _c_capacity;
     std::atomic<T> *_data;
 
-    std::shared_timed_mutex mutex_;
+    boost::shared_mutex mutex_;
 };
 
 #endif //BIGTOPICMODEL_ATOMIC_MATRIX_H

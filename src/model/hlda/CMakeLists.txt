@@ -6,4 +6,4 @@ link_directories(/opt/intel/mkl/lib/intel64)
 
 add_library(hlda_lib tree.cpp base_hlda.cpp document.cpp collapsed_sampling.cpp partially_collapsed_sampling.cpp parallel_tree.cpp)
 add_executable(hlda main.cpp)
-target_link_libraries(hlda hlda_lib util ${MPI_LIBRARIES} ${GLOG} ${GFLAGS} mkl_intel_lp64 mkl_core mkl_sequential m dl)
+target_link_libraries(hlda hlda_lib util ${MPI_LIBRARIES} ${GLOG} ${GFLAGS} mkl_intel_lp64 mkl_core mkl_sequential m dl boost_thread boost_system)

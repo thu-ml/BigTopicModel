@@ -4,17 +4,18 @@
 #include <atomic>
 #include <stdexcept>
 #include <memory.h>
-#include <shared_mutex>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/shared_mutex.hpp>
 
 template <class T>
 class AtomicVector{
 public:
     struct Session {
         Session(AtomicVector &v):
-                v(v), lock(new std::shared_lock<std::shared_timed_mutex>(v.mutex_)) { }
+                v(v), lock(new boost::shared_lock<boost::shared_mutex>(v.mutex_)) { }
 
         AtomicVector &v;
-        std::unique_ptr<std::shared_lock<std::shared_timed_mutex>> lock;
+        std::unique_ptr<boost::shared_lock<boost::shared_mutex>> lock;
 
         void Inc(size_t index) { v.Inc(index); }
         void Inc(size_t index, T delta) { v.Inc(index, delta); }
@@ -41,7 +42,7 @@ public:
     // Parallel and exclusive
 	void Resize(size_t size) {
 		if (size > _capacity) {
-            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            boost::unique_lock<boost::shared_mutex> lock(mutex_);
             if (size > _capacity) InternalResize(size);
         }
 		_size = size;
@@ -49,11 +50,11 @@ public:
 
     void IncreaseSize(size_t size) {
         if (size > _capacity) {
-            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            boost::unique_lock<boost::shared_mutex> lock(mutex_);
             if (size > _capacity) InternalResize(size);
         }
         if (size > _size) {
-            std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+            boost::unique_lock<boost::shared_mutex> lock(mutex_);
             if (size > _size) _size = size;
         }
     }
@@ -65,7 +66,7 @@ public:
 	}
 
     void Permute(std::vector<int> permutation) {
-        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
+        boost::unique_lock<boost::shared_mutex> lock(mutex_);
         if (_size < permutation.size())
             throw std::runtime_error("Incorrect size");
 
@@ -114,7 +115,7 @@ private:
 	size_t _size;
 	size_t _capacity;
 
-    std::shared_timed_mutex mutex_;
+    boost::shared_mutex mutex_;
 };
 
 #endif

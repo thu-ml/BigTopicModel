@@ -27,7 +27,10 @@ include_directories(${ZLIB_INCLUDE_PATH})
 #include_directories(third_party/BigMPI/src)
 include_directories(third_party/glog/build/include)
 include_directories(third_party/gflags/build/include)
+include_directories(third_party/boost/build/include)
 include_directories(${googletest_SOURCE_DIR}/include ${googletest_SOURCE_DIR})
+
+link_directories(${BigTopicModel_SOURCE_DIR}/third_party/boost/build/lib)
 
 # TODO check MPI_Count and MPI_Aint is 8 bytes
 #set(BIGMPI ${BigTopicModel_SOURCE_DIR}/third_party/BigMPI/build/src/libbigmpi.so)
