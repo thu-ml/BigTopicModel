@@ -6,6 +6,7 @@
 #define BIGTOPICMODEL_ATOMIC_MATRIX_H
 
 #include <atomic>
+#include <shared_mutex>
 #include <stdexcept>
 #include <memory.h>
 
@@ -21,11 +22,9 @@ public:
         delete[] _data;
     }
 
-    int GetR() { return _r_size; }
-
-    int GetC() { return _c_size; }
-
+    // Parallel and exclusive
     void SetR(int newR) {
+        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
         if (newR > _r_capacity) {
             _r_capacity = _r_capacity * 2 + 1;
             if (_r_capacity < newR) _r_capacity = newR;
@@ -39,35 +38,19 @@ public:
         _r_size = newR;
     }
 
-    void ResizeC(int newC) {
-        auto old_c_capacity = _c_capacity;
-        _c_capacity = _c_capacity * 2 + 1;
-        if (_c_capacity < newC) _c_capacity = newC;
-
-        auto *old_data = _data;
-        _data = new std::atomic<T>[_r_capacity * _c_capacity];
-        memset(_data, 0, sizeof(std::atomic<T>) * _r_capacity * _c_capacity);
-
-        for (int r = 0; r < _r_size; r++)
-            memcpy(_data + r*_c_capacity,
-                   old_data + r*old_c_capacity,
-                   sizeof(std::atomic<T>) * _c_size);
-
-        delete[] old_data;
-    }
-
     void SetC(int newC) {
-        //TODO lock
+        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
         if (newC > _c_capacity) ResizeC(newC);
         _c_size = newC;
     }
 
     void IncreaseC(int newC) {
-        //TODO lock
+        std::unique_lock<std::shared_timed_mutex> lock(mutex_);
         if (newC > _c_capacity) ResizeC(newC);
         if (_c_size < newC) _c_size = newC;
     }
 
+    // Serial
     void PermuteColumns(std::vector<int> permutation) {
         if (permutation.size() > _c_size)
             throw std::runtime_error("Incorrect permutation");
@@ -92,6 +75,7 @@ public:
         _c_size = permutation.size();
     }
 
+    // Parallel and shared
     T Get(int r, int c) {
         return _data[r*_c_capacity + c].load(std::memory_order_relaxed);
     }
@@ -112,9 +96,32 @@ public:
         _data[r*_c_capacity + c] -= delta;
     }
 
+    int GetR() { return _r_size; }
+
+    int GetC() { return _c_size; }
+
 private:
+    void ResizeC(int newC) {
+        auto old_c_capacity = _c_capacity;
+        _c_capacity = _c_capacity * 2 + 1;
+        if (_c_capacity < newC) _c_capacity = newC;
+
+        auto *old_data = _data;
+        _data = new std::atomic<T>[_r_capacity * _c_capacity];
+        memset(_data, 0, sizeof(std::atomic<T>) * _r_capacity * _c_capacity);
+
+        for (int r = 0; r < _r_size; r++)
+            memcpy(_data + r*_c_capacity,
+                   old_data + r*old_c_capacity,
+                   sizeof(std::atomic<T>) * _c_size);
+
+        delete[] old_data;
+    }
+
     int _r_size, _c_size, _r_capacity, _c_capacity;
     std::atomic<T> *_data;
+
+    std::shared_timed_mutex mutex_;
 };
 
 #endif //BIGTOPICMODEL_ATOMIC_MATRIX_H

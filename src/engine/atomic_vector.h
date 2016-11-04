@@ -38,6 +38,7 @@ public:
         return Session(*this);
     }
 
+    // Parallel and exclusive
 	void Resize(size_t size) {
         std::unique_lock<std::shared_timed_mutex> lock(mutex_);
 		if (size > _capacity) InternalResize(size);
@@ -50,7 +51,7 @@ public:
         if (size > _size) _size = size;
     }
 
-    // Guartanteed to be serial
+    // Guaranteed to be serial
 	void EmplaceBack(T value) {
 		Resize(_size + 1);
 		_data[_size - 1].store(value);
