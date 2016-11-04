@@ -46,13 +46,27 @@ void CollapsedSampling::Estimate() {
         if (current_it >= mc_iters)
             mc_samples = -1;
 
-#pragma omp parallel for schedule(dynamic, 10)
+        #pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
             auto &doc = docs[d];
             ParallelTree::RetTree ret;
             SampleC(doc, true, true, ret);
             SampleZ(doc, true, true, ret);
         }
+
+/*#pragma omp parallel for schedule(dynamic, 10)
+        for (int d = 0; d < corpus.D; d++) {
+            auto &doc = docs[d];
+            ParallelTree::RetTree ret;
+            SampleC(doc, true, true, ret);
+        }
+
+#pragma omp parallel for schedule(dynamic, 10)
+        for (int d = 0; d < corpus.D; d++) {
+            auto &doc = docs[d];
+            ParallelTree::RetTree ret = tree.GetTree();
+            SampleZ(doc, true, true, ret);
+        }*/
 
         SamplePhi();
 

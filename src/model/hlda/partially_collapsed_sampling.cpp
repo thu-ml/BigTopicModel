@@ -76,15 +76,6 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
     // Read out all the required data
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
-    Matrix<TProb> prob_data((int)doc.z.size(), L);
-    for (TLen i = 0; i < L; i++)
-        if (is_collapsed[i])
-            for (int n = 0; n < (int)doc.z.size(); n++)
-                prob_data(n, i) = (count_sess[i].Get(doc.w[n], pos[i]) + beta[i]) /
-                                  (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
-        else
-            for (int n = 0; n < (int)doc.z.size(); n++)
-                prob_data(n, i) = phi[i](doc.w[n], pos[i]);
 
     for (size_t n = 0; n < doc.z.size(); n++) {
         TWord v = doc.w[n];
@@ -95,18 +86,14 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
             --cdl[l];
         }
 
-        if (delayed_update)
-            for (TLen i = 0; i < L; i++)
-                prob[i] = (alpha[i] + cdl[i]) * prob_data(n, i);
-        else
-            for (TLen i = 0; i < L; i++)
-                if (is_collapsed[i])
-                    prob[i] = (cdl[i] + alpha[i]) *
-                              (count_sess[i].Get(v, pos[i]) + beta[i]) /
-                              (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
-                else {
-                    prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
-                }
+        for (TLen i = 0; i < L; i++)
+            if (is_collapsed[i])
+                prob[i] = (cdl[i] + alpha[i]) *
+                          (count_sess[i].Get(v, pos[i]) + beta[i]) /
+                          (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
+            else {
+                prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
+            }
 
         l = (TTopic) DiscreteSample(prob.begin(), prob.end(), generator);
         doc.z[n] = l;
