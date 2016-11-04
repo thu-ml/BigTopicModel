@@ -46,7 +46,9 @@ void CollapsedSampling::Estimate() {
         if (current_it >= mc_iters)
             mc_samples = -1;
 
-        for (auto &doc: docs) {
+#pragma omp parallel for
+        for (int d = 0; d < corpus.D; d++) {
+            auto &doc = docs[d];
             ParallelTree::RetTree ret;
             SampleC(doc, true, true, ret);
             SampleZ(doc, true, true, ret);
