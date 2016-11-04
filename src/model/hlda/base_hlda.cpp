@@ -109,3 +109,15 @@ std::vector<AtomicMatrix<TCount>::Session> BaseHLDA::GetCountSessions() {
         sessions.emplace_back(std::move(count[l].GetSession()));
     return sessions;
 }
+
+void BaseHLDA::PermuteC(std::vector<std::vector<int>> &perm) {
+    std::vector<std::vector<int>> inv_perm(L);
+    for (int l=0; l<L; l++) {
+        inv_perm[l].resize((size_t)*std::max_element(perm[l].begin(), perm[l].end())+1);
+        for (size_t i=0; i<perm[l].size(); i++)
+            inv_perm[l][perm[l][i]] = (int)i;
+    }
+    for (auto &doc: docs)
+        for (int l = 0; l < L; l++)
+            doc.c[l] = inv_perm[l][doc.c[l]];
+}

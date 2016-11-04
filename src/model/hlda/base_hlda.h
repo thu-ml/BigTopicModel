@@ -42,6 +42,8 @@ protected:
 
     std::vector<AtomicMatrix<TCount>::Session> GetCountSessions();
 
+    void PermuteC(std::vector<std::vector<int>> &perm);
+
     ParallelTree tree;
     Corpus &corpus;
     int L;
