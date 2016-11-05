@@ -380,7 +380,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
 
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
-    //LockDoc(doc, count_sess);
+    LockDoc(doc, count_sess);
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
@@ -400,5 +400,5 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
         }
     else
         throw std::runtime_error("Invalid delta");
-    //LockDoc(doc, count_sess);
+    UnlockDoc(doc, count_sess);
 }
