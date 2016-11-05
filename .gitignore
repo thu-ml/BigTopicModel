@@ -3,3 +3,5 @@ release
 third_party
 .idea
 data
+*swp
+*swo
