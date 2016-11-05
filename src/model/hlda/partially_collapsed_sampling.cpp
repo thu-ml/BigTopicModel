@@ -45,8 +45,7 @@ void PartiallyCollapsedSampling::Initialize() {
             for (auto &k: doc.z)
                 k = generator() % L;
 
-            ParallelTree::RetTree ret;
-            SampleC(doc, false, true, ret);
+            SampleC(doc, false, true);
             SampleZ(doc, true, true);
         }
         SamplePhi();

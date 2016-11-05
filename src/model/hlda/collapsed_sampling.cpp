@@ -29,8 +29,7 @@ void CollapsedSampling::Initialize() {
         for (auto &k: doc.z)
             k = generator() % L;
 
-        ParallelTree::RetTree ret;
-        SampleC(doc, false, true, ret);
+        SampleC(doc, false, true);
         SampleZ(doc, true, true);
 
         if (tree.GetTree().nodes.size() > (size_t) topic_limit)
@@ -54,8 +53,7 @@ void CollapsedSampling::Estimate() {
         #pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
             auto &doc = docs[d];
-            ParallelTree::RetTree ret;
-            SampleC(doc, true, true, ret);
+            SampleC(doc, true, true);
             SampleZ(doc, true, true);
         }
 
@@ -149,15 +147,14 @@ void CollapsedSampling::SampleZ(Document &doc,
 }
 
 void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
-                                bool increase_count,
-                                ParallelTree::RetTree &ret) {
+                                bool increase_count) {
     if (decrease_count) {
         UpdateDocCount(doc, -1);
         tree.DecNumDocs(doc.leaf_id);
     }
 
     // Sample
-    auto leaf_id = DFSSample(doc, ret);
+    auto leaf_id = DFSSample(doc);
 
     // Increase num_docs
     if (increase_count) {
@@ -168,8 +165,8 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
     }
 }
 
-int CollapsedSampling::DFSSample(Document &doc, ParallelTree::RetTree &ret) {
-    ret = tree.GetTree();
+int CollapsedSampling::DFSSample(Document &doc) {
+    auto ret = tree.GetTree();
     auto &nodes = ret.nodes;
     int S = max(mc_samples, 1);
     vector<TProb> prob(nodes.size() * S, -1e9f);

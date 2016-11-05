@@ -22,11 +22,11 @@ public:
 protected:
     virtual void SampleZ(Document &doc, bool decrease_count, bool increase_count);
 
-    virtual void SampleC(Document &doc, bool decrease_count, bool increase_count, ParallelTree::RetTree &ret);
+    virtual void SampleC(Document &doc, bool decrease_count, bool increase_count);
 
     virtual void SamplePhi();
 
-    int DFSSample(Document &doc, ParallelTree::RetTree &ret);
+    int DFSSample(Document &doc);
 
     virtual std::vector<TProb>
     WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) override;
