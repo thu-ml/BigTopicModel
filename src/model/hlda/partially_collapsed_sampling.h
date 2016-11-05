@@ -17,7 +17,7 @@ public:
     void Initialize() override;
 
 protected:
-    void SampleZ(Document &doc, bool decrease_count, bool increase_count, ParallelTree::RetTree &ret) override;
+    void SampleZ(Document &doc, bool decrease_count, bool increase_count) override;
 
     virtual void SamplePhi() override;
 

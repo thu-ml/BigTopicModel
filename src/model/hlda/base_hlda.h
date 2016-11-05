@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <vector>
+#include <mutex>
 #include <string>
 #include <mutex>
 #include "matrix.h"
@@ -44,6 +45,13 @@ protected:
 
     void PermuteC(std::vector<std::vector<int>> &perm);
 
+    void LockDoc(Document &doc,
+            std::vector<AtomicMatrix<TCount>::Session> &session);
+    void UnlockDoc(Document &doc,
+            std::vector<AtomicMatrix<TCount>::Session> &session);
+    std::vector<std::mutex*> GetDocLocks(Document &doc, 
+            std::vector<AtomicMatrix<TCount>::Session> &session);
+
     ParallelTree tree;
     Corpus &corpus;
     int L;
@@ -63,6 +71,8 @@ protected:
     std::vector<AtomicMatrix<TCount>> count;
 
     std::vector<AtomicVector<TCount>> ck;
+
+    std::vector<int> num_instantiated;
 
     Matrix<TProb> log_normalization;
 

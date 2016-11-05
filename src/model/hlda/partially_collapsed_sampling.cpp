@@ -37,6 +37,8 @@ void PartiallyCollapsedSampling::Initialize() {
 
     for (size_t d_start = 0; d_start < docs.size(); d_start += minibatch_size) {
         size_t d_end = min(docs.size(), d_start + minibatch_size);
+        auto ret = tree.GetTree();
+        num_instantiated = ret.num_instantiated;
         for (size_t d = d_start; d < d_end; d++) {
             auto &doc = docs[d];
 
@@ -45,7 +47,7 @@ void PartiallyCollapsedSampling::Initialize() {
 
             ParallelTree::RetTree ret;
             SampleC(doc, false, true, ret);
-            SampleZ(doc, true, true, ret);
+            SampleZ(doc, true, true);
         }
         SamplePhi();
 
@@ -61,8 +63,7 @@ void PartiallyCollapsedSampling::Initialize() {
 }
 
 void PartiallyCollapsedSampling::SampleZ(Document &doc,
-                                         bool decrease_count, bool increase_count,
-                                         ParallelTree::RetTree &ret) {
+                                         bool decrease_count, bool increase_count) {
     std::vector<TCount> cdl((size_t) L);
     std::vector<TProb> prob((size_t) L);
     for (auto k: doc.z) cdl[k]++;
@@ -70,12 +71,13 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
     auto &pos = doc.c;
     std::vector<bool> is_collapsed((size_t) L);
     for (int l = 0; l < L; l++) is_collapsed[l] =
-                                        doc.c[l] >= ret.num_instantiated[l];
+                                        doc.c[l] >= num_instantiated[l];
 
     // TODO: the first few topics will have a huge impact...
     // Read out all the required data
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
+    LockDoc(doc, count_sess);
 
     for (size_t n = 0; n < doc.z.size(); n++) {
         TWord v = doc.w[n];
@@ -104,6 +106,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
             ++cdl[l];
         }
     }
+    UnlockDoc(doc, count_sess);
     /*double sum = 0;
     for (TLen l = 0; l < L; l++)
         sum += (doc.theta[l] = cdl[l] + alpha[l]);

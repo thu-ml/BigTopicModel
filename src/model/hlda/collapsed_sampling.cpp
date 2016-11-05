@@ -23,13 +23,15 @@ void CollapsedSampling::Initialize() {
     current_it = -1;
 
     cout << "Start initialize..." << endl;
+    auto ret = tree.GetTree();
+    num_instantiated = ret.num_instantiated;
     for (auto &doc: docs) {
         for (auto &k: doc.z)
             k = generator() % L;
 
         ParallelTree::RetTree ret;
         SampleC(doc, false, true, ret);
-        SampleZ(doc, true, true, ret);
+        SampleZ(doc, true, true);
 
         if (tree.GetTree().nodes.size() > (size_t) topic_limit)
             throw runtime_error("There are too many topics");
@@ -46,12 +48,15 @@ void CollapsedSampling::Estimate() {
         if (current_it >= mc_iters)
             mc_samples = -1;
 
+        auto ret = tree.GetTree();
+        num_instantiated = ret.num_instantiated;
+
         #pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
             auto &doc = docs[d];
             ParallelTree::RetTree ret;
             SampleC(doc, true, true, ret);
-            SampleZ(doc, true, true, ret);
+            SampleZ(doc, true, true);
         }
 
 /*#pragma omp parallel for schedule(dynamic, 10)
@@ -70,7 +75,7 @@ void CollapsedSampling::Estimate() {
 
         SamplePhi();
 
-        auto ret = tree.GetTree();
+        ret = tree.GetTree();
         int num_big_nodes = 0;
         int num_docs_big = 0;
         for (auto &node: ret.nodes)
@@ -100,8 +105,7 @@ void CollapsedSampling::Estimate() {
 }
 
 void CollapsedSampling::SampleZ(Document &doc,
-                                bool decrease_count, bool increase_count,
-                                ParallelTree::RetTree &ret) {
+                                bool decrease_count, bool increase_count) {
     TLen N = (TLen) doc.z.size();
     auto &pos = doc.c;
     std::vector<TProb> prob((size_t) L);
@@ -110,6 +114,7 @@ void CollapsedSampling::SampleZ(Document &doc,
 
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
+    LockDoc(doc, count_sess);
     for (TLen n = 0; n < N; n++) {
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
@@ -134,6 +139,7 @@ void CollapsedSampling::SampleZ(Document &doc,
         }
         doc.z[n] = l;
     }
+    UnlockDoc(doc, count_sess);
 
     /*double sum = 0;
     for (TLen l = 0; l < L; l++)
@@ -377,6 +383,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
 
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
+    //LockDoc(doc, count_sess);
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
@@ -396,4 +403,5 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
         }
     else
         throw std::runtime_error("Invalid delta");
+    //LockDoc(doc, count_sess);
 }

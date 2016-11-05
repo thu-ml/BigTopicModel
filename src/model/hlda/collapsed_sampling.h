@@ -20,7 +20,7 @@ public:
     virtual void Estimate() override;
 
 protected:
-    virtual void SampleZ(Document &doc, bool decrease_count, bool increase_count, ParallelTree::RetTree &ret);
+    virtual void SampleZ(Document &doc, bool decrease_count, bool increase_count);
 
     virtual void SampleC(Document &doc, bool decrease_count, bool increase_count, ParallelTree::RetTree &ret);
 

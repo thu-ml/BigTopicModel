@@ -10,6 +10,7 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <stdexcept>
 #include <memory.h>
+#include <mutex>
 
 template <class T>
 class AtomicMatrix {
@@ -28,11 +29,22 @@ public:
         void Dec(int r, int c, T delta) { m.Dec(r, c, delta); }
         int GetR() { return m.GetR(); }
         int GetC() { return m.GetC(); }
+        std::mutex* GetLock(int c) { 
+            if (c < m.column_mutexes.size())
+                return m.column_mutexes[c].get(); 
+            else {
+                throw std::runtime_error("Incorrect mutex size " + 
+                        std::to_string(m._c_capacity) + " " +
+                        std::to_string(m.column_mutexes.size()) + " " +
+                        std::to_string(c));
+            }
+        }
     };
 
     AtomicMatrix(int R = 0, int C = 0)
             : _r_size(R), _c_size(C), _r_capacity(R), _c_capacity(C),
               _data(new std::atomic<T> [R*C]) {
+        for (int i=0; i<C; i++) column_mutexes.emplace_back(new std::mutex());
     }
 
     ~AtomicMatrix() {
@@ -62,6 +74,7 @@ public:
     void SetC(int newC) {
         if (newC > _c_capacity) {
             boost::unique_lock<boost::shared_mutex> lock(mutex_);
+
             if (newC > _c_capacity) ResizeC(newC);
         }
         _c_size = newC;
@@ -108,6 +121,8 @@ private:
         auto old_c_capacity = _c_capacity;
         _c_capacity = _c_capacity * 2 + 1;
         if (_c_capacity < newC) _c_capacity = newC;
+        while (column_mutexes.size() < _c_capacity) 
+            column_mutexes.emplace_back(new std::mutex());
 
         auto *old_data = _data;
         _data = new std::atomic<T>[_r_capacity * _c_capacity];
@@ -148,6 +163,7 @@ private:
 
     int _r_size, _c_size, _r_capacity, _c_capacity;
     std::atomic<T> *_data;
+    std::vector<std::unique_ptr<std::mutex>> column_mutexes;
 
     boost::shared_mutex mutex_;
 };
