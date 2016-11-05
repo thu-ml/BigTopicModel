@@ -44,7 +44,7 @@ if [ ! -d "$CUR/third_party" ]; then
 		ln -s boost_1_62_0 boost
 		pushd boost
 		mkdir -p build
-		./bootstrap --prefix=$PWD/build
+		./bootstrap.sh --prefix=$PWD/build
 		./b2 -j10 install
 		popd
 	fi
