@@ -172,6 +172,9 @@ int CollapsedSampling::DFSSample(Document &doc) {
     vector<TProb> prob(nodes.size() * S, -1e9f);
     std::vector<TProb> sum_log_prob(nodes.size());
 
+    std::vector<decltype(doc.z)> zs(S);
+    vector<vector<vector<TProb>>> all_scores((size_t) S);
+
     // Warning: this is not thread safe
     for (int s = 0; s < S; s++) {
         // Resample Z
@@ -179,16 +182,28 @@ int CollapsedSampling::DFSSample(Document &doc) {
         if (mc_samples != -1) {
             for (auto &l: doc.z) l = (TTopic) mult(generator);
         }
+        zs[s] = doc.z;
         doc.PartitionWByZ(L);
 
-        vector<vector<TProb> > scores((size_t) L);
+        auto &scores = all_scores[s]; scores.resize(L);
         for (TLen l = 0; l < L; l++) {
             TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
             TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
 
             scores[l].resize(num_instantiated + num_collapsed + 1);
-            fill(scores[l].begin(), scores[l].end(), 0);
             WordScoreInstantiated(doc, l, num_instantiated, scores[l].data());
+        }
+    }
+
+    for (int s = 0; s < S; s++) {
+        doc.z = zs[s];
+        doc.PartitionWByZ(L);
+
+        auto &scores = all_scores[s]; scores.resize(L);
+        for (TLen l = 0; l < L; l++) {
+            TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
+            TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
+
             scores[l].back() = WordScoreCollapsed(doc, l,
                     num_instantiated, num_collapsed, 
                     scores[l].data()+num_instantiated);
