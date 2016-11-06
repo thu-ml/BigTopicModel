@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <random>
 #include <omp.h>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/lock_algorithms.hpp>
@@ -21,7 +22,10 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         num_iters(num_iters), mc_samples(mc_samples), phi((size_t) L), log_phi((size_t) L),
         count((size_t) L), log_normalization(L, 1000), new_topic(true) {
 
+    std::mt19937_64 rd;
     generators.resize(omp_get_max_threads());
+    for (auto &gen: generators)
+        gen.seed(rd(), rd());
 
     TDoc D = corpus.D;
     docs.resize((size_t) D);
