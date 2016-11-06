@@ -186,7 +186,12 @@ int CollapsedSampling::DFSSample(Document &doc) {
             TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
             TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
 
-            scores[l] = WordScore(doc, l, num_instantiated, num_collapsed);
+            scores[l].resize(num_instantiated + num_collapsed + 1);
+            fill(scores[l].begin(), scores[l].end(), 0);
+            WordScoreInstantiated(doc, l, num_instantiated, scores[l].data());
+            scores[l].back() = WordScoreCollapsed(doc, l,
+                    num_instantiated, num_collapsed, 
+                    scores[l].data()+num_instantiated);
         }
 
         vector<TProb> emptyProbability((size_t) L, 0);
@@ -222,52 +227,64 @@ int CollapsedSampling::DFSSample(Document &doc) {
     return nodes[node_number].id;
 }
 
-std::vector<TProb> CollapsedSampling::WordScore(Document &doc, int l,
-                                                TTopic num_instantiated, TTopic num_collapsed) {
+TProb CollapsedSampling::WordScoreCollapsed(Document &doc, int l, int offset, int num, TProb *result) {
     auto b = beta[l];
     auto b_bar = b * corpus.V;
 
-    auto K = num_instantiated + num_collapsed;
-    std::vector<TProb> result((size_t) (K + 1));
-    std::vector<TProb> log_work((size_t) (K + 1));
+    memset(result, 0, num*sizeof(TProb));
+    TProb empty_result = 0;
+
+    std::vector<TProb> log_work((size_t) num+1);
 
     auto begin = doc.BeginLevel(l);
     auto end = doc.EndLevel(l);
 
     auto local_count_sess = count[l].GetSession();
-    auto &local_log_phi = log_phi[l];
 
     for (auto i = begin; i < end; i++) {
         auto c_offset = doc.c_offsets[i];
         auto v = doc.reordered_w[i];
 
-        for (TTopic k = num_instantiated; k < K; k++)
-            log_work[k] = (TProb) (local_count_sess.Get(v, k) + c_offset + b);
+        for (TTopic k = 0; k < num; k++)
+            log_work[k] = (TProb) (local_count_sess.Get(v, offset+k) + c_offset + b);
+        log_work.back() = c_offset + b;
 
         // VML ln
-        vsLn(num_collapsed, log_work.data() + num_instantiated,
-             log_work.data() + num_instantiated);
+        vsLn(num+1, log_work.data(), log_work.data());
 
-        for (TTopic k = 0; k < num_instantiated; k++)
-            result[k] += local_log_phi(v, k);
-
-        for (TTopic k = num_instantiated; k < K; k++)
+        for (TTopic k = 0; k < num; k++)
             result[k] += log_work[k];
 
-        if (c_offset < 1000)
-            result.back() += log_normalization(l, c_offset);
-        else
-            result.back() += logf(c_offset + b);
+        empty_result += log_work[num];
     }
 
     auto ck_sess = ck[l].GetSession();
     auto w_count = end - begin;
-    for (TTopic k = num_instantiated; k < K; k++)
-        result[k] -= lgamma(ck_sess.Get(k) + b_bar + w_count) -
-                lgamma(ck_sess.Get(k) + b_bar);
+    for (TTopic k = 0; k < num; k++)
+        result[k] -= lgamma(ck_sess.Get(offset+k) + b_bar + w_count) -
+                lgamma(ck_sess.Get(offset+k) + b_bar);
 
-    result.back() -= lgamma(b_bar + w_count) - lgamma(b_bar);
-    return std::move(result);
+    empty_result -= lgamma(b_bar + w_count) - lgamma(b_bar);
+    return empty_result;
+}
+
+TProb CollapsedSampling::WordScoreInstantiated(Document &doc, int l, int num, TProb *result) {
+    memset(result, 0, num*sizeof(TProb));
+
+    auto begin = doc.BeginLevel(l);
+    auto end = doc.EndLevel(l);
+
+    auto &local_log_phi = log_phi[l];
+
+    for (auto i = begin; i < end; i++) {
+        auto v = doc.reordered_w[i];
+
+        for (TTopic k = 0; k < num; k++)
+            result[k] += local_log_phi(v, k);
+    }
+    
+    TProb empty_result = logf(1./corpus.V) * (end - begin);
+    return empty_result;
 }
 
 void CollapsedSampling::SamplePhi() {

@@ -28,8 +28,9 @@ protected:
 
     int DFSSample(Document &doc);
 
-    virtual std::vector<TProb>
-    WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) override;
+    TProb WordScoreCollapsed(Document &doc, int l, int offset, int num, TProb *result);
+
+    TProb WordScoreInstantiated(Document &doc, int l, int num, TProb *result);
 
     double Perplexity();
 

@@ -34,9 +34,6 @@ public:
     void Visualize(std::string fileName, int threshold = -1);
 
 protected:
-    virtual std::vector<TProb>
-    WordScore(Document &doc, int l, TTopic num_instantiated, TTopic num_collapsed) = 0;
-
     std::string TopWords(int l, int id);
 
     std::vector<AtomicVector<TCount>::Session> GetCkSessions();
