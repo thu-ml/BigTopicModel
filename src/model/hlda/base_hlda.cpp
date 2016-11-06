@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <omp.h>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/lock_algorithms.hpp>
 #include <boost/iterator/indirect_iterator.hpp>
@@ -19,6 +20,8 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         corpus(corpus), L(L), alpha(alpha), beta(beta), gamma(gamma),
         num_iters(num_iters), mc_samples(mc_samples), phi((size_t) L), log_phi((size_t) L),
         count((size_t) L), log_normalization(L, 1000), new_topic(true) {
+
+    generators.resize(omp_get_max_threads());
 
     TDoc D = corpus.D;
     docs.resize((size_t) D);
@@ -149,3 +152,6 @@ std::vector<std::mutex*> BaseHLDA::GetDocLocks(Document &doc,
     return std::move(locks);
 }
 
+xorshift& BaseHLDA::GetGenerator() {
+    return generators[omp_get_thread_num()];
+}

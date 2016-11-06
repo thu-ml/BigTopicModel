@@ -27,7 +27,7 @@ void CollapsedSampling::Initialize() {
     num_instantiated = ret.num_instantiated;
     for (auto &doc: docs) {
         for (auto &k: doc.z)
-            k = generator() % L;
+            k = GetGenerator()() % L;
 
         SampleC(doc, false, true);
         SampleZ(doc, true, true);
@@ -113,6 +113,7 @@ void CollapsedSampling::SampleZ(Document &doc,
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
     LockDoc(doc, count_sess);
+    auto &generator = GetGenerator();
     for (TLen n = 0; n < N; n++) {
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
@@ -176,6 +177,7 @@ int CollapsedSampling::DFSSample(Document &doc) {
     vector<vector<vector<TProb>>> all_scores((size_t) S);
 
     // Warning: this is not thread safe
+    auto &generator = GetGenerator();
     for (int s = 0; s < S; s++) {
         // Resample Z
         linear_discrete_distribution<TProb> mult(doc.theta);

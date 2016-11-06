@@ -35,6 +35,7 @@ void PartiallyCollapsedSampling::Initialize() {
     if (!new_topic)
         SamplePhi();
 
+    auto &generator = GetGenerator();
     for (size_t d_start = 0; d_start < docs.size(); d_start += minibatch_size) {
         size_t d_end = min(docs.size(), d_start + minibatch_size);
         auto ret = tree.GetTree();
@@ -78,6 +79,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
     auto count_sess = GetCountSessions();
     LockDoc(doc, count_sess);
 
+    auto &generator = GetGenerator();
     for (size_t n = 0; n < doc.z.size(); n++) {
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
@@ -135,6 +137,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
     auto ret = tree.GetTree();
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
+    auto &generator = GetGenerator();
     if (!sample_phi) {
         for (TLen l = 0; l < L; l++) {
             TTopic K = (TTopic) ret.num_nodes[l];

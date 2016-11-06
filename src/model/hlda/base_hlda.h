@@ -49,6 +49,8 @@ protected:
     std::vector<std::mutex*> GetDocLocks(Document &doc, 
             std::vector<AtomicMatrix<TCount>::Session> &session);
 
+    xorshift& GetGenerator();
+
     ParallelTree tree;
     Corpus &corpus;
     int L;
@@ -57,7 +59,7 @@ protected:
     std::vector<TProb> beta;        // Beta for each layer
     std::vector<double> gamma;
     int num_iters, mc_samples;
-    xorshift generator;
+    std::vector<xorshift> generators;
 
     std::vector<Document> docs;
 
