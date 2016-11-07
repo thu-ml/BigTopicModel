@@ -408,10 +408,13 @@ void CollapsedSampling::Check(int D) {
 
 void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     // Update number of topics
+#pragma omp critical
+{
     for (TLen l = 0; l < L; l++) {
         count[l].IncreaseC(doc.c[l] + 1);
         ck[l].IncreaseSize((size_t)(doc.c[l] + 1));
     }
+}
 
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
