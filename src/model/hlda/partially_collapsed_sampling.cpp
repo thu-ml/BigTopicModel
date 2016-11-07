@@ -6,6 +6,7 @@
 #include "clock.h"
 #include "corpus.h"
 #include <iostream>
+#include <omp.h>
 #include "mkl_vml.h"
 #include "utils.h"
 
@@ -35,11 +36,17 @@ void PartiallyCollapsedSampling::Initialize() {
     if (!new_topic)
         SamplePhi();
 
+    int num_threads = omp_get_max_threads();
+    size_t minibatch_size = docs.size() / ((1 + num_threads) * num_threads / 2) + 1;
     auto &generator = GetGenerator();
-    for (size_t d_start = 0; d_start < docs.size(); d_start += minibatch_size) {
-        size_t d_end = min(docs.size(), d_start + minibatch_size);
+    size_t d_start = 0;
+    omp_set_dynamic(0);
+    for (int t = 0; t < num_threads; t++, d_start += minibatch_size * t) {
+        auto d_end = min(docs.size(), d_start + minibatch_size * (t+1));
         auto ret = tree.GetTree();
         num_instantiated = ret.num_instantiated;
+        omp_set_num_threads(t+1);
+#pragma omp parallel for
         for (size_t d = d_start; d < d_end; d++) {
             auto &doc = docs[d];
 
@@ -51,7 +58,7 @@ void PartiallyCollapsedSampling::Initialize() {
         }
         SamplePhi();
 
-        printf("Processed %lu documents, %d topics\n", d_end,
+        printf("Processed document [%lu, %lu) documents, %d topics\n", d_start, d_end,
                (int)tree.GetTree().nodes.size());
         if ((int)tree.GetTree().nodes.size() > (size_t) topic_limit)
             throw runtime_error("There are too many topics");
