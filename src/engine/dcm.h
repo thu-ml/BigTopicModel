@@ -18,6 +18,7 @@
 #include "cva.h"
 #include "thread_local.h"
 #include "sort.h"
+#include "glog/logging.h"
 #include <atomic>
 
 using std::vector;

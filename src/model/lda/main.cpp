@@ -1,16 +1,16 @@
+#include <unistd.h>
+#include <limits.h>
+#include <mpi.h>
 #include <iostream>
 #include <fstream>
 #include <thread>
-#include <mpi.h>
-
-#include <unistd.h>
-#include <limits.h>
-
+#include <vector>
+#include <string>
+#include <algorithm>
 #include "glog/logging.h"
 #include "gflags/gflags.h"
-
-#include "types.h"
-#include "lda.h"
+#include "engine/types.h"
+#include "model/lda/lda.h"
 
 DEFINE_string(prefix, "../data/nips", "input data path");
 DEFINE_uint64(K, 100, "the number of topic ");
@@ -30,8 +30,8 @@ int main(int argc, char **argv) {
     // initialize and set google log
     google::InitGoogleLogging(argv[0]);
     // output all logs to stderr
-    FLAGS_stderrthreshold=google::INFO;
-    FLAGS_colorlogtostderr=true;
+    FLAGS_stderrthreshold = google::INFO;
+    FLAGS_colorlogtostderr = true;
     LOG(INFO) << "Initialize google log done" << endl;
 
     /// usage : vocab train_file to_file th_file K alpha beta iter
@@ -48,16 +48,17 @@ int main(int argc, char **argv) {
 
     // initialize ans set MPI
     MPI_Init(NULL, NULL);
-	int process_id, process_size;
+    int process_id, process_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
     MPI_Comm_size(MPI_COMM_WORLD, &process_size);
 
     /// split corpus into doc_part * word_part
     if (FLAGS_doc_part * FLAGS_word_part != process_size) {
-        LOG(ERROR) << "FLAGS_doc_part * FLAGS_word_part != process_size" << endl;
+        LOG(ERROR) << "FLAGS_doc_part * FLAGS_word_part != process_size"
+        << endl;
         LOG(ERROR) << "FLAGS_doc_part : " << FLAGS_doc_part
-                    << " FLAGS_word_part : " << FLAGS_word_part
-                    << " process_size : " << process_size << endl;
+        << " FLAGS_word_part : " << FLAGS_word_part
+        << " process_size : " << process_size << endl;
         throw runtime_error("Number of processes is incorrect");
     }
 
@@ -69,16 +70,17 @@ int main(int argc, char **argv) {
         throw runtime_error(train_path + " does not exist.");
     }
 
-    fin.read((char*)&num_docs, sizeof(num_docs));
-    fin.read((char*)&num_words, sizeof(num_words));
+    fin.read(reinterpret_cast<char*>(&num_docs), sizeof(num_docs));
+    fin.read(reinterpret_cast<char*>(&num_words), sizeof(num_words));
     CVA<int> train_corpus(fin);
     fin.close();
-	
-	gethostname(hostname, HOST_NAME_MAX);
-    LOG(INFO) << hostname << " : Rank " << process_id << " has " << num_docs << " docs, "
-              << num_words << " words, " << train_corpus.size() / sizeof(int) << " tokens." << endl;
+    gethostname(hostname, HOST_NAME_MAX);
+    LOG(INFO) << hostname << " : Rank " << process_id << " has "
+    << num_docs << " docs, " << num_words << " words, "
+    << train_corpus.size() / sizeof(int) << " tokens." << endl;
 
-    LDA lda(FLAGS_iter, FLAGS_K, FLAGS_alpha, FLAGS_beta, train_corpus, process_size, process_id, omp_get_max_threads(),
+    LDA lda(FLAGS_iter, FLAGS_K, FLAGS_alpha, FLAGS_beta, train_corpus,
+            process_size, process_id, omp_get_max_threads(),
             num_docs, num_words, FLAGS_doc_part, FLAGS_word_part, monolith);
     lda.Estimate();
 
@@ -87,13 +89,14 @@ int main(int argc, char **argv) {
     string vocab_path = FLAGS_prefix + ".vocab";
     ifstream fvocab(vocab_path.c_str());
     string word_idx, word_txt, word_cnt;
-    while(fvocab >> word_idx >> word_txt >> word_cnt) {
+    while (fvocab >> word_idx >> word_txt >> word_cnt) {
         vocab.push_back(word_txt);
     }
 
     /// local_word -> global_word
     vector<TIndex> wordmap(num_words);
-    string wordmap_path = FLAGS_prefix + ".wordmap." + to_string(process_id % FLAGS_word_part);
+    string wordmap_path = FLAGS_prefix + ".wordmap." +
+            to_string(process_id % FLAGS_word_part);
     ifstream fwordmap(wordmap_path.c_str());
     string global_word, local_word;
     int line_number = 0;
@@ -113,12 +116,14 @@ int main(int argc, char **argv) {
     /// gather all frequently word from each node
     int output_node = 0;
     MPI_Comm row_partition;
-    MPI_Comm_split(MPI_COMM_WORLD, process_id / FLAGS_word_part, process_id, &row_partition);
-    vector<SpEntry> global_topic_word(FLAGS_K * frequent_word_number * FLAGS_word_part);
+    MPI_Comm_split(MPI_COMM_WORLD, process_id / FLAGS_word_part, process_id,
+                   &row_partition);
+    vector<SpEntry> global_topic_word(FLAGS_K * frequent_word_number *
+                                              FLAGS_word_part);
     vector<SpEntry> sort_buff(frequent_word_number * FLAGS_word_part);
     MPI_Gather(local_topic_word.data(), local_topic_word.size() * 2, MPI_INT,
-                global_topic_word.data(), local_topic_word.size() * 2, MPI_INT, output_node, row_partition);
-
+                global_topic_word.data(), local_topic_word.size() * 2, MPI_INT,
+               output_node, row_partition);
     /*
      * code backup for debug
     ofstream fout(prefix + ".topic." + to_string(process_id));
@@ -149,7 +154,8 @@ int main(int argc, char **argv) {
             TIndex copy_size = frequent_word_number * sizeof(SpEntry);
             for (TIndex p = 0; p < FLAGS_word_part; ++p)
                 memcpy(&(sort_buff[p * copy_size]),
-                       &(global_topic_word[p * FLAGS_K * frequent_word_number + topic * frequent_word_number]), copy_size);
+                       &(global_topic_word[p * FLAGS_K * frequent_word_number +
+                               topic * frequent_word_number]), copy_size);
             std::sort(sort_buff.begin(), sort_buff.end(), compareByCount);
             for (TIndex word = 0; word < frequent_word_number; ++word)
                 ftopic << vocab[sort_buff[word].k] << " ";
