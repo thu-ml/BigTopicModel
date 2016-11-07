@@ -41,6 +41,7 @@ void CollapsedSampling::Initialize() {
 
 void CollapsedSampling::Estimate() {
     for (int it = 0; it < num_iters; it++) {
+        //shuffle(docs.begin(), docs.end(), GetGenerator());
         current_it = it;
         Clock clk;
 
@@ -174,6 +175,7 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
         }
     }
 
+    //std::lock_guard<std::mutex> lock(model_mutex);
     if (decrease_count) {
         doc.z = z_bak;
         UpdateDocCount(doc, -1);
@@ -189,7 +191,7 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
         doc.z = zs[s];
         doc.PartitionWByZ(L);
 
-        auto &scores = all_scores[s]; 
+        auto &scores = all_scores[s];
         for (TLen l = 0; l < L; l++) {
             TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
             TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
@@ -411,7 +413,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
 
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
-    LockDoc(doc, count_sess);
+    //LockDoc(doc, count_sess);
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
@@ -431,5 +433,5 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
         }
     else
         throw std::runtime_error("Invalid delta");
-    UnlockDoc(doc, count_sess);
+    //UnlockDoc(doc, count_sess);
 }

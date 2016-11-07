@@ -64,6 +64,7 @@ void PartiallyCollapsedSampling::Initialize() {
 
 void PartiallyCollapsedSampling::SampleZ(Document &doc,
                                          bool decrease_count, bool increase_count) {
+    //std::lock_guard<std::mutex> lock(model_mutex);
     std::vector<TCount> cdl((size_t) L);
     std::vector<TProb> prob((size_t) L);
     for (auto k: doc.z) cdl[k]++;
