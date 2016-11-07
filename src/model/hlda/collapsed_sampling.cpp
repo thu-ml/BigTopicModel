@@ -327,7 +327,6 @@ double CollapsedSampling::Perplexity() {
         auto &doc = docs[d];
         double doc_log_likelihood = 0;
 
-        T += doc.z.size();
         // Compute theta
         for (auto k: doc.z) theta[k]++;
         double inv_sum = 1. / (doc.z.size() + alpha_bar);
@@ -346,7 +345,10 @@ double CollapsedSampling::Perplexity() {
             doc_log_likelihood += log(prob);
         }
 #pragma omp critical
-        log_likelihood += doc_log_likelihood;
+        {
+            T += doc.z.size();
+            log_likelihood += doc_log_likelihood;
+        }
     }
 
     return exp(-log_likelihood / T);
@@ -413,7 +415,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
 
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
-    //LockDoc(doc, count_sess);
+    LockDoc(doc, count_sess);
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
@@ -433,5 +435,5 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
         }
     else
         throw std::runtime_error("Invalid delta");
-    //UnlockDoc(doc, count_sess);
+    UnlockDoc(doc, count_sess);
 }
