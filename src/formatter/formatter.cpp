@@ -100,7 +100,7 @@ void Count() {
                 {
                     if (std::stoi(unique_doc_id) > local_max_docid)
                         local_max_docid = std::stoi(unique_doc_id);
-                    doc_map[unique_doc_id] = MappedEntry{d_part, -1};
+                    doc_map[unique_doc_id] = MappedEntry{d_part, size_t(-1)};
                     num_docs_in_part[d_part]++;
                 }
             });
