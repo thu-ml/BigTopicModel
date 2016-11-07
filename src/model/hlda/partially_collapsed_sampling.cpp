@@ -33,19 +33,19 @@ void PartiallyCollapsedSampling::Initialize() {
     if (minibatch_size == 0)
         minibatch_size = docs.size();
 
+    shuffle(docs.begin(), docs.end(), GetGenerator());
     if (!new_topic)
         SamplePhi();
 
     int num_threads = omp_get_max_threads();
-    size_t minibatch_size = docs.size() / ((1 + num_threads) * num_threads / 2) + 1;
     auto &generator = GetGenerator();
-    size_t d_start = 0;
+    int mb_count = 0;
     omp_set_dynamic(0);
-    for (int t = 0; t < num_threads; t++, d_start += minibatch_size * t) {
-        auto d_end = min(docs.size(), d_start + minibatch_size * (t+1));
+    for (size_t d_start = 0; d_start < docs.size(); d_start += minibatch_size) {
+        auto d_end = min(docs.size(), d_start + minibatch_size);
+        omp_set_num_threads(min(++mb_count, num_threads));
         auto ret = tree.GetTree();
         num_instantiated = ret.num_instantiated;
-        omp_set_num_threads(t+1);
 #pragma omp parallel for
         for (size_t d = d_start; d < d_end; d++) {
             auto &doc = docs[d];
