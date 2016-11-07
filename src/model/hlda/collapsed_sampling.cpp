@@ -150,31 +150,15 @@ void CollapsedSampling::SampleZ(Document &doc,
 void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
                                 bool increase_count) {
     if (decrease_count) {
-        UpdateDocCount(doc, -1);
-        tree.DecNumDocs(doc.leaf_id);
+        //UpdateDocCount(doc, -1);
+        //tree.DecNumDocs(doc.leaf_id);
     }
 
     // Sample
-    auto leaf_id = DFSSample(doc);
-
-    // Increase num_docs
-    if (increase_count) {
-        auto ret = tree.IncNumDocs(leaf_id);
-        doc.leaf_id = ret.id;
-        doc.c = ret.pos;
-        UpdateDocCount(doc, 1);
-    }
-}
-
-int CollapsedSampling::DFSSample(Document &doc) {
-    auto ret = tree.GetTree();
-    auto &nodes = ret.nodes;
     int S = max(mc_samples, 1);
-    vector<TProb> prob(nodes.size() * S, -1e9f);
-    std::vector<TProb> sum_log_prob(nodes.size());
-
     std::vector<decltype(doc.z)> zs(S);
     vector<vector<vector<TProb>>> all_scores((size_t) S);
+    auto z_bak = doc.z;
 
     // Warning: this is not thread safe
     auto &generator = GetGenerator();
@@ -189,13 +173,21 @@ int CollapsedSampling::DFSSample(Document &doc) {
 
         auto &scores = all_scores[s]; scores.resize(L);
         for (TLen l = 0; l < L; l++) {
-            TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
-            TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
-
-            scores[l].resize(num_instantiated + num_collapsed + 1);
-            WordScoreInstantiated(doc, l, num_instantiated, scores[l].data());
+            TTopic num_i = (TTopic) num_instantiated[l];
+            scores[l].resize(num_i);
+            WordScoreInstantiated(doc, l, num_i, scores[l].data());
         }
     }
+
+    if (decrease_count) {
+        doc.z = z_bak;
+        UpdateDocCount(doc, -1);
+        tree.DecNumDocs(doc.leaf_id);
+    }
+    auto ret = tree.GetTree();
+    auto &nodes = ret.nodes;
+    vector<TProb> prob(nodes.size() * S, -1e9f);
+    std::vector<TProb> sum_log_prob(nodes.size());
 
     for (int s = 0; s < S; s++) {
         doc.z = zs[s];
@@ -206,9 +198,10 @@ int CollapsedSampling::DFSSample(Document &doc) {
             TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
             TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
 
+            scores[l].resize(num_instantiated + num_collapsed + 1);
             scores[l].back() = WordScoreCollapsed(doc, l,
-                    num_instantiated, num_collapsed, 
-                    scores[l].data()+num_instantiated);
+                                                  num_instantiated, num_collapsed,
+                                                  scores[l].data()+num_instantiated);
         }
 
         vector<TProb> emptyProbability((size_t) L, 0);
@@ -223,14 +216,14 @@ int CollapsedSampling::DFSSample(Document &doc) {
                 sum_log_prob[i] = scores[node.depth][node.pos];
             else
                 sum_log_prob[i] = scores[node.depth][node.pos]
-                        + sum_log_prob[node.parent];
+                                  + sum_log_prob[node.parent];
 
             if (node.depth + 1 == L) {
                 prob[i*S+s] = (TProb)(sum_log_prob[i] + node.log_path_weight);
             } else {
                 if (new_topic)
                     prob[i * S + s] = (TProb)(sum_log_prob[i] +
-                            node.log_path_weight + emptyProbability[node.depth]);
+                                              node.log_path_weight + emptyProbability[node.depth]);
             }
         }
     }
@@ -241,7 +234,15 @@ int CollapsedSampling::DFSSample(Document &doc) {
     if (node_number < 0 || node_number >= (int) nodes.size())
         throw runtime_error("Invalid node number");
 
-    return nodes[node_number].id;
+    auto leaf_id = nodes[node_number].id;
+
+    // Increase num_docs
+    if (increase_count) {
+        auto ret = tree.IncNumDocs(leaf_id);
+        doc.leaf_id = ret.id;
+        doc.c = ret.pos;
+        UpdateDocCount(doc, 1);
+    }
 }
 
 TProb CollapsedSampling::WordScoreCollapsed(Document &doc, int l, int offset, int num, TProb *result) {

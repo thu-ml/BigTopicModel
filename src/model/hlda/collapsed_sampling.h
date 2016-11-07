@@ -26,8 +26,6 @@ protected:
 
     virtual void SamplePhi();
 
-    int DFSSample(Document &doc);
-
     TProb WordScoreCollapsed(Document &doc, int l, int offset, int num, TProb *result);
 
     TProb WordScoreInstantiated(Document &doc, int l, int num, TProb *result);
