@@ -149,19 +149,14 @@ void CollapsedSampling::SampleZ(Document &doc,
 
 void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
                                 bool increase_count) {
-    if (decrease_count) {
-        //UpdateDocCount(doc, -1);
-        //tree.DecNumDocs(doc.leaf_id);
-    }
-
     // Sample
     int S = max(mc_samples, 1);
     std::vector<decltype(doc.z)> zs(S);
     vector<vector<vector<TProb>>> all_scores((size_t) S);
     auto z_bak = doc.z;
 
-    // Warning: this is not thread safe
     auto &generator = GetGenerator();
+    // Stage 1
     for (int s = 0; s < S; s++) {
         // Resample Z
         linear_discrete_distribution<TProb> mult(doc.theta);
@@ -189,11 +184,12 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
     vector<TProb> prob(nodes.size() * S, -1e9f);
     std::vector<TProb> sum_log_prob(nodes.size());
 
+    // Stage 2
     for (int s = 0; s < S; s++) {
         doc.z = zs[s];
         doc.PartitionWByZ(L);
 
-        auto &scores = all_scores[s]; scores.resize(L);
+        auto &scores = all_scores[s]; 
         for (TLen l = 0; l < L; l++) {
             TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
             TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
