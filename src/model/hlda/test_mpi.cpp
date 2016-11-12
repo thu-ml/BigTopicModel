@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
         // Pubsub for cv
         std::vector<int> cv((size_t)vocab_size);
         auto on_recv = [&](std::string &msg) {
-            int v = stoi(msg);
+            int v; memcpy(&v, msg.data(), sizeof(int));
             cv[v]++;
         };
         PublisherSubscriber<decltype(on_recv)> pubsub(0, true, true, on_recv);
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
         // Another pubsub for cv
         std::vector<int> cv2((size_t)vocab_size);
         auto on_recv2 = [&](std::string &msg) {
-            int v = stoi(msg);
+            int v; memcpy(&v, msg.data(), sizeof(int));
             cv2[v]++;
         };
         PublisherSubscriber<decltype(on_recv2)> pubsub2(1, true, true, on_recv2);
@@ -85,8 +85,9 @@ int main(int argc, char **argv) {
         // Compute via pubsub
         for (auto &doc: corpus.w)
             for (auto v: doc) {
-                pubsub.Publish(std::to_string(v));
-                pubsub2.Publish(std::to_string(v));
+                std::string data((char*)&v, 4);
+                pubsub.Publish(data);
+                pubsub2.Publish(data);
             }
         pubsub.Barrier();
         pubsub2.Barrier();
