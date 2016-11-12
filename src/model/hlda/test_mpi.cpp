@@ -63,11 +63,11 @@ int main(int argc, char **argv) {
 
         // Pubsub for cv
         std::vector<int> cv((size_t)vocab_size);
-        auto on_recv = [&](std::string &msg) {
+        auto on_recv = [&](const char *msg, size_t length) {
             int msg_length;
-            memcpy(&msg_length, msg.data(), sizeof(int));
+            memcpy(&msg_length, msg, sizeof(int));
             int *msg_content = new int[msg_length];
-            memcpy(msg_content, msg.data()+sizeof(int), msg_length*sizeof(int));
+            memcpy(msg_content, msg+sizeof(int), msg_length*sizeof(int));
             for (int i=0; i<msg_length; i++)
                 cv[msg_content[i]]++;
             delete[] msg_content;
@@ -76,11 +76,11 @@ int main(int argc, char **argv) {
 
         // Another pubsub for cv
         std::vector<int> cv2((size_t)vocab_size);
-        auto on_recv2 = [&](std::string &msg) {
+        auto on_recv2 = [&](const char *msg, size_t length) {
             int msg_length;
-            memcpy(&msg_length, msg.data(), sizeof(int));
+            memcpy(&msg_length, msg, sizeof(int));
             int *msg_content = new int[msg_length];
-            memcpy(msg_content, msg.data()+sizeof(int), msg_length*sizeof(int));
+            memcpy(msg_content, msg+sizeof(int), msg_length*sizeof(int));
             for (int i=0; i<msg_length; i++)
                 cv2[msg_content[i]]++;
             delete[] msg_content;

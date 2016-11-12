@@ -150,7 +150,7 @@ private:
         //LOG(INFO) << blk.source << ' ' << blk.sn << ' '  << blk.num << ' ' << blk.id << ' ' << blk.length << ' ' << blk.content;
 
         if (blk.num == 1)
-            on_recv(blk.content);
+            on_recv(blk.content.data(), blk.content.size());
         else {
             // Concatenate
             auto id = std::make_pair(blk.source, blk.sn);
@@ -161,12 +161,21 @@ private:
                           [](const MessageBlock &a, const MessageBlock &b) {
                               return a.id < b.id;
                           });
-                std::string msg;
+
+                size_t total_size = 0;
                 for (auto &msg_block: l)
-                    msg += msg_block.content;
+                    total_size += msg_block.content.size();
+
+                auto* msg = (char*)_mm_malloc(total_size, ALIGN_SIZE);
+                size_t offset = 0;
+                for (auto &msg_block: l) {
+                    memcpy(msg+offset, msg_block.content.data(), msg_block.content.size());
+                    offset += msg_block.content.size();
+                }
 
                 messages.erase(id);
-                on_recv(msg);
+                on_recv(msg, total_size);
+                delete[] msg;
             }
         }
     }
