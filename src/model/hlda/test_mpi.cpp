@@ -98,11 +98,10 @@ int main(int argc, char **argv) {
             data_int[0] = (int)doc.size();
             for (size_t i=0; i<doc.size(); i++)
                 data_int[i+1] = (int)doc[i];
-            std::string data((char*)data_int, (doc.size()+1)*sizeof(int));
-            delete[] data_int;
 
-            pubsub.Publish(data);
-            pubsub2.Publish(data);
+            pubsub.Publish((char*)data_int, (doc.size()+1)*sizeof(int));
+            pubsub2.Publish((char*)data_int, (doc.size()+1)*sizeof(int));
+            delete[] data_int;
         }
         pubsub.Barrier();
         pubsub2.Barrier();

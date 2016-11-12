@@ -29,7 +29,8 @@ public:
         std::string content;
     };
 
-    PublisherSubscriber(int tag, bool is_publisher, bool is_subscriber, TOnReceive &on_recv)
+    PublisherSubscriber(int tag, bool is_publisher,
+                        bool is_subscriber, TOnReceive &on_recv)
      : tag(tag), max_sn(0), on_recv(on_recv),
        is_publisher(is_publisher), is_subscriber(is_subscriber),
        num_send(0), num_recv(0) {
@@ -65,24 +66,24 @@ public:
         Stop();
     }
 
-    void Publish(const std::string &msg) {
-        if (msg.empty())
+    void Publish(char *msg, size_t length) {
+        if (!length)
             return;
 
         // Break msg into pieces
         int MSG_LENGTH = MAX_MSG_LENGTH - MAX_HEADER_LENGTH;
-        int num_msgs = (msg.size() - 1) / MSG_LENGTH + 1;
+        int num_msgs = (length - 1) / MSG_LENGTH + 1;
 
         int sn = max_sn++;
-        for (size_t i_start = 0; i_start < msg.size(); i_start += MSG_LENGTH) {
-            size_t i_end = std::min(i_start + MSG_LENGTH, msg.size());
+        for (size_t i_start = 0; i_start < length; i_start += MSG_LENGTH) {
+            size_t i_end = std::min(i_start + MSG_LENGTH, length);
             int msg_block_length = i_end - i_start;
 
             SendTask task;
             task.content = std::unique_ptr<char[]>(new char[MAX_HEADER_LENGTH + msg_block_length]);
             auto cnt = sprintf(task.content.get(), "%d %d %d %d %d ",
                 process_id, sn, num_msgs, (int)i_start/MSG_LENGTH, msg_block_length);
-            memcpy(task.content.get()+cnt, msg.data()+i_start, msg_block_length);
+            memcpy(task.content.get()+cnt, msg+i_start, msg_block_length);
 
             // Send out
             for (auto receiver: receivers) {
