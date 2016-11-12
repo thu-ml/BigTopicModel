@@ -263,5 +263,4 @@ private:
     std::mutex m;
 };
 
-
 #endif //BIGTOPICMODEL_PUBLISHERSUBSCRIBER_H

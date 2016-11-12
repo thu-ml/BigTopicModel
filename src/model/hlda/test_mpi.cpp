@@ -7,6 +7,7 @@
 #include <memory>
 #include <mpi.h>
 #include <publisher_subscriber.h>
+#include "corpus.h"
 #include <chrono>
 #include "glog/logging.h"
 
@@ -29,23 +30,70 @@ int main(int argc, char **argv) {
     bool is_publisher = process_id < 2;
     bool is_subscriber = process_id >= 1;
 
-    auto on_recv = [&](string &msg){
-        LOG(INFO) << process_id << " received " << msg;
-    };
+//    {
+//        auto on_recv = [&](string &msg){
+//            LOG(INFO) << process_id << " received " << msg;
+//        };
+//
+//        PublisherSubscriber<decltype(on_recv)> pubsub(0, is_publisher, is_subscriber, on_recv);
+//        LOG(INFO) << "PubSub started";
+//
+//        std::this_thread::sleep_for(1s);
+//        if (process_id == 0)
+//            pubsub.Publish("Message from node 0");
+//
+//        std::this_thread::sleep_for(1s);
+//        if (process_id == 1)
+//            pubsub.Publish("Message from node 1");
+//
+//        pubsub.Barrier();
+//    }
 
     {
-        PublisherSubscriber<decltype(on_recv)> pubsub(0, is_publisher, is_subscriber, on_recv);
-        LOG(INFO) << "PubSub started";
+        // Generate some data
+        int num_docs = 1000;
+        float avg_doc_length = 1000;
+        int vocab_size = 10000;
+        auto corpus = Corpus::Generate(num_docs, avg_doc_length, vocab_size);
+        LOG(INFO) << "Corpus have " << corpus.T << " tokens";
 
-        std::this_thread::sleep_for(1s);
-        if (process_id == 0)
-            pubsub.Publish("Message from node 0");
+        // Pubsub for cv
+        std::vector<int> cv((size_t)vocab_size);
+        auto on_recv = [&](std::string &msg) {
+            int v = stoi(msg);
+            cv[v]++;
+        };
+        PublisherSubscriber<decltype(on_recv)> pubsub(0, true, true, on_recv);
 
-        std::this_thread::sleep_for(1s);
-        if (process_id == 1)
-            pubsub.Publish("Message from node 1");
+        // Another pubsub for cv
+        std::vector<int> cv2((size_t)vocab_size);
+        auto on_recv2 = [&](std::string &msg) {
+            int v = stoi(msg);
+            cv2[v]++;
+        };
+        PublisherSubscriber<decltype(on_recv2)> pubsub2(1, true, true, on_recv2);
 
+        // Compute via allreduce
+        std::vector<int> local_cv((size_t)vocab_size);
+        std::vector<int> global_cv((size_t)vocab_size);
+        for (auto &doc: corpus.w)
+            for (auto v: doc)
+                local_cv[v]++;
+        MPI_Allreduce(local_cv.data(), global_cv.data(), vocab_size,
+                      MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+        // Compute via pubsub
+        for (auto &doc: corpus.w)
+            for (auto v: doc) {
+                pubsub.Publish(std::to_string(v));
+                pubsub2.Publish(std::to_string(v));
+            }
         pubsub.Barrier();
+        pubsub2.Barrier();
+
+        // Compare
+        LOG_IF(FATAL, global_cv != cv) << "Incorrect CV";
+        LOG_IF(FATAL, global_cv != cv2) << "Incorrect CV2";
     }
 
     MPI_Finalize();

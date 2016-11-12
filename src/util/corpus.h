@@ -10,9 +10,13 @@
 
 class Corpus {
 public:
+	Corpus() {}
+
 	Corpus(const char *vocabPath, const char *dataPath);
 
 	Corpus(const Corpus &from, int start, int end);
+
+	static Corpus Generate(TDoc D, float avg_doc_length, TWord V);
 
 	std::vector<std::vector<TWord>> w;
 	std::vector<std::string> vocab;

@@ -1,6 +1,7 @@
 #include "corpus.h"
 #include "readbuf.h"
 #include <algorithm>
+#include <random>
 using namespace std;
 
 constexpr int READ_BUF_CAPACITY = 1 << 24;
@@ -64,4 +65,24 @@ Corpus::Corpus(const Corpus &from, int start, int end) :
 		D(end - start), V(from.V) {
 	T = 0;
 	for (auto &doc: w) T += doc.size();
+}
+
+Corpus Corpus::Generate(TDoc D, float avg_doc_length, TWord V) {
+	Corpus corpus;
+	corpus.D = D;
+	corpus.V = V;
+	corpus.T = 0;
+
+    corpus.w.resize(D);
+    std::poisson_distribution<int> doc_len(avg_doc_length);
+    std::mt19937 generator;
+    for (auto &doc: corpus.w) {
+        int len = doc_len(generator);
+        doc.resize((size_t)len);
+        for (auto &w: doc)
+            w = (TWord)(generator() % V);
+        corpus.T += len;
+    }
+
+	return corpus;
 }
