@@ -153,5 +153,11 @@ void Permute(std::vector<T> &a, std::vector<int> perm) {
         a[i] = original[perm[i]];
 }
 
+template <class T>
+std::ostream& operator << (std::ostream &out, const std::vector<T> &v) {
+    for (const T& elem: v)
+        out << elem;
+    return out;
+}
 
 #endif
