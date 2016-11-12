@@ -73,6 +73,7 @@ public:
         int MSG_LENGTH = MAX_MSG_LENGTH - MAX_HEADER_LENGTH;
         int num_msgs = (msg.size() - 1) / MSG_LENGTH + 1;
 
+        int sn = max_sn++;
         for (size_t i_start = 0; i_start < msg.size(); i_start += MSG_LENGTH) {
             size_t i_end = std::min(i_start + MSG_LENGTH, msg.size());
             int msg_block_length = i_end - i_start;
@@ -80,7 +81,7 @@ public:
             SendTask task;
             task.content = std::unique_ptr<char[]>(new char[MAX_HEADER_LENGTH + msg_block_length]);
             auto cnt = sprintf(task.content.get(), "%d %d %d %d %d ",
-                process_id, max_sn++, num_msgs, (int)i_start/MSG_LENGTH, msg_block_length);
+                process_id, sn, num_msgs, (int)i_start/MSG_LENGTH, msg_block_length);
             memcpy(task.content.get()+cnt, msg.data()+i_start, msg_block_length);
 
             // Send out
@@ -141,9 +142,9 @@ private:
 
         blk.content = std::string(msg_block.get() + i + 1,
                                   msg_block.get() + i + blk.length + 1);
-        //LOG(INFO) << blk.source << ' ' << blk.sn << ' '  << blk.num << ' ' << blk.id << ' ' << blk.length;
+        //LOG(INFO) << blk.source << ' ' << blk.sn << ' '  << blk.num << ' ' << blk.id << ' ' << blk.length << ' ' << blk.content;
 
-        if (blk.num == 0)
+        if (blk.num == 1)
             on_recv(blk.content);
         else {
             // Concatenate
