@@ -60,16 +60,26 @@ int main(int argc, char **argv) {
         // Pubsub for cv
         std::vector<int> cv((size_t)vocab_size);
         auto on_recv = [&](std::string &msg) {
-            int v; memcpy(&v, msg.data(), sizeof(int));
-            cv[v]++;
+            int msg_length;
+            memcpy(&msg_length, msg.data(), sizeof(int));
+            int *msg_content = new int[msg_length];
+            memcpy(msg_content, msg.data()+sizeof(int), msg_length*sizeof(int));
+            for (int i=0; i<msg_length; i++)
+                cv[msg_content[i]]++;
+            delete[] msg_content;
         };
         PublisherSubscriber<decltype(on_recv)> pubsub(0, true, true, on_recv);
 
         // Another pubsub for cv
         std::vector<int> cv2((size_t)vocab_size);
         auto on_recv2 = [&](std::string &msg) {
-            int v; memcpy(&v, msg.data(), sizeof(int));
-            cv2[v]++;
+            int msg_length;
+            memcpy(&msg_length, msg.data(), sizeof(int));
+            int *msg_content = new int[msg_length];
+            memcpy(msg_content, msg.data()+sizeof(int), msg_length*sizeof(int));
+            for (int i=0; i<msg_length; i++)
+                cv2[msg_content[i]]++;
+            delete[] msg_content;
         };
         PublisherSubscriber<decltype(on_recv2)> pubsub2(1, true, true, on_recv2);
 
@@ -83,12 +93,17 @@ int main(int argc, char **argv) {
                       MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
         // Compute via pubsub
-        for (auto &doc: corpus.w)
-            for (auto v: doc) {
-                std::string data((char*)&v, 4);
-                pubsub.Publish(data);
-                pubsub2.Publish(data);
-            }
+        for (auto &doc: corpus.w) {
+            int *data_int = new int[doc.size()+1];
+            data_int[0] = (int)doc.size();
+            for (size_t i=0; i<doc.size(); i++)
+                data_int[i+1] = (int)doc[i];
+            std::string data((char*)data_int, (doc.size()+1)*sizeof(int));
+            delete[] data_int;
+
+            pubsub.Publish(data);
+            pubsub2.Publish(data);
+        }
         pubsub.Barrier();
         pubsub2.Barrier();
 
