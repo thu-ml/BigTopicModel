@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
         }
         pubsub.Barrier();
         //pubsub2.Barrier();
-        LOG(INFO) << "Finished in " << clk.toc() << " seconds.";
+        LOG(INFO) << "Finished in " << clk.toc() << " seconds. (" << pubsub.GetNumSyncs() << " syncs)";
 
         // Compare
         LOG_IF(FATAL, global_cv != cv) << "Incorrect CV";

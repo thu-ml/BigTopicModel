@@ -64,10 +64,13 @@ public:
         barrier = false;
     }
 
+    int GetNumSyncs() { return num_syncs; }
+
 private:
     void Start() {
         stop = false;
         barrier = false;
+        num_syncs = 0;
 
         sync_thread = std::move(std::thread([&]()
         {
@@ -83,6 +86,7 @@ private:
                 MPIHelpers::Allgatherv(MPI_COMM_WORLD, process_size,
                                        sending.size(), sending.data(),
                                        recv_offsets, recv_buffer);
+                ++num_syncs;
 
                 // Invoke on_recv
                 if (is_subscriber) {
@@ -94,8 +98,7 @@ private:
                         on_recv(recv_buffer.data()+i_start+sizeof(int),
                                 p_length);
 
-                        i_next = i_start + sizeof(int) +
-                                calculate_storage(p_length);
+                        i_next = i_start + calculate_storage(p_length);
                     }
                 }
 
@@ -155,7 +158,7 @@ private:
     std::mutex offset_mutex, global_mutex;
     std::condition_variable cv;
 
-    int process_id, process_size;
+    int process_id, process_size, num_syncs;
 };
 
 #endif //BIGTOPICMODEL_PUBLISHERSUBSCRIBER_H
