@@ -8,6 +8,7 @@
 #include <mpi.h>
 #include <publisher_subscriber.h>
 #include "corpus.h"
+#include "clock.h"
 #include <chrono>
 #include "glog/logging.h"
 
@@ -64,26 +65,14 @@ int main(int argc, char **argv) {
         // Pubsub for cv
         std::vector<int> cv((size_t)vocab_size);
         auto on_recv = [&](const char *msg, size_t length) {
-            int msg_length;
-            memcpy(&msg_length, msg, sizeof(int));
-            int *msg_content = new int[msg_length];
-            memcpy(msg_content, msg+sizeof(int), msg_length*sizeof(int));
-            for (int i=0; i<msg_length; i++)
-                cv[msg_content[i]]++;
-            delete[] msg_content;
+            cv[*((const int*)msg)]++;
         };
         PublisherSubscriber<decltype(on_recv)> pubsub(0, true, true, on_recv);
 
         // Another pubsub for cv
         std::vector<int> cv2((size_t)vocab_size);
         auto on_recv2 = [&](const char *msg, size_t length) {
-            int msg_length;
-            memcpy(&msg_length, msg, sizeof(int));
-            int *msg_content = new int[msg_length];
-            memcpy(msg_content, msg+sizeof(int), msg_length*sizeof(int));
-            for (int i=0; i<msg_length; i++)
-                cv2[msg_content[i]]++;
-            delete[] msg_content;
+            cv2[*((const int*)msg)]++;
         };
         PublisherSubscriber<decltype(on_recv2)> pubsub2(1, true, true, on_recv2);
 
@@ -97,18 +86,16 @@ int main(int argc, char **argv) {
                       MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
         // Compute via pubsub
+        Clock clk;
         for (auto &doc: corpus.w) {
-            int *data_int = new int[doc.size()+1];
-            data_int[0] = (int)doc.size();
-            for (size_t i=0; i<doc.size(); i++)
-                data_int[i+1] = (int)doc[i];
-
-            pubsub.Publish((char*)data_int, (doc.size()+1)*sizeof(int));
-            pubsub2.Publish((char*)data_int, (doc.size()+1)*sizeof(int));
-            delete[] data_int;
+            for (auto v: doc) {
+                pubsub.Publish((char*)&v, sizeof(v));
+                pubsub2.Publish((char*)&v, sizeof(v));
+            }
         }
         pubsub.Barrier();
         pubsub2.Barrier();
+        LOG(INFO) << "Finished in " << clk.toc() << " seconds.";
 
         // Compare
         LOG_IF(FATAL, global_cv != cv) << "Incorrect CV";
