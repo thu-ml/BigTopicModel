@@ -27,10 +27,10 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &process_size);
     LOG(INFO) << process_id << ' ' << process_size;
 
-    bool is_publisher = process_id < 2;
-    bool is_subscriber = process_id >= 1;
-
 //    {
+//        bool is_publisher = process_id < 2;
+//        bool is_subscriber = process_id >= 1;
+//
 //        auto on_recv = [&](string &msg){
 //            LOG(INFO) << process_id << " received " << msg;
 //        };
@@ -39,12 +39,16 @@ int main(int argc, char **argv) {
 //        LOG(INFO) << "PubSub started";
 //
 //        std::this_thread::sleep_for(1s);
-//        if (process_id == 0)
-//            pubsub.Publish("Message from node 0");
+//        if (process_id == 0) {
+//            string message = "Message from node 0";
+//            pubsub.Publish(message.data(), message.size());
+//        }
 //
 //        std::this_thread::sleep_for(1s);
-//        if (process_id == 1)
-//            pubsub.Publish("Message from node 1");
+//        if (process_id == 1) {
+//            string message = "Message from node 1";
+//            pubsub.Publish(message.data(), message.size());
+//        }
 //
 //        pubsub.Barrier();
 //    }

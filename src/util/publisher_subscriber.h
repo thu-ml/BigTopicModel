@@ -15,12 +15,19 @@
 #include "glog/logging.h"
 #include "utils.h"
 
+template<typename T>
+struct aligned_delete {
+    void operator()(T* ptr) const {
+        _mm_free(ptr);
+    }
+};
+
 template <class TOnReceive>
 class PublisherSubscriber {
 public:
     struct SendTask {
         std::vector<MPI_Request> requests;
-        std::unique_ptr<char[]> content;
+        std::unique_ptr<char[], aligned_delete<char>> content;
     };
 
     struct MessageBlock {
@@ -66,7 +73,7 @@ public:
         Stop();
     }
 
-    void Publish(char *msg, size_t length) {
+    void Publish(const char *msg, size_t length) {
         if (!length)
             return;
 
@@ -80,10 +87,16 @@ public:
             int msg_block_length = i_end - i_start;
 
             SendTask task;
-            task.content = std::unique_ptr<char[]>(new char[MAX_HEADER_LENGTH + msg_block_length]);
-            auto cnt = sprintf(task.content.get(), "%d %d %d %d %d ",
-                process_id, sn, num_msgs, (int)i_start/MSG_LENGTH, msg_block_length);
-            memcpy(task.content.get()+cnt, msg+i_start, msg_block_length);
+            task.content = std::unique_ptr<char[], aligned_delete<char>>
+                    ((char*)_mm_malloc(MAX_HEADER_LENGTH + msg_block_length, ALIGN_SIZE));
+
+            auto* meta_data = (int*)task.content.get();
+            meta_data[0] = process_id;
+            meta_data[1] = sn;
+            meta_data[2] = num_msgs;
+            meta_data[3] = (int)i_start / MSG_LENGTH;
+            meta_data[4] = msg_block_length;
+            memcpy(task.content.get()+20, msg+i_start, msg_block_length);
 
             // Send out
             for (auto receiver: receivers) {
@@ -122,27 +135,18 @@ public:
     }
 
 private:
-    void Parse(std::unique_ptr<char[]> &msg_block) {
+    void Parse(std::unique_ptr<char[], aligned_delete<char>> &msg_block) {
         // Read meta data
         int i = 0;
         MessageBlock blk;
-        blk.source = atoi(msg_block.get());
-        while (msg_block[i] != ' ') i++;
-
-        blk.sn = atoi(msg_block.get() + i);
-        i++; while (msg_block[i] != ' ') i++;
-
-        blk.num = atoi(msg_block.get() + i);
-        i++; while (msg_block[i] != ' ') i++;
-
-        blk.id = atoi(msg_block.get() + i);
-        i++; while (msg_block[i] != ' ') i++;
-
-        blk.length = atoi(msg_block.get() + i);
-        i++; while (msg_block[i] != ' ') i++;
-
-        blk.content = std::string(msg_block.get() + i + 1,
-                                  msg_block.get() + i + blk.length + 1);
+        auto *meta_data = (int*)msg_block.get();
+        blk.source = meta_data[0];
+        blk.sn = meta_data[1];
+        blk.num = meta_data[2];
+        blk.id = meta_data[3];
+        blk.length = meta_data[4];
+        blk.content = std::string(msg_block.get() + 20,
+                                  msg_block.get() + 20 + blk.length);
         //LOG(INFO) << blk.source << ' ' << blk.sn << ' '  << blk.num << ' ' << blk.id << ' ' << blk.length << ' ' << blk.content;
 
         if (blk.num == 1)
@@ -190,7 +194,8 @@ private:
             recv_requests.clear();
             recv_buf.clear();
             for (auto sender: senders) {
-                std::unique_ptr<char[]> buf(new char[MAX_MSG_LENGTH]);
+                std::unique_ptr<char[], aligned_delete<char>>
+                        buf((char*)_mm_malloc(MAX_MSG_LENGTH, ALIGN_SIZE));
                 MPI_Request req;
                 MPI_Irecv(buf.get(), MAX_MSG_LENGTH, MPI_CHAR, sender, tag,
                           MPI_COMM_WORLD, &req);
@@ -252,7 +257,7 @@ private:
     std::vector<int> senders, receivers;
 
     std::vector<MPI_Request> recv_requests;
-    std::vector<std::unique_ptr<char[]>> recv_buf;
+    std::vector<std::unique_ptr<char[], aligned_delete<char>>> recv_buf;
 
     int process_id, process_size;
 
