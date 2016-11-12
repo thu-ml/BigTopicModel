@@ -145,12 +145,12 @@ private:
         blk.num = meta_data[2];
         blk.id = meta_data[3];
         blk.length = meta_data[4];
-        blk.content = std::string(msg_block.get() + 20,
-                                  msg_block.get() + 20 + blk.length);
+        //blk.content = std::string(msg_block.get() + 20,
+        //                          msg_block.get() + 20 + blk.length);
         //LOG(INFO) << blk.source << ' ' << blk.sn << ' '  << blk.num << ' ' << blk.id << ' ' << blk.length << ' ' << blk.content;
 
         if (blk.num == 1)
-            on_recv(blk.content.data(), blk.content.size());
+            on_recv(msg_block.get() + 20, blk.length);
         else {
             // Concatenate
             auto id = std::make_pair(blk.source, blk.sn);
