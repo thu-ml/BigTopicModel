@@ -17,6 +17,8 @@ typedef enum {
     row_partition,
     column_partition
 } PartitionType;
+// monolith require a preprocess of the corpus.
+// If you don't want to, use separate instead.
 typedef enum {
     monolith,
     separate

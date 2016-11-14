@@ -168,6 +168,8 @@ void LDA::iterWord() {
 void LDA::Estimate() {
     Clock clk;
     clk.tic();
+    // TODO(dong) : using monolith style need a fixed corpus
+    // the code structure needs to be refactored
     if (monolith == local_merge_style) {
         // LOG_IF(INFO, process_id == monitor_id) << "start set mono buf";
         vector<size_t> doc_count;
@@ -176,7 +178,6 @@ void LDA::Estimate() {
         word_count.resize(num_words);
         fill(doc_count.begin(), doc_count.end(), 0);
         fill(word_count.begin(), word_count.end(), 0);
-#pragma omp parallel for
         for (TWord v = 0; v < num_words; v++) {
             auto row = corpus.Get(v);
             for (auto d : row) {

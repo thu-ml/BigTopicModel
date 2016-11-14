@@ -68,6 +68,6 @@ for p, v in params.iteritems():
 
 
 ####################    Execute     ####################
-cmd = "OMP_NUM_THREADS=%d "%thread_size + dtm
+cmd = "OMP_NUM_THREADS=%d "%thread_size + lda
 print cmd
 os.system(cmd)
