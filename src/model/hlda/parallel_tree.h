@@ -12,6 +12,8 @@
 
 class ParallelTree {
 public:
+    friend class DistributedTree;
+
     struct Node {
         Node *parent;
         std::vector<Node *> children;
@@ -22,6 +24,10 @@ public:
         Node(Node *parent, int id, int pos, int depth)
                 : parent(parent), id(id), pos(pos),
                   depth(depth), num_docs(0) {}
+    };
+
+    struct IDPos {
+        int id, pos;
     };
 
     struct RetNode {
@@ -47,6 +53,9 @@ public:
     ~ParallelTree();
 
     // Local operations
+    std::vector<IDPos> AddNodes(int node_id);
+    void AddNodes(IDPos *node_ids, int len);
+
     void DecNumDocs(int old_node_id);
 
     IncResult IncNumDocs(int new_node_id);
@@ -70,6 +79,8 @@ private:
     void Remove(Node *node);
 
     Node *AddChildren(Node *parent);
+
+    Node *AddChildren(Node *parent, int id, int pos);
 
     int L;
     std::vector<double> gamma;

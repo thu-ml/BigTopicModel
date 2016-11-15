@@ -61,6 +61,8 @@ public:
 
     int GetNumSyncs() { return num_syncs; }
 
+    int ID() { return process_id; }
+
 private:
     void Start() {
         stop = false;

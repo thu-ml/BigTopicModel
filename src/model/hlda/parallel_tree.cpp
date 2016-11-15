@@ -50,6 +50,28 @@ ParallelTree::IncResult ParallelTree::IncNumDocs(int new_node_id) {
     return std::move(result);
 }
 
+std::vector<ParallelTree::IDPos> ParallelTree::AddNodes(int node_id) {
+    std::lock_guard<std::mutex> guard(tree_mutex);
+
+    Node *node = FindByID(node_id);
+    std::vector<IDPos> result;
+    while (node->depth + 1 < L) {
+        result.push_back(IDPos{node->id, node->pos});
+        node = AddChildren(node);
+    }
+    result.push_back(IDPos{node->id, node->pos});
+
+    return std::move(result);
+}
+
+void ParallelTree::AddNodes(IDPos *node_ids, int len) {
+    std::lock_guard<std::mutex> guard(tree_mutex);
+
+    Node *node = FindByID(node_ids[0].id);
+    for (int l = 1; l < len; l++)
+        node = AddChildren(node, node_ids[l].id, node_ids[l].pos);
+}
+
 ParallelTree::RetTree ParallelTree::GetTree() {
     RetTree result;
     {
@@ -140,6 +162,16 @@ ParallelTree::Node* ParallelTree::FindByID(int id) {
 ParallelTree::Node* ParallelTree::AddChildren(ParallelTree::Node *parent) {
     int depth = parent->depth + 1;
     Node *child = new Node(parent, max_id++, num_nodes[depth]++, depth);
+    parent->children.push_back(child);
+    nodes.push_back(child);
+    return child;
+}
+
+ParallelTree::Node* ParallelTree::AddChildren(ParallelTree::Node *parent, int id, int pos) {
+    int depth = parent->depth + 1;
+    Node *child = new Node(parent, id, pos, depth);
+    max_id = std::max(max_id, id + 1);
+    num_nodes[depth] = std::max(num_nodes[depth], pos + 1);
     parent->children.push_back(child);
     nodes.push_back(child);
     return child;
