@@ -60,7 +60,7 @@ public:
 
     IncResult IncNumDocs(int new_node_id);
 
-    RetTree GetTree();
+    RetTree GetTree(bool pos_instead_id = false);
 
     // Sync operations
 
@@ -72,6 +72,10 @@ public:
     void Check();
 
     std::vector<std::vector<int>> Compress();
+
+    std::vector<int> Serialize();
+
+    void Deserialize(std::vector<int> &data);
 
 private:
     Node* FindByID(int id);

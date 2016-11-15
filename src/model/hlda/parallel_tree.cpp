@@ -6,6 +6,7 @@
 #include <cmath>
 #include <map>
 #include "parallel_tree.h"
+#include "glog/logging.h"
 
 ParallelTree::ParallelTree(int L, std::vector<double> gamma)
         : L(L), gamma(gamma), threshold(100000000), //Collapsed sampling by default
@@ -72,7 +73,7 @@ void ParallelTree::AddNodes(IDPos *node_ids, int len) {
         node = AddChildren(node, node_ids[l].id, node_ids[l].pos);
 }
 
-ParallelTree::RetTree ParallelTree::GetTree() {
+ParallelTree::RetTree ParallelTree::GetTree(bool pos_instead_id) {
     RetTree result;
     {
         std::lock_guard<std::mutex> guard(tree_mutex);
@@ -99,6 +100,9 @@ ParallelTree::RetTree ParallelTree::GetTree() {
         result.num_instantiated = num_instantiated;
         result.num_nodes = num_nodes;
     }
+
+    if (!pos_instead_id)
+        return std::move(result);
 
     // Change parent_id to position in array
     std::map<int, int> id_to_pos;
@@ -184,6 +188,55 @@ void ParallelTree::Remove(ParallelTree::Node *node) {
         throw std::runtime_error("Invalid node to remove");
     pchildren.erase(it);
     delete node;
+}
+
+std::vector<int> ParallelTree::Serialize() {
+    // Serialize threshold, max_id, num_nodes, num_instantiated
+    std::vector<int> data{threshold, max_id};
+    for (int l=0; l<L; l++)
+        data.insert(data.end(), {num_nodes[l], num_instantiated[l]});
+
+    // Serialize the tree
+    auto tree = GetTree(true);
+    data.push_back(static_cast<int>(tree.nodes.size()));
+    for (auto &node: tree.nodes)
+        data.insert(data.end(), {node.parent, node.id, node.pos, node.num_docs, node.depth});
+
+    return std::move(data);
+}
+
+void ParallelTree::Deserialize(std::vector<int> &data) {
+    // Deserialize threshold, max_id, num_nodes, num_instantiated
+    threshold = data[0]; max_id = data[1];
+    int* ptr = data.data() + 2;
+    for (int l=0; l<L; l++) {
+        num_nodes[l] = *(ptr++);
+        num_instantiated[l] = *(ptr++);
+    }
+
+    // Clear the tree
+    for (auto *node: nodes)
+        delete node;
+    nodes.clear();
+    root = new Node(nullptr, 0, 0, 0);
+    nodes.push_back(root);
+
+    int num_nodes = *(ptr++);
+    // Deserialize the tree
+    for (int i = 0; i < num_nodes; i++) {
+        int parent = *(ptr++);
+        int id = *(ptr++);
+        int pos = *(ptr++);
+        int num_docs = *(ptr++);
+        int depth = *(ptr++);
+
+        Node *node = root;
+        if (i != 0)
+            node = AddChildren(FindByID(parent), id, pos);
+        node->num_docs = num_docs;
+        if (node->depth != depth)
+            throw std::runtime_error("Incorrect depth in deserialization.");
+    }
 }
 
 std::ostream& operator << (std::ostream &out, const ParallelTree::RetTree &tree) {

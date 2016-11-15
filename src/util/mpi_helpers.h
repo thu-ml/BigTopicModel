@@ -777,6 +777,17 @@ public:
                           (char*)recv_buffer, recv_counts.data(), recv_displs.data(), MPI_CHAR,
                           comm);
     }
+
+    template <class T>
+    static void Bcast(MPI_Comm comm, int root,
+                      std::vector<T> &data) {
+        // Send size
+        size_t size = data.size();
+        MPI_Bcast(&size, 1, MPI_UNSIGNED_LONG_LONG, root, comm);
+
+        data.resize(size);
+        MPI_Bcast(data.data(), size*sizeof(T), MPI_CHAR, root, comm);
+    }
 };
 
 #endif

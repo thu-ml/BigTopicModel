@@ -59,6 +59,7 @@ DistributedTree::DistributedTree(int L, std::vector<double> gamma) :
         tree(L, gamma), on_recv(*this), pub_sub(true, on_recv),
         tasks(new channel<ParallelTree::IncResult>[omp_get_max_threads()]){
 
+    MPI_Comm_dup(MPI_COMM_WORLD, &comm);
 }
 
 void DistributedTree::DecNumDocs(int old_node_id) {
@@ -106,15 +107,49 @@ void DistributedTree::SetThreshold(int threshold) {
 }
 
 void DistributedTree::Check() {
-
+    tree.Check();
 }
 
 std::vector<std::vector<int>> DistributedTree::Compress() {
-    return std::vector<std::vector<int>>();
+    std::vector<std::vector<int>> id_map;
+    std::vector<int> buff;
+    if (pub_sub.ID() == 0) {
+        id_map = tree.Compress();
+        // Serialize
+        for (auto &v: id_map) {
+            buff.push_back(static_cast<int>(v.size()));
+            for (auto k: v)
+                buff.push_back(k);
+        }
+    }
+    MPIHelpers::Bcast(comm, 0, buff);
+    // Deserialize
+    if (pub_sub.ID() != 0) {
+        id_map.resize(static_cast<size_t>(tree.L));
+        int pos = 0;
+        for (int l = 0; l < tree.L; l++) {
+            int len = buff[pos];
+            id_map[l].resize(static_cast<size_t>(len));
+            pos++;
+            for (int i=0; i<len; i++, pos++)
+                id_map[l][i] = buff[pos];
+        }
+    }
+
+    Sync();
+
+    return id_map;
 }
 
 void DistributedTree::Sync() {
+    decltype(tree.Serialize()) data;
+    if (pub_sub.ID() == 0) {
+        data = tree.Serialize();
+    }
 
+    MPIHelpers::Bcast(comm, 0, data);
+
+    tree.Deserialize(data);
 }
 
 void DistributedTree::Barrier() {

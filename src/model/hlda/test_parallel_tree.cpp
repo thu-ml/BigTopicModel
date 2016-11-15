@@ -59,6 +59,16 @@ int main(int argc, char **argv) {
             tree.IncNumDocs(5);
         }
         PrintTree();
+
+        auto id_map = tree.Compress();
+        PrintTree();
+
+        for (int i = 0; i < process_size; i++) {
+            if (i == process_id) {
+                LOG(INFO) << "Node " << i << "\n" << id_map;
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
     }
 
     MPI_Finalize();

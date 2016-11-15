@@ -8,6 +8,7 @@
 #include "parallel_tree.h"
 #include "publisher_subscriber.h"
 #include "channel.h"
+#include "mpi.h"
 
 class DistributedTree {
 public:
@@ -49,6 +50,7 @@ private:
     PublisherSubscriber<TOnRecv> pub_sub;
 
     std::unique_ptr<channel<ParallelTree::IncResult>[]> tasks;
+    MPI_Comm comm;
 };
 
 #endif //BIGTOPICMODEL_DISTRIBUTED_TREE_H
