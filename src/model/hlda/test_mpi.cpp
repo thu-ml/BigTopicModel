@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
 
         // Compare
         LOG_IF(FATAL, global_cv != cv) << "Incorrect CV";
-        //LOG_IF(FATAL, global_cv != cv2) << "Incorrect CV2";
+        //  LOG_IF(FATAL, global_cv != cv2) << "Incorrect CV2";
     }
 
     MPI_Finalize();

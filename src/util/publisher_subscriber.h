@@ -60,7 +60,7 @@ public:
         std::unique_lock<std::mutex> lock(global_mutex);
         barrier = true;
         barrier_met = false;
-        cv.wait(lock, [&](){ return barrier_met; });
+        cv2.wait(lock, [&](){ return barrier_met; });
         barrier = false;
     }
 
@@ -116,18 +116,19 @@ private:
                 int total_is_stop = 0;
                 MPI_Allreduce(&is_stop, &total_is_stop, 1,
                               MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-                if (total_is_stop)
+                if (total_is_stop == process_size) {
                     break;
+                }
 
                 if (total_is_barrier == process_size) {
                     if (total_send_size == 0 && recv_buffer.empty()) {
                         std::lock_guard<std::mutex> lock(global_mutex);
                         barrier_met = true;
-                        cv.notify_all();
+                        cv2.notify_all();
                     }
                 }
             }
-            std::lock_guard<std::mutex> lock(global_mutex);
+            std::unique_lock<std::mutex> lock(global_mutex);
             stopped = true;
             cv.notify_all();
         }));
@@ -156,7 +157,7 @@ private:
 
     boost::shared_mutex mutex;
     std::mutex offset_mutex, global_mutex;
-    std::condition_variable cv;
+    std::condition_variable cv, cv2;
 
     int process_id, process_size, num_syncs;
 };

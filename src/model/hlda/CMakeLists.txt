@@ -10,3 +10,5 @@ target_link_libraries(hlda hlda_lib util ${MPI_LIBRARIES} ${GLOG} ${GFLAGS} mkl_
 
 add_executable(test_mpi test_mpi.cpp)
 target_link_libraries(test_mpi util ${MPI_LIBRARIES} ${GLOG} ${GFLAGS} boost_thread boost_system)
+
+add_executable(test2 test2.cpp)
