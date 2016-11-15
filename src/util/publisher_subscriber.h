@@ -11,8 +11,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <mpi.h>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/shared_mutex.hpp>
 #include "glog/logging.h"
 #include "utils.h"
 #include "mpi_helpers.h"
@@ -41,14 +39,10 @@ public:
         // Calculate where should I start
         int num_bytes_occupied = calculate_storage(length);
 
-        boost::shared_lock<boost::shared_mutex> lk(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         size_t pos = 0;
-        {
-            std::lock_guard<std::mutex> lock(offset_mutex);
-            pos = to_send.size();
-            to_send.resize(pos + num_bytes_occupied);
-            //cv.notify_all();
-        }
+        pos = to_send.size();
+        to_send.resize(pos + num_bytes_occupied);
         int &p_length = *(reinterpret_cast<int*>(to_send.data() + pos));
         p_length = length;
         pos += sizeof(int);
@@ -77,7 +71,7 @@ private:
             while (1) {
                 // Swap to_send and sending
                 {
-                    boost::unique_lock<boost::shared_mutex> lk(mutex);
+                    std::lock_guard<std::mutex> lock(mutex);
                     sending = std::move(to_send);
                     to_send.clear();
                 }
@@ -155,8 +149,7 @@ private:
     std::vector<char> sending, to_send, recv_buffer;
     std::vector<size_t> recv_offsets;
 
-    boost::shared_mutex mutex;
-    std::mutex offset_mutex, global_mutex;
+    std::mutex mutex, global_mutex;
     std::condition_variable cv, cv2;
 
     int process_id, process_size, num_syncs;
