@@ -54,7 +54,7 @@ public:
         std::unique_lock<std::mutex> lock(global_mutex);
         barrier = true;
         barrier_met = false;
-        cv2.wait(lock, [&](){ return barrier_met; });
+        cv.wait(lock, [&](){ return barrier_met; });
         barrier = false;
     }
 
@@ -118,11 +118,11 @@ private:
                     if (total_send_size == 0 && recv_buffer.empty()) {
                         std::lock_guard<std::mutex> lock(global_mutex);
                         barrier_met = true;
-                        cv2.notify_all();
+                        cv.notify_all();
                     }
                 }
             }
-            std::unique_lock<std::mutex> lock(global_mutex);
+            std::lock_guard<std::mutex> lock(global_mutex);
             stopped = true;
             cv.notify_all();
         }));
@@ -150,7 +150,7 @@ private:
     std::vector<size_t> recv_offsets;
 
     std::mutex mutex, global_mutex;
-    std::condition_variable cv, cv2;
+    std::condition_variable cv;
 
     int process_id, process_size, num_syncs;
 };

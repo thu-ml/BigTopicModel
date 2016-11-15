@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 
     {
         // Generate some data
-        int num_docs = 1000;
+        int num_docs = 10000;
         float avg_doc_length = 1000;
         int vocab_size = 10000;
         auto corpus = Corpus::Generate(num_docs, avg_doc_length, vocab_size);
