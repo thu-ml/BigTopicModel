@@ -22,8 +22,9 @@ public:
     PublisherSubscriber(bool is_subscriber, TOnReceive &on_recv)
      : is_subscriber(is_subscriber), on_recv(on_recv) {
 
-        MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
-        MPI_Comm_size(MPI_COMM_WORLD, &process_size);
+        MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+        MPI_Comm_rank(comm, &process_id);
+        MPI_Comm_size(comm, &process_size);
 
         Start();
     }
@@ -77,7 +78,7 @@ private:
                 }
 
                 // Send out sending
-                MPIHelpers::Allgatherv(MPI_COMM_WORLD, process_size,
+                MPIHelpers::Allgatherv(comm, process_size,
                                        sending.size(), sending.data(),
                                        recv_offsets, recv_buffer);
                 ++num_syncs;
@@ -99,17 +100,17 @@ private:
                 int send_size = (int)to_send.size();
                 int total_send_size = 0;
                 MPI_Allreduce(&send_size, &total_send_size, 1,
-                              MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+                              MPI_INT, MPI_SUM, comm);
 
                 int is_barrier = barrier;
                 int total_is_barrier = 0;
                 MPI_Allreduce(&is_barrier, &total_is_barrier, 1,
-                              MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+                              MPI_INT, MPI_SUM, comm);
 
                 int is_stop = stop;
                 int total_is_stop = 0;
                 MPI_Allreduce(&is_stop, &total_is_stop, 1,
-                              MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+                              MPI_INT, MPI_SUM, comm);
                 if (total_is_stop == process_size) {
                     break;
                 }
@@ -153,6 +154,7 @@ private:
     std::condition_variable cv;
 
     int process_id, process_size, num_syncs;
+    MPI_Comm comm;
 };
 
 #endif //BIGTOPICMODEL_PUBLISHERSUBSCRIBER_H

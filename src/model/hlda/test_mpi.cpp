@@ -70,11 +70,11 @@ int main(int argc, char **argv) {
         PublisherSubscriber<decltype(on_recv)> pubsub(true, on_recv);
 
         // Another pubsub for cv
-        /*std::vector<int> cv2((size_t)vocab_size);
+        std::vector<int> cv2((size_t)vocab_size);
         auto on_recv2 = [&](const char *msg, size_t length) {
             cv2[*((const int*)msg)]++;
         };
-        PublisherSubscriber<decltype(on_recv2)> pubsub2(1, true, true, on_recv2);*/
+        PublisherSubscriber<decltype(on_recv2)> pubsub2(true, on_recv2);
 
         // Compute via allreduce
         std::vector<int> local_cv((size_t)vocab_size);
@@ -90,16 +90,16 @@ int main(int argc, char **argv) {
         for (auto &doc: corpus.w) {
             for (auto v: doc) {
                 pubsub.Publish((char*)&v, sizeof(v));
-                //pubsub2.Publish((char*)&v, sizeof(v));
+                pubsub2.Publish((char*)&v, sizeof(v));
             }
         }
         pubsub.Barrier();
-        //pubsub2.Barrier();
+        pubsub2.Barrier();
         LOG(INFO) << "Finished in " << clk.toc() << " seconds. (" << pubsub.GetNumSyncs() << " syncs)";
 
         // Compare
         LOG_IF(FATAL, global_cv != cv) << "Incorrect CV";
-        //  LOG_IF(FATAL, global_cv != cv2) << "Incorrect CV2";
+        LOG_IF(FATAL, global_cv != cv2) << "Incorrect CV2";
     }
 
     MPI_Finalize();
