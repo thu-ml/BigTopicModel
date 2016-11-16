@@ -60,6 +60,10 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
     for (TLen l = 0; l < L; l++)
         for (int i = 0; i < 1000; i++)
             log_normalization(l, i) = logf(beta[l] + i);
+
+    int process_id, process_size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
+    MPI_Comm_size(MPI_COMM_WORLD, &process_size);
 }
 
 void BaseHLDA::Visualize(std::string fileName, int threshold) {

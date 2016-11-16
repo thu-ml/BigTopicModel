@@ -17,6 +17,7 @@
 #include "document.h"
 #include "atomic_matrix.h"
 #include "atomic_vector.h"
+#include "mpi.h"
 
 class Corpus;
 
@@ -80,6 +81,8 @@ protected:
     bool new_topic;
 
     std::mutex model_mutex;
+
+    int process_id, process_size;
 };
 
 
