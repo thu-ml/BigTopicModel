@@ -25,18 +25,24 @@ void CollapsedSampling::Initialize() {
     cout << "Start initialize..." << endl;
     auto ret = tree.GetTree();
     num_instantiated = ret.num_instantiated;
-    for (auto &doc: docs) {
-        for (auto &k: doc.z)
-            k = GetGenerator()() % L;
+    for (int process = 0; process < process_size; process++) {
+        if (process == process_id) {
+            for (auto &doc: docs) {
+                for (auto &k: doc.z)
+                    k = GetGenerator()() % L;
 
-        SampleC(doc, false, true);
-        SampleZ(doc, true, true);
+                SampleC(doc, false, true);
+                SampleZ(doc, true, true);
 
-        if (tree.GetTree().nodes.size() > (size_t) topic_limit)
-            throw runtime_error("There are too many topics");
-    }
-    cout << "Initialized with " << tree.GetTree().nodes.size()
-         << " topics." << endl;
+                if (tree.GetTree().nodes.size() > (size_t) topic_limit)
+                    throw runtime_error("There are too many topics");
+            }
+            cout << "Initialized with " << tree.GetTree().nodes.size()
+                 << " topics." << endl;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    } 
+    AllBarrier();
 }
 
 void CollapsedSampling::Estimate() {
