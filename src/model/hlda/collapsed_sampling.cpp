@@ -86,19 +86,23 @@ void CollapsedSampling::Estimate() {
                     num_docs_big += node.num_docs;
             }
 
-        std::vector<int> cl((size_t) L);
-        for (auto &node: ret.nodes)
-            cl[node.depth]++;
-        for (int l=0; l<L; l++)
-            printf("%d ", cl[l]);
-        printf("\n");
+        if (process_id == 0) {
+            std::vector<int> cl((size_t) L);
+            for (auto &node: ret.nodes)
+                cl[node.depth]++;
+            for (int l=0; l<L; l++)
+                printf("%d ", cl[l]);
+            printf("\n");
+        }
 
         double time = clk.toc();
         double throughput = corpus.T / time / 1048576;
         double perplexity = Perplexity();
-        printf("Iteration %d, %d topics (%d, %d), %.2f seconds (%.2fMtoken/s), perplexity = %.2f\n",
-               it, (int)ret.nodes.size(), num_big_nodes,
-               num_docs_big, time, throughput, perplexity);
+        if (process_id == 0) {
+            printf("Iteration %d, %d topics (%d, %d), %.2f seconds (%.2fMtoken/s), perplexity = %.2f\n",
+                   it, (int)ret.nodes.size(), num_big_nodes,
+                   num_docs_big, time, throughput, perplexity);
+        }
 
         Check();
         tree.Check();
@@ -360,7 +364,11 @@ double CollapsedSampling::Perplexity() {
         }
     }
 
-    return exp(-log_likelihood / T);
+    double global_log_likelihood;
+    size_t global_T;
+    MPI_Allreduce(&log_likelihood, &global_log_likelihood, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&T, &global_T, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+    return exp(-global_log_likelihood / global_T);
 }
 
 void CollapsedSampling::Check(int D) {
@@ -383,10 +391,15 @@ void CollapsedSampling::Check(int D) {
     // Deep check
     std::vector<Matrix<int>> count2(L);
     std::vector<std::vector<int>> ck2(L);
+    std::vector<Matrix<int>> global_count2(L);
+    std::vector<std::vector<int>> global_ck2(L);
     for (int l=0; l<L; l++) {
         count2[l].SetR(corpus.V);
         count2[l].SetC(count_sess[l].GetC());
         ck2[l].resize(count_sess[l].GetC());
+        global_count2[l].SetR(corpus.V);
+        global_count2[l].SetC(count_sess[l].GetC());
+        global_ck2[l].resize(count_sess[l].GetC());
     }
     for (int d=0; d<D; d++) {
         auto &doc = docs[d];
@@ -402,15 +415,26 @@ void CollapsedSampling::Check(int D) {
             ck2[z][c]++;
         }
     }
+    // Reduce count2 and ck2
+    for (int l=0; l<L; l++) {
+        MPI_Allreduce(count2[l].Data(), global_count2[l].Data(), 
+                      count2[l].GetR() * count2[l].GetC(), 
+                      MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(ck2[l].data(), global_ck2[l].data(),
+                      ck2[l].size(), 
+                      MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    }
+
+
     for (int l=0; l<L; l++) {
         for (int r = 0; r < corpus.V; r++)
             for (int c = 0; c < count_sess[l].GetC(); c++)
-                if (count_sess[l].Get(r, c) != count2[l](r, c))
+                if (count_sess[l].Get(r, c) != global_count2[l](r, c))
                     throw std::runtime_error("Count error at " + std::to_string(l) + "," + std::to_string(r)
-                    + "," + std::to_string(c) + " expected " + std::to_string(count2[l](r, c))
+                    + "," + std::to_string(c) + " expected " + std::to_string(global_count2[l](r, c))
                     + " get " + std::to_string(count_sess[l].Get(r, c)));
         for (int c = 0; c < count_sess[l].GetC(); c++)
-            if (ck_sess[l].Get(c) != ck2[l][c])
+            if (ck_sess[l].Get(c) != global_ck2[l][c])
                 throw std::runtime_error("Ck error");
     }
 }
