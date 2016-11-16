@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <mutex>
 #include <condition_variable>
+#include <chrono>
 #include <mpi.h>
 #include "glog/logging.h"
 #include "utils.h"
@@ -139,6 +140,7 @@ private:
                         cv.notify_all();
                     }
                 }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
             std::lock_guard<std::mutex> lock(global_mutex);
             stopped = true;
