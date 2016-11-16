@@ -159,3 +159,9 @@ std::vector<std::mutex*> BaseHLDA::GetDocLocks(Document &doc,
 xorshift& BaseHLDA::GetGenerator() {
     return generators[omp_get_thread_num()];
 }
+
+void BaseHLDA::AllBarrier() {
+    for (auto &v: ck) v.Barrier();
+    for (auto &m: count) m.Barrier();
+    tree.Barrier();
+}

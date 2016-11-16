@@ -202,6 +202,8 @@ std::vector<int> ParallelTree::Serialize() {
     for (auto &node: tree.nodes)
         data.insert(data.end(), {node.parent, node.id, node.pos, node.num_docs, node.depth});
 
+    //LOG(INFO) << tree;
+
     return std::move(data);
 }
 
@@ -235,7 +237,8 @@ void ParallelTree::Deserialize(std::vector<int> &data) {
             node = AddChildren(FindByID(parent), id, pos);
         node->num_docs = num_docs;
         if (node->depth != depth)
-            throw std::runtime_error("Incorrect depth in deserialization.");
+            throw std::runtime_error("Incorrect depth in deserialization. " +
+                                     std::to_string(node->id));
     }
 }
 

@@ -11,7 +11,7 @@
 #include <string>
 #include <mutex>
 #include "matrix.h"
-#include "parallel_tree.h"
+#include "distributed_tree.h"
 #include "xorshift.h"
 #include "types.h"
 #include "document.h"
@@ -49,9 +49,11 @@ protected:
     std::vector<std::mutex*> GetDocLocks(Document &doc, 
             std::vector<AtomicMatrix<TCount>::Session> &session);
 
+    void AllBarrier();
+
     xorshift& GetGenerator();
 
-    ParallelTree tree;
+    DistributedTree tree;
     Corpus &corpus;
     int L;
     std::vector<TProb> alpha;

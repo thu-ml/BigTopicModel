@@ -57,6 +57,7 @@ void CollapsedSampling::Estimate() {
             SampleC(doc, true, true);
             SampleZ(doc, true, true);
         }
+        AllBarrier();
 
 /*#pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
@@ -73,6 +74,7 @@ void CollapsedSampling::Estimate() {
         }*/
 
         SamplePhi();
+        AllBarrier();
 
         ret = tree.GetTree();
         int num_big_nodes = 0;
