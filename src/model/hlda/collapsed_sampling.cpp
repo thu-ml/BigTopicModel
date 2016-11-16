@@ -258,27 +258,34 @@ TProb CollapsedSampling::WordScoreCollapsed(Document &doc, int l, int offset, in
     auto end = doc.EndLevel(l);
 
     auto local_count_sess = count[l].GetSession();
+    auto ck_sess = ck[l].GetSession();
+
+    // Make sure that we do not access outside the boundary
+    int actual_num = std::min(num, 
+                              std::min(local_count_sess.GetC(), 
+                              static_cast<int>(ck_sess.Size())) - offset);
+    for (int k = actual_num; k < num; k++) 
+        result[k] = -1e20f;
 
     for (auto i = begin; i < end; i++) {
         auto c_offset = doc.c_offsets[i];
         auto v = doc.reordered_w[i];
 
-        for (TTopic k = 0; k < num; k++)
+        for (TTopic k = 0; k < actual_num; k++)
             log_work[k] = (TProb) (local_count_sess.Get(v, offset+k) + c_offset + b);
         log_work.back() = c_offset + b;
 
         // VML ln
         vsLn(num+1, log_work.data(), log_work.data());
 
-        for (TTopic k = 0; k < num; k++)
+        for (TTopic k = 0; k < actual_num; k++)
             result[k] += log_work[k];
 
         empty_result += log_work[num];
     }
 
-    auto ck_sess = ck[l].GetSession();
     auto w_count = end - begin;
-    for (TTopic k = 0; k < num; k++)
+    for (TTopic k = 0; k < actual_num; k++)
         result[k] -= lgamma(ck_sess.Get(offset+k) + b_bar + w_count) -
                 lgamma(ck_sess.Get(offset+k) + b_bar);
 
