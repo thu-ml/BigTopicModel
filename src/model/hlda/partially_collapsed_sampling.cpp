@@ -42,31 +42,45 @@ void PartiallyCollapsedSampling::Initialize() {
     auto &generator = GetGenerator();
     int mb_count = 0;
     omp_set_dynamic(0);
-    for (size_t d_start = 0; d_start < docs.size(); d_start += minibatch_size) {
-        auto d_end = min(docs.size(), d_start + minibatch_size);
-        omp_set_num_threads(min(++mb_count, num_threads));
-        auto ret = tree.GetTree();
-        num_instantiated = ret.num_instantiated;
+    for (int process = 0; process < process_size; process++) {
+        size_t num_mbs = (docs.size() - 1) / minibatch_size + 1; 
+        MPI_Bcast(&num_mbs, 1, MPI_UNSIGNED_LONG_LONG, process, MPI_COMM_WORLD);
+        if (process == process_id) {
+            for (size_t d_start = 0; d_start < docs.size(); 
+                    d_start += minibatch_size) {
+                auto d_end = min(docs.size(), d_start + minibatch_size);
+                omp_set_num_threads(min(++mb_count, num_threads));
+                auto ret = tree.GetTree();
+                num_instantiated = ret.num_instantiated;
 #pragma omp parallel for
-        for (size_t d = d_start; d < d_end; d++) {
-            auto &doc = docs[d];
+                for (size_t d = d_start; d < d_end; d++) {
+                    auto &doc = docs[d];
 
-            for (auto &k: doc.z)
-                k = generator() % L;
+                    for (auto &k: doc.z)
+                        k = generator() % L;
 
-            SampleC(doc, false, true);
-            SampleZ(doc, true, true);
-        }
-        AllBarrier();
-        SamplePhi();
-        AllBarrier();
+                    SampleC(doc, false, true);
+                    SampleZ(doc, true, true);
+                }
+                AllBarrier();
+                SamplePhi();
+                AllBarrier();
 
-        printf("Processed document [%lu, %lu) documents, %d topics\n", d_start, d_end,
-               (int)tree.GetTree().nodes.size());
-        if ((int)tree.GetTree().nodes.size() > (size_t) topic_limit)
-            throw runtime_error("There are too many topics");
-    }
+                printf("Processed document [%lu, %lu) documents, %d topics\n", d_start, d_end,
+                       (int)tree.GetTree().nodes.size());
+                if ((int)tree.GetTree().nodes.size() > (size_t) topic_limit)
+                    throw runtime_error("There are too many topics");
+            }
     	    cout << "Initialized with " << (int)tree.GetTree().nodes.size() << " topics." << endl;
+        } else {
+            for (size_t i = 0; i < num_mbs; i++) {
+                AllBarrier();
+                SamplePhi();
+                AllBarrier();
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
 
     SamplePhi();
     delayed_update = true;
