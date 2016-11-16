@@ -70,7 +70,9 @@ int main(int argc, char **argv) {
     vmlSetMode(VML_EP); // VML_HA VML_LA
 
     // initialize and set MPI
-    MPI_Init(NULL, NULL);
+    int provided;
+    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+    LOG_IF(FATAL, provided != MPI_THREAD_MULTIPLE) << "MPI_THREAD_MULTIPLE is not supported";
     int process_id, process_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
     MPI_Comm_size(MPI_COMM_WORLD, &process_size);
@@ -129,6 +131,7 @@ int main(int argc, char **argv) {
     model->Initialize();
     model->Estimate();
     model->Visualize(FLAGS_vis_prefix, -1);
+    delete model;
 
 
     MPI_Finalize();

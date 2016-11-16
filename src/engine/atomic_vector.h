@@ -49,8 +49,8 @@ public:
         }
 
         Session(Session &&from) noexcept :
-                v(from.v), lock(std::move(lock)),
-                buffer(std::move(buffer)), if_publish(if_publish) {
+                v(from.v), lock(std::move(from.lock)),
+                buffer(std::move(from.buffer)), if_publish(from.if_publish) {
         }
 
         ~Session() {

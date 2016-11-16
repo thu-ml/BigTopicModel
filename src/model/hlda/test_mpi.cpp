@@ -190,46 +190,52 @@ int main(int argc, char **argv) {
 //        }
 //    }
 
+//    {
+//        AtomicMatrix<int> m;
+//
+//        auto PrintMatrix = [&]() {
+//            for (int i = 0; i < process_size; i++) {
+//                if (i == process_id) {
+//                    auto sess = m.GetSession();
+//                    auto R = sess.GetR();
+//                    auto C = sess.GetC();
+//                    std::ostringstream sout;
+//                    sout << "Node " << i << " R = " << R << " C = " << C << "\n";
+//                    for (int r=0; r<R; r++) {
+//                        for (int c=0; c<C; c++)
+//                            sout << sess.Get(r, c) << " ";
+//                        sout << "\n";
+//                    }
+//                    LOG(INFO) << sout.str();
+//                }
+//                MPI_Barrier(MPI_COMM_WORLD);
+//            }
+//        };
+//
+//        m.SetR(3);
+//
+//        if (process_id == 0) {
+//            m.IncreaseC(5);
+//            auto sess = m.GetSession();
+//            sess.Inc(2, 4);
+//            sess.Inc(1, 3);
+//            sess.Dec(1, 2);
+//        }
+//        m.Barrier();
+//        PrintMatrix();
+//
+//        if (process_id == 1) {
+//            auto sess = m.GetSession();
+//            sess.Inc(2, 2);
+//        }
+//        m.Barrier();
+//        PrintMatrix();
+//    }
+
     {
-        AtomicMatrix<int> m;
-
-        auto PrintMatrix = [&]() {
-            for (int i = 0; i < process_size; i++) {
-                if (i == process_id) {
-                    auto sess = m.GetSession();
-                    auto R = sess.GetR();
-                    auto C = sess.GetC();
-                    std::ostringstream sout;
-                    sout << "Node " << i << " R = " << R << " C = " << C << "\n";
-                    for (int r=0; r<R; r++) {
-                        for (int c=0; c<C; c++)
-                            sout << sess.Get(r, c) << " ";
-                        sout << "\n";
-                    }
-                    LOG(INFO) << sout.str();
-                }
-                MPI_Barrier(MPI_COMM_WORLD);
-            }
-        };
-
-        m.SetR(3);
-
-        if (process_id == 0) {
-            m.IncreaseC(5);
-            auto sess = m.GetSession();
-            sess.Inc(2, 4);
-            sess.Inc(1, 3);
-            sess.Dec(1, 2);
-        }
-        m.Barrier();
-        PrintMatrix();
-
-        if (process_id == 1) {
-            auto sess = m.GetSession();
-            sess.Inc(2, 2);
-        }
-        m.Barrier();
-        PrintMatrix();
+        AtomicVector<int> v;
+        auto sess = v.GetSession();
+        auto sess2 = std::move(sess);
     }
 
     MPI_Finalize();
