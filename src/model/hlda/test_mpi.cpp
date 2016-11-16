@@ -11,6 +11,8 @@
 #include "clock.h"
 #include <chrono>
 #include "glog/logging.h"
+#include <sstream>
+#include "atomic_vector.h"
 
 using namespace std;
 
@@ -54,52 +56,88 @@ int main(int argc, char **argv) {
 //        pubsub.Barrier();
 //    }
 
+//    {
+//        // Generate some data
+//        int num_docs = 10000;
+//        float avg_doc_length = 1000;
+//        int vocab_size = 10000;
+//        auto corpus = Corpus::Generate(num_docs, avg_doc_length, vocab_size);
+//        LOG(INFO) << "Corpus have " << corpus.T << " tokens";
+//
+//        // Pubsub for cv
+//        std::vector<int> cv((size_t)vocab_size);
+//        auto on_recv = [&](const char *msg, size_t length) {
+//            cv[*((const int*)msg)]++;
+//        };
+//        PublisherSubscriber<decltype(on_recv)> pubsub(true, on_recv);
+//
+//        // Another pubsub for cv
+//        std::vector<int> cv2((size_t)vocab_size);
+//        auto on_recv2 = [&](const char *msg, size_t length) {
+//            cv2[*((const int*)msg)]++;
+//        };
+//        PublisherSubscriber<decltype(on_recv2)> pubsub2(true, on_recv2);
+//
+//        // Compute via allreduce
+//        std::vector<int> local_cv((size_t)vocab_size);
+//        std::vector<int> global_cv((size_t)vocab_size);
+//        for (auto &doc: corpus.w)
+//            for (auto v: doc)
+//                local_cv[v]++;
+//        MPI_Allreduce(local_cv.data(), global_cv.data(), vocab_size,
+//                      MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+//
+//        // Compute via pubsub
+//        Clock clk;
+//        for (auto &doc: corpus.w) {
+//            for (auto v: doc) {
+//                pubsub.Publish((char*)&v, sizeof(v));
+//                pubsub2.Publish((char*)&v, sizeof(v));
+//            }
+//        }
+//        pubsub.Barrier();
+//        pubsub2.Barrier();
+//        LOG(INFO) << "Finished in " << clk.toc() << " seconds. (" << pubsub.GetNumSyncs() << " syncs)";
+//
+//        // Compare
+//        LOG_IF(FATAL, global_cv != cv) << "Incorrect CV";
+//        LOG_IF(FATAL, global_cv != cv2) << "Incorrect CV2";
+//    }
+
     {
-        // Generate some data
-        int num_docs = 10000;
-        float avg_doc_length = 1000;
-        int vocab_size = 10000;
-        auto corpus = Corpus::Generate(num_docs, avg_doc_length, vocab_size);
-        LOG(INFO) << "Corpus have " << corpus.T << " tokens";
+        AtomicVector<int> v;
 
-        // Pubsub for cv
-        std::vector<int> cv((size_t)vocab_size);
-        auto on_recv = [&](const char *msg, size_t length) {
-            cv[*((const int*)msg)]++;
-        };
-        PublisherSubscriber<decltype(on_recv)> pubsub(true, on_recv);
-
-        // Another pubsub for cv
-        std::vector<int> cv2((size_t)vocab_size);
-        auto on_recv2 = [&](const char *msg, size_t length) {
-            cv2[*((const int*)msg)]++;
-        };
-        PublisherSubscriber<decltype(on_recv2)> pubsub2(true, on_recv2);
-
-        // Compute via allreduce
-        std::vector<int> local_cv((size_t)vocab_size);
-        std::vector<int> global_cv((size_t)vocab_size);
-        for (auto &doc: corpus.w)
-            for (auto v: doc)
-                local_cv[v]++;
-        MPI_Allreduce(local_cv.data(), global_cv.data(), vocab_size,
-                      MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-        // Compute via pubsub
-        Clock clk;
-        for (auto &doc: corpus.w) {
-            for (auto v: doc) {
-                pubsub.Publish((char*)&v, sizeof(v));
-                pubsub2.Publish((char*)&v, sizeof(v));
+        auto PrintVector = [&]() {
+            for (int i = 0; i < process_size; i++) {
+                if (i == process_id) {
+                    auto sess = v.GetSession();
+                    auto size = sess.Size();
+                    std::ostringstream sout;
+                    sout << "Node " << i << " size = " << size;
+                    for (int i = 0; i < size; i++)
+                        sout << " " << sess.Get(i);
+                    LOG(INFO) << sout.str();
+                }
+                MPI_Barrier(MPI_COMM_WORLD);
             }
-        }
-        pubsub.Barrier();
-        pubsub2.Barrier();
-        LOG(INFO) << "Finished in " << clk.toc() << " seconds. (" << pubsub.GetNumSyncs() << " syncs)";
+        };
 
-        // Compare
-        LOG_IF(FATAL, global_cv != cv) << "Incorrect CV";
-        LOG_IF(FATAL, global_cv != cv2) << "Incorrect CV2";
+        if (process_id == 0) {
+            v.IncreaseSize(5);
+            auto sess = v.GetSession();
+            sess.Inc(3);
+            sess.Inc(2);
+            sess.Dec(1);
+        }
+        v.Barrier();
+        PrintVector();
+
+        if (process_id == 1) {
+            auto sess = v.GetSession();
+            sess.Inc(4);
+        }
+        v.Barrier();
+        PrintVector();
     }
 
     MPI_Finalize();

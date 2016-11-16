@@ -33,21 +33,36 @@ public:
         Stop();
     }
 
-    void Publish(const char *msg, size_t length) {
+    void Publish(const char *msg, size_t length, bool merge=false) {
         if (!length)
             return;
 
-        // Calculate where should I start
-        int num_bytes_occupied = calculate_storage(length);
+        if (!merge) {
+            // Calculate where should I start
+            int num_bytes_occupied = calculate_storage(length);
 
-        std::lock_guard<std::mutex> lock(mutex);
-        size_t pos = 0;
-        pos = to_send.size();
-        to_send.resize(pos + num_bytes_occupied);
-        int &p_length = *(reinterpret_cast<int*>(to_send.data() + pos));
-        p_length = length;
-        pos += sizeof(int);
-        memcpy(to_send.data()+pos, msg, length);
+            std::lock_guard<std::mutex> lock(mutex);
+            size_t pos = 0;
+            pos = to_send.size();
+            to_send.resize(pos + num_bytes_occupied);
+            int &p_length = *(reinterpret_cast<int *>(to_send.data() + pos));
+            p_length = length;
+            pos += sizeof(int);
+            memcpy(to_send.data() + pos, msg, length);
+        } else {
+            assert(length % 4 == 0);
+            std::lock_guard<std::mutex> lock(mutex);
+            if (to_send.empty()) {
+                to_send.resize(8);
+                *(reinterpret_cast<int*>(to_send.data())) = 1;
+                *(reinterpret_cast<int*>(to_send.data()+4)) = ID();
+            }
+            *(reinterpret_cast<int*>(to_send.data())) += length;
+
+            auto pos = to_send.size();
+            to_send.resize(pos + length);
+            memcpy(to_send.data() + pos, msg, length);
+        }
     }
 
     // Block until all the send and recv's are finished
