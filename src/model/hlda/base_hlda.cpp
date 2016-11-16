@@ -6,11 +6,13 @@
 #include <sstream>
 #include <random>
 #include <omp.h>
+#include <thread>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/lock_algorithms.hpp>
 #include <boost/iterator/indirect_iterator.hpp>
 #include "base_hlda.h"
 #include "corpus.h"
+#include "clock.h"
 
 using namespace std;
 
@@ -164,7 +166,10 @@ xorshift& BaseHLDA::GetGenerator() {
 }
 
 void BaseHLDA::AllBarrier() {
-    for (auto &v: ck) v.Barrier();
-    for (auto &m: count) m.Barrier();
-    tree.Barrier();
+    std::vector<std::thread> threads;
+    for (auto &v: ck) threads.push_back(std::thread([&](){v.Barrier();}));
+    for (auto &m: count) threads.push_back(std::thread([&](){m.Barrier();}));
+    threads.push_back(std::thread([&](){tree.Barrier();}));
+    for (auto &thr: threads)
+        thr.join();
 }
