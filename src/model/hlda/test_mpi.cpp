@@ -12,6 +12,7 @@
 #include <chrono>
 #include "glog/logging.h"
 #include <sstream>
+#include <atomic_matrix.h>
 #include "atomic_vector.h"
 
 using namespace std;
@@ -144,49 +145,91 @@ int main(int argc, char **argv) {
 //        PrintVector();
 //    }
 
+//    {
+//        AtomicVector<int> v;
+//
+//        int vector_size = 100000;
+//        int num_operations = 1000000;
+//
+//        std::mt19937 generator;
+//        std::vector<Operation> operations(static_cast<size_t>(num_operations));
+//        for (auto &op: operations) {
+//            op.pos = static_cast<int>(generator() % vector_size);
+//            op.delta = generator() % 2 == 0 ? 1 : -1;
+//        }
+//        std::vector<int> oracle(static_cast<size_t>(vector_size));
+//        std::vector<int> global_oracle(static_cast<size_t>(vector_size));
+//        for (auto &op: operations)
+//            oracle[op.pos] += op.delta;
+//        MPI_Allreduce(oracle.data(), global_oracle.data(), vector_size,
+//                      MPI_INT, MPI_SUM,
+//                      MPI_COMM_WORLD);
+//        LOG(INFO) << "Generated oracle";
+//
+//        // Resize on node 0
+//        if (process_id == 0)
+//            v.IncreaseSize(vector_size);
+//        v.Barrier();
+//
+//        {
+//            auto sess = v.GetSession();
+//            for (auto &op: operations)
+//                if (op.delta == 1)
+//                    sess.Inc(op.pos);
+//                else
+//                    sess.Dec(op.pos);
+//        }
+//        v.Barrier();
+//
+//        {
+//            auto sess = v.GetSession();
+//            for (int i = 0; i < vector_size; i++)
+//                LOG_IF(FATAL, sess.Get(i) != global_oracle[i])
+//                  << "Incorrect result. Expect " << global_oracle[i]
+//                  << " got " << sess.Get(i);
+//        }
+//    }
+
     {
-        AtomicVector<int> v;
+        AtomicMatrix<int> m;
 
-        int vector_size = 100000;
-        int num_operations = 1000000;
+        auto PrintMatrix = [&]() {
+            for (int i = 0; i < process_size; i++) {
+                if (i == process_id) {
+                    auto sess = m.GetSession();
+                    auto R = sess.GetR();
+                    auto C = sess.GetC();
+                    std::ostringstream sout;
+                    sout << "Node " << i << " R = " << R << " C = " << C << "\n";
+                    for (int r=0; r<R; r++) {
+                        for (int c=0; c<C; c++)
+                            sout << sess.Get(r, c) << " ";
+                        sout << "\n";
+                    }
+                    LOG(INFO) << sout.str();
+                }
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
+        };
 
-        std::mt19937 generator;
-        std::vector<Operation> operations(static_cast<size_t>(num_operations));
-        for (auto &op: operations) {
-            op.pos = static_cast<int>(generator() % vector_size);
-            op.delta = generator() % 2 == 0 ? 1 : -1;
+        m.SetR(3);
+
+        if (process_id == 0) {
+            m.IncreaseC(5);
+            auto sess = m.GetSession();
+            sess.Inc(2, 4);
+            sess.Inc(1, 3);
+            sess.Dec(1, 2);
         }
-        std::vector<int> oracle(static_cast<size_t>(vector_size));
-        std::vector<int> global_oracle(static_cast<size_t>(vector_size));
-        for (auto &op: operations)
-            oracle[op.pos] += op.delta;
-        MPI_Allreduce(oracle.data(), global_oracle.data(), vector_size,
-                      MPI_INT, MPI_SUM,
-                      MPI_COMM_WORLD);
-        LOG(INFO) << "Generated oracle";
+        m.Barrier();
+        PrintMatrix();
 
-        // Resize on node 0
-        if (process_id == 0)
-            v.IncreaseSize(vector_size);
-        v.Barrier();
-
-        {
-            auto sess = v.GetSession();
-            for (auto &op: operations)
-                if (op.delta == 1)
-                    sess.Inc(op.pos);
-                else
-                    sess.Dec(op.pos);
+        if (process_id == 1) {
+            auto sess = m.GetSession();
+            sess.Inc(2, 2);
         }
-        v.Barrier();
-
-        {
-            auto sess = v.GetSession();
-            for (int i = 0; i < vector_size; i++)
-                LOG_IF(FATAL, sess.Get(i) != global_oracle[i])
-                  << "Incorrect result. Expect " << global_oracle[i]
-                  << " got " << sess.Get(i);
-        }
+        m.Barrier();
+        PrintMatrix();
     }
 
     MPI_Finalize();

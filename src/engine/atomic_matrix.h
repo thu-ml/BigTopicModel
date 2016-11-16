@@ -38,7 +38,7 @@ public:
 
             auto sess = m.GetSession(false);
 
-            for (size_t i = 0; i < n; i+=2) {
+            for (size_t i = 0; i < n; i+=3) {
                 sess.Inc(data[i], data[i+1], data[i+2]);
             }
         }
