@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <iomanip>
 #include "collapsed_sampling.h"
 #include "clock.h"
 #include "corpus.h"
@@ -65,20 +66,6 @@ void CollapsedSampling::Estimate() {
         }
         AllBarrier();
 
-/*#pragma omp parallel for schedule(dynamic, 10)
-        for (int d = 0; d < corpus.D; d++) {
-            auto &doc = docs[d];
-            ParallelTree::RetTree ret;
-            SampleC(doc, true, true, ret);
-        }
-
-#pragma omp parallel for schedule(dynamic, 10)
-        for (int d = 0; d < corpus.D; d++) {
-            auto &doc = docs[d];
-            ParallelTree::RetTree ret = tree.GetTree();
-            SampleZ(doc, true, true, ret);
-        }*/
-
         SamplePhi();
         AllBarrier();
 
@@ -102,13 +89,16 @@ void CollapsedSampling::Estimate() {
         }
 
         double time = clk.toc();
+
         double throughput = corpus.T / time / 1048576;
         double perplexity = Perplexity();
-        if (process_id == 0) {
-            printf("Iteration %d, %d topics (%d, %d), %.2f seconds (%.2fMtoken/s), perplexity = %.2f\n",
-                   it, (int)ret.nodes.size(), num_big_nodes,
-                   num_docs_big, time, throughput, perplexity);
-        }
+        LOG_IF(INFO, process_id == 0) 
+            << std::fixed << std::setprecision(2)
+            << "\x1b[32mIteration " << it 
+            << ", " << ret.nodes.size() << " topics (" 
+            << num_big_nodes << ", " << num_docs_big << "), "
+            << time << " seconds (" << throughput << " Mtoken/s), perplexity = "
+            << perplexity << "\x1b[0m";
 
         Check();
         tree.Check();
