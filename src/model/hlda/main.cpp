@@ -21,8 +21,8 @@
 
 using namespace std;
 
-DEFINE_string(prefix, "../data/nysmaller", "prefix of the corpus");
-DEFINE_uint64(doc_part, 1, "document partition number");
+DEFINE_string(prefix, "../data/nysmaller_parted", "prefix of the corpus");
+DEFINE_uint64(doc_part, 2, "document partition number");
 DEFINE_string(algo, "pcs", "Algorithm, cs, pcs, is, or es");
 DEFINE_int32(L, 4, "number of levels");
 DEFINE_string(alpha, "0.3", "Prior on level assignment, delimited by comma");

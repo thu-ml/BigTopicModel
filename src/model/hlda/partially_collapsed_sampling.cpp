@@ -9,6 +9,7 @@
 #include <omp.h>
 #include "mkl_vml.h"
 #include "utils.h"
+#include <chrono>
 
 using namespace std;
 
@@ -58,7 +59,9 @@ void PartiallyCollapsedSampling::Initialize() {
     	            SampleC(doc, false, true);
     	            SampleZ(doc, true, true);
     	        }
+                AllBarrier();
     	        SamplePhi();
+                AllBarrier();
 
     	        printf("Processed document [%lu, %lu) documents, %d topics\n", d_start, d_end,
     	               (int)tree.GetTree().nodes.size());
