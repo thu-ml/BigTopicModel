@@ -16,6 +16,10 @@
 
 using namespace std;
 
+struct Operation {
+    int pos, delta;
+};
+
 int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);
     // output all logs to stderr
@@ -104,40 +108,85 @@ int main(int argc, char **argv) {
 //        LOG_IF(FATAL, global_cv != cv2) << "Incorrect CV2";
 //    }
 
+//    {
+//        AtomicVector<int> v;
+//
+//        auto PrintVector = [&]() {
+//            for (int i = 0; i < process_size; i++) {
+//                if (i == process_id) {
+//                    auto sess = v.GetSession();
+//                    auto size = sess.Size();
+//                    std::ostringstream sout;
+//                    sout << "Node " << i << " size = " << size;
+//                    for (int i = 0; i < size; i++)
+//                        sout << " " << sess.Get(i);
+//                    LOG(INFO) << sout.str();
+//                }
+//                MPI_Barrier(MPI_COMM_WORLD);
+//            }
+//        };
+//
+//        if (process_id == 0) {
+//            v.IncreaseSize(5);
+//            auto sess = v.GetSession();
+//            sess.Inc(3);
+//            sess.Inc(2);
+//            sess.Dec(1);
+//        }
+//        v.Barrier();
+//        PrintVector();
+//
+//        if (process_id == 1) {
+//            auto sess = v.GetSession();
+//            sess.Inc(4);
+//        }
+//        v.Barrier();
+//        PrintVector();
+//    }
+
     {
         AtomicVector<int> v;
 
-        auto PrintVector = [&]() {
-            for (int i = 0; i < process_size; i++) {
-                if (i == process_id) {
-                    auto sess = v.GetSession();
-                    auto size = sess.Size();
-                    std::ostringstream sout;
-                    sout << "Node " << i << " size = " << size;
-                    for (int i = 0; i < size; i++)
-                        sout << " " << sess.Get(i);
-                    LOG(INFO) << sout.str();
-                }
-                MPI_Barrier(MPI_COMM_WORLD);
-            }
-        };
+        int vector_size = 100000;
+        int num_operations = 1000000;
 
-        if (process_id == 0) {
-            v.IncreaseSize(5);
+        std::mt19937 generator;
+        std::vector<Operation> operations(static_cast<size_t>(num_operations));
+        for (auto &op: operations) {
+            op.pos = static_cast<int>(generator() % vector_size);
+            op.delta = generator() % 2 == 0 ? 1 : -1;
+        }
+        std::vector<int> oracle(static_cast<size_t>(vector_size));
+        std::vector<int> global_oracle(static_cast<size_t>(vector_size));
+        for (auto &op: operations)
+            oracle[op.pos] += op.delta;
+        MPI_Allreduce(oracle.data(), global_oracle.data(), vector_size,
+                      MPI_INT, MPI_SUM,
+                      MPI_COMM_WORLD);
+        LOG(INFO) << "Generated oracle";
+
+        // Resize on node 0
+        if (process_id == 0)
+            v.IncreaseSize(vector_size);
+        v.Barrier();
+
+        {
             auto sess = v.GetSession();
-            sess.Inc(3);
-            sess.Inc(2);
-            sess.Dec(1);
+            for (auto &op: operations)
+                if (op.delta == 1)
+                    sess.Inc(op.pos);
+                else
+                    sess.Dec(op.pos);
         }
         v.Barrier();
-        PrintVector();
 
-        if (process_id == 1) {
+        {
             auto sess = v.GetSession();
-            sess.Inc(4);
+            for (int i = 0; i < vector_size; i++)
+                LOG_IF(FATAL, sess.Get(i) != global_oracle[i])
+                  << "Incorrect result. Expect " << global_oracle[i]
+                  << " got " << sess.Get(i);
         }
-        v.Barrier();
-        PrintVector();
     }
 
     MPI_Finalize();
