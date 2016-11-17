@@ -62,7 +62,8 @@ public:
                                   buffer.size() * sizeof(int), true);
             }
 
-            m.buffer_manager.Free(std::move(buffer));
+            if (!buffer.empty())
+                m.buffer_manager.Free(std::move(buffer));
         }
 
         AtomicMatrix &m;

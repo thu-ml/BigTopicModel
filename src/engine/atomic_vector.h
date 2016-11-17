@@ -59,7 +59,8 @@ public:
                                   buffer.size() * sizeof(int), true);
             }
 
-            v.buffer_manager.Free(std::move(buffer));
+            if (!buffer.empty())
+                v.buffer_manager.Free(std::move(buffer));
         }
 
         AtomicVector &v;

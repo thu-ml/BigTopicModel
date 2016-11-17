@@ -7,12 +7,15 @@
 
 #include <vector>
 #include <mutex>
+#include "glog/logging.h"
 
 template<class T>
 class BufferManager {
 public:
     std::vector<T> Get() {
         std::lock_guard<std::mutex> lock(m);
+        int old_size, new_size;
+        old_size = free.size();
         if (!free.empty()) {
             auto ret = std::move(free.back());
             free.pop_back();
