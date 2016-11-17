@@ -380,10 +380,10 @@ public:
         last_wbuff_thread_size.resize(thread_size);
         for (auto &s: last_wbuff_thread_size) s = 0;
         wbuff_sorted.resize(thread_size);
-        row_sum.resize(column_size);
-        row_sum_read.resize(column_size);
         local_merge_time_total = 0;
         global_merge_time_total = 0;
+        row_sum.resize(column_size);
+        row_sum_read.resize(column_size);
 
         /*!
          *            documents words   tokens      token per doc   token per word
@@ -418,6 +418,14 @@ public:
             mono_buff[mono_tails[local_row_idx]++] = key;
         else
             wbuff_thread[tid].push_back(Entry{local_row_idx, key});
+    }
+
+    // TODO (dong) : notice that set_column_size can only by invoked after sync/rowMarginal
+    // or column_size should be set as a parameter of sync/rowMarginal?
+    void set_column_size(TCoord new_column_size) {
+        column_size = new_column_size;
+        row_sum.resize(column_size);
+        row_sum_read.resize(column_size);
     }
 
     size_t *rowMarginal() {
