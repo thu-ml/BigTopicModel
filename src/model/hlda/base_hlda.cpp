@@ -22,7 +22,11 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         tree(L, gamma),
         corpus(corpus), L(L), alpha(alpha), beta(beta), gamma(gamma),
         num_iters(num_iters), mc_samples(mc_samples), phi((size_t) L), log_phi((size_t) L),
-        count((size_t) L), log_normalization(L, 1000), new_topic(true) {
+        count((size_t) L),
+        /*icount(1, process_size, num_words, K, column_partition,
+               process_size, process_id, omp_get_max_threads(), local_merge_style,
+               0),*/
+        log_normalization(L, 1000), new_topic(true) {
 
     std::mt19937_64 rd;
     generators.resize(omp_get_max_threads());

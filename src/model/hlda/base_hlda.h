@@ -10,6 +10,7 @@
 #include <mutex>
 #include <string>
 #include <mutex>
+#include <mpi.h>
 #include "matrix.h"
 #include "distributed_tree.h"
 #include "xorshift.h"
@@ -17,7 +18,7 @@
 #include "document.h"
 #include "atomic_matrix.h"
 #include "atomic_vector.h"
-#include "mpi.h"
+#include "dcm.h"
 
 class Corpus;
 
@@ -71,6 +72,7 @@ protected:
     std::vector<Matrix<TProb> > log_phi;
 
     std::vector<AtomicMatrix<TCount>> count;
+    //DCMSparse icount;
 
     std::vector<AtomicVector<TCount>> ck;
 
