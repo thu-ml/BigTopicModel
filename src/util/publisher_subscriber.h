@@ -73,6 +73,7 @@ public:
         barrier_met = false;
         cv.wait(lock, [&](){ return barrier_met; });
         barrier = false;
+        //std::this_thread::sleep_for(std::chrono::milliseconds(500)); //TODO
     }
 
     int GetNumSyncs() { return num_syncs; }
@@ -115,11 +116,6 @@ private:
                     }
                 }
 
-                int send_size = (int)to_send.size();
-                int total_send_size = 0;
-                MPI_Allreduce(&send_size, &total_send_size, 1,
-                              MPI_INT, MPI_SUM, comm);
-
                 int is_barrier = barrier;
                 int total_is_barrier = 0;
                 MPI_Allreduce(&is_barrier, &total_is_barrier, 1,
@@ -134,7 +130,12 @@ private:
                 }
 
                 if (total_is_barrier == process_size) {
-                    if (total_send_size == 0 && recv_buffer.empty()) {
+                    int send_size = (int)(to_send.size() + recv_buffer.size());
+                    int total_send_size = 0;
+                    MPI_Allreduce(&send_size, &total_send_size, 1,
+                                  MPI_INT, MPI_SUM, comm);
+
+                    if (total_send_size == 0) {
                         std::lock_guard<std::mutex> lock(global_mutex);
                         barrier_met = true;
                         cv.notify_all();

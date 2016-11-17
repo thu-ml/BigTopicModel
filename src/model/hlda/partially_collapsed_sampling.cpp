@@ -155,6 +155,7 @@ void PartiallyCollapsedSampling::SamplePhi() {
         ck[l].Permute(perm[l]);
     }
 
+    AllBarrier();
     ComputePhi();
 }
 

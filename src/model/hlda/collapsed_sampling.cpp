@@ -380,9 +380,13 @@ void CollapsedSampling::Check(int D) {
                 sum += count_sess[l].Get(v, k);
             }
     }
-    /*if (sum != corpus.T)
+    int local_size = corpus.T;
+    int global_size;
+    MPI_Allreduce(&local_size, &global_size, 1, MPI_INT,
+            MPI_SUM, MPI_COMM_WORLD);
+    if (sum != global_size)
         throw runtime_error("Total token error! expected " +
-                            to_string(corpus.T) + ", got " + to_string(sum));*/
+                            to_string(corpus.T) + ", got " + to_string(sum));
 
     // Deep check
     std::vector<Matrix<int>> count2(L);
@@ -421,18 +425,30 @@ void CollapsedSampling::Check(int D) {
                       MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     }
 
-
+    bool if_error = false;
     for (int l=0; l<L; l++) {
         for (int r = 0; r < corpus.V; r++)
             for (int c = 0; c < count_sess[l].GetC(); c++)
-                if (count_sess[l].Get(r, c) != global_count2[l](r, c))
-                    throw std::runtime_error("Count error at " + std::to_string(l) + "," + std::to_string(r)
-                    + "," + std::to_string(c) + " expected " + std::to_string(global_count2[l](r, c))
-                    + " get " + std::to_string(count_sess[l].Get(r, c)));
-        for (int c = 0; c < count_sess[l].GetC(); c++)
-            if (ck_sess[l].Get(c) != global_ck2[l][c])
-                throw std::runtime_error("Ck error");
+                if (count_sess[l].Get(r, c) != global_count2[l](r, c)) {
+                    LOG(WARNING) << "Count error at " 
+                              << l << "," << r << "," << c
+                              << " expected " << global_count2[l](r, c) 
+                              << " get " << count_sess[l].Get(r, c);
+                    if_error = true;
+                }
+
+        for (int c = 0; c < count_sess[l].GetC(); c++) 
+            if (ck_sess[l].Get(c) != global_ck2[l][c]) {
+                LOG(WARNING) << "Ck error at " 
+                          << l << "," << c
+                          << " expected " << global_ck2[l][c]
+                          << " get " << ck_sess[l].Get(c);
+                if_error = true;
+            }
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (if_error)
+        throw std::runtime_error("Check error");
 }
 
 void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
