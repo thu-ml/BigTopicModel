@@ -388,7 +388,30 @@ void CollapsedSampling::Check(int D) {
         throw runtime_error("Total token error! expected " +
                             to_string(corpus.T) + ", got " + to_string(sum));
 
-    // Deep check
+    // Check the tree
+    std::vector<int> num_docs(10000), total_num_docs(10000);
+    auto nodes = tree.GetTree().nodes;
+    for (auto &doc: docs) {
+        for (int l = 0; l < L; l++) {
+            auto pos = doc.c[l];
+            // Find node by pos
+            auto it = find_if(nodes.begin(), nodes.end(), 
+                    [&](const ParallelTree::RetNode& node) { 
+                        return node.depth == l && node.pos == pos; });
+            LOG_IF(FATAL, it == nodes.end()) << "Check error: pos not found";
+
+            num_docs[it->id]++;
+        }
+    }
+    MPI_Allreduce(num_docs.data(), total_num_docs.data(), 10000,
+            MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    for (auto &node: nodes)
+        total_num_docs[node.id] -= node.num_docs;
+    for (int id = 0; id < 10000; id++)
+        LOG_IF(FATAL, total_num_docs[id] != 0) 
+            << "Num docs error. expected 0 got " << total_num_docs[id];
+
+    // Check the count matrix
     std::vector<Matrix<int>> count2(L);
     std::vector<std::vector<int>> ck2(L);
     std::vector<Matrix<int>> global_count2(L);
