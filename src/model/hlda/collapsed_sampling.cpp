@@ -332,8 +332,16 @@ double CollapsedSampling::Perplexity() {
     double log_likelihood = 0;
 
     size_t T = 0;
-    auto ck_sess = GetCkSessions();
-    auto count_sess = GetCountSessions();
+    // Set count = icount
+    Matrix<int> icount_dense(corpus.V, icount_offset.back());
+#pragma omp parallel for
+    for (int r = 0; r < corpus.V; r++) {
+        auto row = icount.row(r);
+        for (int i = 0; i < row.size(); i++)
+            icount_dense(r, row[i].k) += row[i].v;
+    }
+    auto *ck_dense = icount.rowMarginal();
+
 #pragma omp parallel for
     for (int d = 0; d < corpus.D; d++) {
         std::vector<double> theta((size_t) L);
@@ -350,8 +358,8 @@ double CollapsedSampling::Perplexity() {
             double prob = 0;
             TWord v = doc.w[n];
             for (int l = 0; l < L; l++) {
-                double phi = (count_sess[l].Get(v, doc.c[l]) + beta[l]) /
-                             (ck_sess[l].Get((size_t)doc.c[l]) + beta[l] * corpus.V);
+                double phi = (icount_dense(v, doc.c[l]+icount_offset[l]) + beta[l]) /
+                             (ck_dense[doc.c[l]+icount_offset[l]] + beta[l] * corpus.V);
 
                 prob += theta[l] * phi;
             }
@@ -388,13 +396,14 @@ void CollapsedSampling::Check() {
     int global_size;
     MPI_Allreduce(&local_size, &global_size, 1, MPI_INT,
             MPI_SUM, MPI_COMM_WORLD);
-    if (sum != global_size)
-        throw runtime_error("Total token error! expected " +
-                            to_string(corpus.T) + ", got " + to_string(sum));
+    //if (sum != global_size)
+    //    throw runtime_error("Total token error! expected " +
+    //                        to_string(corpus.T) + ", got " + to_string(sum));
 
     // Check the tree
     std::vector<int> num_docs(10000), total_num_docs(10000);
-    auto nodes = tree.GetTree().nodes;
+    auto ret = tree.GetTree();
+    auto &nodes = ret.nodes;
     for (auto &doc: docs) if (doc.initialized) {
         for (int l = 0; l < L; l++) {
             auto pos = doc.c[l];
@@ -467,7 +476,7 @@ void CollapsedSampling::Check() {
     bool if_error = false;
     for (int l=0; l<L; l++) {
         for (int r = 0; r < corpus.V; r++)
-            for (int c = 0; c < count_sess[l].GetC(); c++)
+            for (int c = ret.num_instantiated[l]; c < count_sess[l].GetC(); c++)
                 if (count_sess[l].Get(r, c) != global_count2[l](r, c)) {
                     LOG(WARNING) << "Count error at " 
                               << l << "," << r << "," << c
@@ -486,7 +495,7 @@ void CollapsedSampling::Check() {
                     if_error = true;
                 }
 
-        for (int c = 0; c < count_sess[l].GetC(); c++) 
+        for (int c = ret.num_instantiated[l]; c < count_sess[l].GetC(); c++) 
             if (ck_sess[l].Get(c) != global_ck2[l][c]) {
                 LOG(WARNING) << "Ck error at " 
                           << l << "," << c
@@ -522,16 +531,20 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
             TLen l = doc.z[n];
             TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
-            count_sess[l].Inc(v, k);
-            ck_sess[l].Inc(k);
+            if (k >= num_instantiated[l]) {
+                count_sess[l].Inc(v, k);
+                ck_sess[l].Inc(k);
+            }
         }
     else if (delta == -1)
         for (TLen n = 0; n < N; n++) {
             TLen l = doc.z[n];
             TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
-            count_sess[l].Dec(v, k);
-            ck_sess[l].Dec(k);
+            if (k >= num_instantiated[l]) {
+                count_sess[l].Dec(v, k);
+                ck_sess[l].Dec(k);
+            }
         }
     else
         throw std::runtime_error("Invalid delta");

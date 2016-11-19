@@ -209,4 +209,23 @@ void BaseHLDA::UpdateICount() {
 
     // Sync
     icount.sync();
+
+    // Set count = icount
+    Matrix<int> icount_dense(corpus.V, icount_offset.back());
+#pragma omp parallel for
+    for (int r = 0; r < corpus.V; r++) {
+        auto row = icount.row(r);
+        for (int i = 0; i < row.size(); i++)
+            icount_dense(r, row[i].k) += row[i].v;
+    }
+    auto *ck_dense = icount.rowMarginal();
+
+    for (int l = 0; l < L; l++) {
+#pragma omp parallel for
+        for (int r = 0; r < corpus.V; r++)
+            for (int c = ret.num_instantiated[l]; c < ret.num_nodes[l]; c++)
+                count[l].Set(r, c, icount_dense(r, c+icount_offset[l]));
+        for (int c = ret.num_instantiated[l]; c < ret.num_nodes[l]; c++)
+            ck[l].Set(c, ck_dense[c+icount_offset[l]]);
+    }
 }

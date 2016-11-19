@@ -187,6 +187,10 @@ public:
         pub_sub.Barrier();
     }
 
+    void Set(int r, int c, T value) {
+        _data[r*_c_capacity + c].store(value, std::memory_order_relaxed);
+    }
+
 private:
     void ResizeC(int newC) {
         auto old_c_capacity = _c_capacity;

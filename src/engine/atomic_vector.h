@@ -152,6 +152,10 @@ public:
         pub_sub.Barrier();
     }
 
+    void Set(size_t index, int value) {
+        _data[index].store(value, std::memory_order_relaxed);
+    }
+
 private:
     void Inc(size_t index) {
         _data[index].fetch_add(1);

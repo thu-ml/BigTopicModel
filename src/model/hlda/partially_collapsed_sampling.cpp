@@ -112,8 +112,10 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
         if (decrease_count) {
-            count_sess[l].Dec(v, pos[l]);
-            ck_sess[l].Dec((size_t)pos[l]);
+            if (pos[l] >= num_instantiated[l]) {
+                count_sess[l].Dec(v, pos[l]);
+                ck_sess[l].Dec((size_t)pos[l]);
+            }
             --cdl[l];
         }
 
@@ -130,8 +132,10 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
         doc.z[n] = l;
 
         if (increase_count) {
-            count_sess[l].Inc(v, pos[l]);
-            ck_sess[l].Inc((size_t)pos[l]);
+            if (pos[l] >= num_instantiated[l]) {
+                count_sess[l].Inc(v, pos[l]);
+                ck_sess[l].Inc((size_t)pos[l]);
+            }
             ++cdl[l];
         }
     }
