@@ -156,10 +156,6 @@ void PartiallyCollapsedSampling::SamplePhi() {
     for (TLen l = 0; l < L; l++) {
         phi[l].SetC(ret.num_nodes[l]);
         log_phi[l].SetC(ret.num_nodes[l]);
-
-        count[l].PermuteColumns(perm[l]);
-
-        ck[l].Permute(perm[l]);
     }
 
     AllBarrier();
