@@ -332,15 +332,6 @@ double CollapsedSampling::Perplexity() {
     double log_likelihood = 0;
 
     size_t T = 0;
-    // Set count = icount
-    Matrix<int> icount_dense(corpus.V, icount_offset.back());
-#pragma omp parallel for
-    for (int r = 0; r < corpus.V; r++) {
-        auto row = icount.row(r);
-        for (int i = 0; i < row.size(); i++)
-            icount_dense(r, row[i].k) += row[i].v;
-    }
-    auto *ck_dense = icount.rowMarginal();
 
 #pragma omp parallel for
     for (int d = 0; d < corpus.D; d++) {
@@ -460,15 +451,7 @@ void CollapsedSampling::Check() {
                       MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     }
 
-    Matrix<int> icount_dense(corpus.V, icount_offset.back());
-    size_t sum_2 = 0; 
-    for (int r = 0; r < corpus.V; r++) {
-        auto row = icount.row(r);
-        for (int i = 0; i < row.size(); i++) {
-            icount_dense(r, row[i].k) += row[i].v;
-            sum_2 += row[i].v;
-        }
-    }
+    size_t sum_2 = std::accumulate(ck_dense, ck_dense+icount_offset.back(), 0);
     if (sum_2 != global_size)
         throw runtime_error("Total token error! expected " +
                             to_string(corpus.T) + ", got " + to_string(sum_2));

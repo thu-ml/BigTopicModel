@@ -77,6 +77,8 @@ protected:
     std::vector<AtomicMatrix<TCount>> count;
 
     DCMSparse icount;
+    Matrix<int> icount_dense;
+    size_t *ck_dense;
     std::vector<int> icount_offset;
 
     std::vector<AtomicVector<TCount>> ck;

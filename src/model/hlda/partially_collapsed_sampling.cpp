@@ -170,15 +170,6 @@ void PartiallyCollapsedSampling::SamplePhi() {
 void PartiallyCollapsedSampling::ComputePhi() {
     auto ret = tree.GetTree();
     auto &generator = GetGenerator();
-    auto *ck = icount.rowMarginal();
-
-    Matrix<int> icount_dense(corpus.V, icount_offset.back());
-#pragma omp parallel for
-    for (int r = 0; r < corpus.V; r++) {
-        auto row = icount.row(r);
-        for (int i = 0; i < row.size(); i++)
-            icount_dense(r, row[i].k) += row[i].v;
-    }
 
     if (!sample_phi) {
         for (TLen l = 0; l < L; l++) {
@@ -187,7 +178,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
 
             vector<float> inv_normalization(K);
             for (TTopic k = 0; k < K; k++)
-                inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck[k+offset]);
+                inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck_dense[k+offset]);
 #pragma omp parallel for
             for (TWord v = 0; v < corpus.V; v++) {
                 for (TTopic k = 0; k < K; k++) {
