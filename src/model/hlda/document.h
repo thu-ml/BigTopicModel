@@ -22,6 +22,8 @@ struct Document {
     std::vector<int> c_offsets;    // offset for log gamma
     std::vector<TLen> offsets;
 
+    bool initialized;
+
     void PartitionWByZ(int L);
 
     void Check();

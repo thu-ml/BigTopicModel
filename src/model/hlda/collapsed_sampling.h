@@ -32,7 +32,7 @@ protected:
 
     double Perplexity();
 
-    void Check(int D = -1);
+    void Check();
 
     void UpdateDocCount(Document &doc, int delta);
 

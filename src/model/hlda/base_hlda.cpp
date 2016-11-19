@@ -26,7 +26,7 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         count((size_t) L),
         icount(1, process_size, corpus.V, 1/*K*/, column_partition,
                process_size, process_id, omp_get_max_threads(), separate,
-               0),
+               -1),
         log_normalization(L, 1000), new_topic(true) {
 
     std::mt19937_64 rd;
@@ -44,6 +44,7 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         doc.c.resize((size_t) L);
         doc.theta.resize((size_t) L);
         fill(doc.theta.begin(), doc.theta.end(), 1. / L);
+        doc.initialized = false;
     }
     //shuffle(docs.begin(), docs.end(), generator);
 
@@ -190,17 +191,21 @@ void BaseHLDA::UpdateICount() {
     icount.set_column_size(icount_offset.back());
 
     // Count
+    std::atomic<size_t> total_count(0);
 #pragma omp parallel for
-    for (size_t d = 0; d < docs.size(); d++) {
-        auto &doc = docs[d];
-        auto tid = omp_get_thread_num();
-        for (size_t n = 0; n < doc.w.size(); n++) {
-            TLen l = doc.z[n];
-            TTopic k = (TTopic)doc.c[l];
-            TWord v = doc.w[n];
-            icount.update(tid, v, k + icount_offset[l]);
+    for (size_t d = 0; d < docs.size(); d++) 
+        if (docs[d].initialized) {
+            auto &doc = docs[d];
+            auto tid = omp_get_thread_num();
+            for (size_t n = 0; n < doc.w.size(); n++) {
+                TLen l = doc.z[n];
+                TTopic k = (TTopic)doc.c[l];
+                TWord v = doc.w[n];
+                icount.update(tid, v, k + icount_offset[l]);
+            }
+            total_count += doc.w.size();
         }
-    }
+    //LOG(INFO) << "Total count = " << total_count;
 
     // Sync
     icount.sync();

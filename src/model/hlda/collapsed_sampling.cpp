@@ -33,6 +33,7 @@ void CollapsedSampling::Initialize() {
                 for (auto &k: doc.z)
                     k = GetGenerator()() % L;
 
+                doc.initialized = true;
                 SampleC(doc, false, true);
                 SampleZ(doc, true, true);
 
@@ -370,10 +371,9 @@ double CollapsedSampling::Perplexity() {
     return exp(-global_log_likelihood / global_T);
 }
 
-void CollapsedSampling::Check(int D) {
+void CollapsedSampling::Check() {
     auto count_sess = GetCountSessions();
     auto ck_sess = GetCkSessions();
-    if (D == -1) D = corpus.D;
     int sum = 0;
     for (TLen l = 0; l < L; l++) {
         for (TTopic k = 0; k < count_sess[l].GetC(); k++)
@@ -383,7 +383,8 @@ void CollapsedSampling::Check(int D) {
                 sum += count_sess[l].Get(v, k);
             }
     }
-    int local_size = corpus.T;
+    int local_size = 0;
+    for (auto &doc: docs) if (doc.initialized) local_size += doc.w.size();
     int global_size;
     MPI_Allreduce(&local_size, &global_size, 1, MPI_INT,
             MPI_SUM, MPI_COMM_WORLD);
@@ -394,7 +395,7 @@ void CollapsedSampling::Check(int D) {
     // Check the tree
     std::vector<int> num_docs(10000), total_num_docs(10000);
     auto nodes = tree.GetTree().nodes;
-    for (auto &doc: docs) {
+    for (auto &doc: docs) if (doc.initialized) {
         for (int l = 0; l < L; l++) {
             auto pos = doc.c[l];
             // Find node by pos
@@ -427,8 +428,7 @@ void CollapsedSampling::Check(int D) {
         global_count2[l].SetC(count_sess[l].GetC());
         global_ck2[l].resize(count_sess[l].GetC());
     }
-    for (int d=0; d<D; d++) {
-        auto &doc = docs[d];
+    for (auto &doc: docs) if (doc.initialized) {
         for (size_t n = 0; n < doc.z.size(); n++) {
             auto z = doc.z[n];
             auto v = doc.w[n];
