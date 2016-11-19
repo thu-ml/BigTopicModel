@@ -16,8 +16,9 @@ using namespace std;
 CollapsedSampling::CollapsedSampling(Corpus &corpus, int L,
                                      std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
                                      int num_iters, int mc_samples, int mc_iters,
-                                     int topic_limit) :
-        BaseHLDA(corpus, L, alpha, beta, gamma, num_iters, mc_samples), mc_iters(mc_iters),
+                                     int topic_limit, int process_id, int process_size) :
+        BaseHLDA(corpus, L, alpha, beta, gamma, num_iters, mc_samples, process_id, process_size), 
+        mc_iters(mc_iters),
         topic_limit(topic_limit) {}
 
 void CollapsedSampling::Initialize() {
@@ -115,6 +116,7 @@ void CollapsedSampling::SampleZ(Document &doc,
 
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
+    auto tid = omp_get_thread_num();
     LockDoc(doc, count_sess);
     auto &generator = GetGenerator();
     for (TLen n = 0; n < N; n++) {
@@ -319,6 +321,7 @@ void CollapsedSampling::SamplePhi() {
         count[l].PermuteColumns(perm[l]);
         ck[l].Permute(perm[l]);
     }
+    UpdateICount();
 }
 
 double CollapsedSampling::Perplexity() {
@@ -448,6 +451,19 @@ void CollapsedSampling::Check(int D) {
                       MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     }
 
+    Matrix<int> icount_dense(corpus.V, icount_offset.back());
+    size_t sum_2 = 0; 
+    for (int r = 0; r < corpus.V; r++) {
+        auto row = icount.row(r);
+        for (int i = 0; i < row.size(); i++) {
+            icount_dense(r, row[i].k) += row[i].v;
+            sum_2 += row[i].v;
+        }
+    }
+    if (sum_2 != global_size)
+        throw runtime_error("Total token error! expected " +
+                            to_string(corpus.T) + ", got " + to_string(sum_2));
+
     bool if_error = false;
     for (int l=0; l<L; l++) {
         for (int r = 0; r < corpus.V; r++)
@@ -460,6 +476,16 @@ void CollapsedSampling::Check(int D) {
                     if_error = true;
                 }
 
+        for (int r = 0; r < corpus.V; r++)
+            for (int c = 0; c < count_sess[l].GetC(); c++) 
+                if (icount_dense(r, c+icount_offset[l]) != global_count2[l](r, c)) {
+                    LOG(WARNING) << "ICount error at " 
+                              << l << "," << r << "," << c
+                              << " expected " << global_count2[l](r, c) 
+                              << " get " << icount_dense(r, c+icount_offset[l]);
+                    if_error = true;
+                }
+
         for (int c = 0; c < count_sess[l].GetC(); c++) 
             if (ck_sess[l].Get(c) != global_ck2[l][c]) {
                 LOG(WARNING) << "Ck error at " 
@@ -469,6 +495,8 @@ void CollapsedSampling::Check(int D) {
                 if_error = true;
             }
     }
+
+
     MPI_Barrier(MPI_COMM_WORLD);
     if (if_error)
         throw std::runtime_error("Check error");
@@ -484,6 +512,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     }
 }
 
+    auto tid = omp_get_thread_num();
     auto ck_sess = GetCkSessions();
     auto count_sess = GetCountSessions();
     LockDoc(doc, count_sess);

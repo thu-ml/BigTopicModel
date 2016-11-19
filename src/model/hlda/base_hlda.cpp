@@ -18,14 +18,15 @@ using namespace std;
 
 BaseHLDA::BaseHLDA(Corpus &corpus, int L,
                    std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
-                   int num_iters, int mc_samples) :
+                   int num_iters, int mc_samples, int process_id, int process_size) :
+        process_id(process_id), process_size(process_size),
         tree(L, gamma),
         corpus(corpus), L(L), alpha(alpha), beta(beta), gamma(gamma),
         num_iters(num_iters), mc_samples(mc_samples), phi((size_t) L), log_phi((size_t) L),
         count((size_t) L),
-        /*icount(1, process_size, num_words, K, column_partition,
-               process_size, process_id, omp_get_max_threads(), local_merge_style,
-               0),*/
+        icount(1, process_size, corpus.V, 1/*K*/, column_partition,
+               process_size, process_id, omp_get_max_threads(), separate,
+               0),
         log_normalization(L, 1000), new_topic(true) {
 
     std::mt19937_64 rd;
@@ -176,4 +177,31 @@ void BaseHLDA::AllBarrier() {
     threads.push_back(std::thread([&](){tree.Barrier();}));
     for (auto &thr: threads)
         thr.join();
+}
+
+void BaseHLDA::UpdateICount() {
+    // Compute icount_offset
+    icount_offset.resize(static_cast<int>(L+1));
+    icount_offset[0] = 0;
+    auto ret = tree.GetTree();
+    for (int l = 0; l < L; l++)
+        icount_offset[l+1] = icount_offset[l] + ret.num_nodes[l];
+
+    icount.set_column_size(icount_offset.back());
+
+    // Count
+#pragma omp parallel for
+    for (size_t d = 0; d < docs.size(); d++) {
+        auto &doc = docs[d];
+        auto tid = omp_get_thread_num();
+        for (size_t n = 0; n < doc.w.size(); n++) {
+            TLen l = doc.z[n];
+            TTopic k = (TTopic)doc.c[l];
+            TWord v = doc.w[n];
+            icount.update(tid, v, k + icount_offset[l]);
+        }
+    }
+
+    // Sync
+    icount.sync();
 }

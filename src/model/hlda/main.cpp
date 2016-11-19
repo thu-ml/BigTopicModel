@@ -109,13 +109,13 @@ int main(int argc, char **argv) {
         model = new CollapsedSampling(corpus,
                                       FLAGS_L, alpha, beta, gamma,
                                       FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
-                                      FLAGS_topic_limit);
+                                      FLAGS_topic_limit, process_id, process_size);
     } else if (FLAGS_algo == "pcs") {
         model = new PartiallyCollapsedSampling(corpus,
                                                FLAGS_L, alpha, beta, gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                                (size_t) FLAGS_minibatch_size,
-                                               FLAGS_topic_limit, FLAGS_threshold, FLAGS_sample_phi);
+                                               FLAGS_topic_limit, FLAGS_threshold, FLAGS_sample_phi, process_id, process_size);
     } else if (FLAGS_algo == "is") {
         /*model = new InstantiatedWeightSampling(corpus,
                                                FLAGS_L, alpha, beta, gamma,

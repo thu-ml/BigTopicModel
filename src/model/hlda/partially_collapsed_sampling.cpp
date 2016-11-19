@@ -17,9 +17,9 @@ PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, ve
                                                        vector<double> gamma,
                                                        int num_iters, int mc_samples, int mc_iters,
                                                        size_t minibatch_size,
-                                                       int topic_limit, int threshold, bool sample_phi) :
+                                                       int topic_limit, int threshold, bool sample_phi, int process_id, int process_size) :
         CollapsedSampling(corpus, L, alpha, beta, gamma, num_iters, mc_samples, mc_iters,
-                          topic_limit),
+                          topic_limit, process_id, process_size),
         minibatch_size(minibatch_size), threshold(threshold), sample_phi(sample_phi) {
     current_it = -1;
     delayed_update = false;
@@ -157,6 +157,7 @@ void PartiallyCollapsedSampling::SamplePhi() {
 
     AllBarrier();
     ComputePhi();
+    UpdateICount();
 }
 
 void PartiallyCollapsedSampling::ComputePhi() {

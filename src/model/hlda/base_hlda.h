@@ -27,7 +27,7 @@ class BaseHLDA {
 public:
     BaseHLDA(Corpus &corpus, int L,
              std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
-             int num_iters, int mc_samples);
+             int num_iters, int mc_samples, int process_id, int process_size);
 
     virtual void Initialize() = 0;
 
@@ -53,8 +53,11 @@ protected:
 
     void AllBarrier();
 
+    void UpdateICount();
+
     xorshift& GetGenerator();
 
+    int process_id, process_size;
     DistributedTree tree;
     Corpus &corpus;
     int L;
@@ -72,7 +75,9 @@ protected:
     std::vector<Matrix<TProb> > log_phi;
 
     std::vector<AtomicMatrix<TCount>> count;
-    //DCMSparse icount;
+
+    DCMSparse icount;
+    std::vector<int> icount_offset;
 
     std::vector<AtomicVector<TCount>> ck;
 
@@ -83,8 +88,6 @@ protected:
     bool new_topic;
 
     std::mutex model_mutex;
-
-    int process_id, process_size;
 };
 
 
