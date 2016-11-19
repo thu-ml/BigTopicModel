@@ -14,6 +14,7 @@
 #include <sstream>
 #include <atomic_matrix.h>
 #include "atomic_vector.h"
+#include "dcm_dense.h"
 
 using namespace std;
 
@@ -232,10 +233,36 @@ int main(int argc, char **argv) {
 //        PrintMatrix();
 //    }
 
-    {
-        AtomicVector<int> v;
-        auto sess = v.GetSession();
-        auto sess2 = std::move(sess);
+//    {
+//        AtomicVector<int> v;
+//        auto sess = v.GetSession();
+//        auto sess2 = std::move(sess);
+//    }
+    DCMDense<int> dcm(1, process_size, 5, 1, row_partition, process_size, process_id);
+    dcm.resize(5, 3);
+    if (process_id == 0) {
+        dcm.increase(3, 1);
+        dcm.increase(2, 0);
+    } else {
+        dcm.increase(1, 1);
+    }
+    dcm.sync();
+    for (int p = 0; p < process_size; p++) {
+        if (p == process_id) {
+            cout << "Node " << p << endl;
+            for (int r = 0; r < 5; r++) {
+                auto *row = dcm.row(r);
+                for (int c = 0; c < 3; c++)
+                    cout << row[c] << ' ';
+                cout << endl;
+            }
+            cout << "Marginal" << endl;
+            auto *m = dcm.rowMarginal();
+            for (int c = 0; c < 3; c++)
+                cout << m[c] << ' ';
+            cout << endl;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     MPI_Finalize();
