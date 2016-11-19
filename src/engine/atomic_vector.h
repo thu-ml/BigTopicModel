@@ -10,6 +10,7 @@
 #include "buffer_manager.h"
 #include <omp.h>
 #include "glog/logging.h"
+#include "global_lock.h"
 
 template <class T>
 class AtomicVector{
@@ -30,7 +31,9 @@ public:
                 for (size_t i = 0; i < n; i+=2)
                     max_index = std::max(max_index, data[i]);
             }
+            global_mutex.lock();
             v.IncreaseSize(max_index + 1);
+            global_mutex.unlock();
 
             auto sess = v.GetSession(false);
             for (size_t j = 0; j < msgs.size(); j++) {

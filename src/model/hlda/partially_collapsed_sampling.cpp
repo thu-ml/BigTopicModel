@@ -66,7 +66,7 @@ void PartiallyCollapsedSampling::Initialize() {
                 AllBarrier();
                 SamplePhi();
                 AllBarrier();
-                Check();
+                //Check();
 
                 printf("Processed document [%lu, %lu) documents, %d topics\n", d_start, d_end,
                        (int)tree.GetTree().nodes.size());
@@ -79,7 +79,7 @@ void PartiallyCollapsedSampling::Initialize() {
                 AllBarrier();
                 SamplePhi();
                 AllBarrier();
-                Check();
+                //Check();
             }
         }
         MPI_Barrier(MPI_COMM_WORLD);

@@ -15,6 +15,7 @@
 #include "buffer_manager.h"
 #include <omp.h>
 #include "glog/logging.h"
+#include "global_lock.h"
 
 template <class T>
 class AtomicMatrix {
@@ -35,7 +36,9 @@ public:
                 for (size_t i = 0; i < n; i+=3)
                     max_c_index = std::max(max_c_index, data[i+1]);
             }
+            global_mutex.lock();
             m.IncreaseC(max_c_index + 1);
+            global_mutex.unlock();
 
             auto sess = m.GetSession(false);
             for (size_t j = 0; j < msgs.size(); j++) {

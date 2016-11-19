@@ -10,6 +10,7 @@
 #include "corpus.h"
 #include "utils.h"
 #include "mkl_vml.h"
+#include "global_lock.h"
 
 using namespace std;
 
@@ -60,16 +61,21 @@ void CollapsedSampling::Estimate() {
         auto ret = tree.GetTree();
         num_instantiated = ret.num_instantiated;
 
+        Clock clk2;
         #pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
             auto &doc = docs[d];
             SampleC(doc, true, true);
             SampleZ(doc, true, true);
         }
+        LOG(INFO) << "Sample took " << clk2.toc() << " seconds"; clk2.tic();
         AllBarrier();
+        LOG(INFO) << "Barrier took " << clk2.toc() << " seconds"; clk2.tic();
 
         SamplePhi();
+        LOG(INFO) << "SamplePhi took " << clk2.toc() << " seconds"; clk2.tic();
         AllBarrier();
+        LOG(INFO) << "Barrier2 took " << clk2.toc() << " seconds"; clk2.tic();
 
         ret = tree.GetTree();
         int num_big_nodes = 0;
@@ -94,6 +100,7 @@ void CollapsedSampling::Estimate() {
 
         double throughput = corpus.T / time / 1048576;
         double perplexity = Perplexity();
+        LOG(INFO) << "Perplexity took " << clk2.toc() << " seconds"; clk2.tic();
         LOG_IF(INFO, process_id == 0) 
             << std::fixed << std::setprecision(2)
             << "\x1b[32mIteration " << it 
@@ -104,6 +111,7 @@ void CollapsedSampling::Estimate() {
 
         Check();
         tree.Check();
+        LOG(INFO) << "Check took " << clk2.toc() << " seconds"; clk2.tic();
     }
 }
 
@@ -371,8 +379,8 @@ double CollapsedSampling::Perplexity() {
 }
 
 void CollapsedSampling::Check() {
-    auto count_sess = GetCountSessions();
     auto ck_sess = GetCkSessions();
+    auto count_sess = GetCountSessions();
     int sum = 0;
     for (TLen l = 0; l < L; l++) {
         for (TTopic k = 0; k < count_sess[l].GetC(); k++)
@@ -496,12 +504,13 @@ void CollapsedSampling::Check() {
 
 void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     // Update number of topics
-#pragma omp critical
 {
+    global_mutex.lock();
     for (TLen l = 0; l < L; l++) {
         count[l].IncreaseC(doc.c[l] + 1);
         ck[l].IncreaseSize((size_t)(doc.c[l] + 1));
     }
+    global_mutex.unlock();
 }
 
     auto tid = omp_get_thread_num();

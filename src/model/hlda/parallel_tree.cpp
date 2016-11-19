@@ -130,10 +130,10 @@ std::vector<std::vector<int>> ParallelTree::Compress() {
     // Remove all zero nodes
     std::vector<Node*> new_nodes;
     for (int i = (int)nodes.size() - 1; i >= 0; i--)
-        if (nodes[i]->num_docs == 0)
-            Remove(nodes[i]);
-        else
-            new_nodes.push_back(nodes[i]);
+        //if (nodes[i]->num_docs == 0)
+        //    Remove(nodes[i]);
+        //else
+        new_nodes.push_back(nodes[i]);
 
     std::reverse(new_nodes.begin(), new_nodes.end());
     nodes = std::move(new_nodes);
@@ -241,9 +241,9 @@ void ParallelTree::Deserialize(std::vector<int> &data) {
         if (i != 0)
             node = AddChildren(FindByID(parent), id, pos);
         node->num_docs = num_docs;
-        if (node->depth != depth)
-            throw std::runtime_error("Incorrect depth in deserialization. " +
-                                     std::to_string(node->id));
+        if (node->depth != depth) {
+            throw std::runtime_error("Incorrect depth in deserialization. expected " + std::to_string(node->depth) + " get " + std::to_string(depth) + " " + std::to_string(node->id));
+        }
     }
 }
 
