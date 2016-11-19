@@ -105,15 +105,18 @@ private:
                 // Invoke on_recv
                 if (is_subscriber) {
                     size_t i_next;
+                    std::vector<const char *> starts;
+                    std::vector<size_t> lengths;
                     for (size_t i_start = 0; i_start < recv_buffer.size();
                          i_start = i_next) {
                         int p_length = *(reinterpret_cast<int*>
                                          (recv_buffer.data()+i_start));
-                        on_recv(recv_buffer.data()+i_start+sizeof(int),
-                                p_length);
+                        starts.push_back(recv_buffer.data()+i_start+sizeof(int));
+                        lengths.push_back(p_length);
 
                         i_next = i_start + calculate_storage(p_length);
                     }
+                    on_recv(starts, lengths);
                 }
 
                 int is_barrier = barrier;

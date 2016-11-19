@@ -23,23 +23,31 @@ public:
         TOnRecv(AtomicMatrix &m): m(m) {}
         AtomicMatrix &m;
 
-        void operator() (const char *msg, size_t length) {
-            const int *data = reinterpret_cast<const int *>(msg) + 1;
-            size_t n = length / sizeof(int) - 1;
-            int src = *(data - 1);
-            if (src == m.pub_sub.ID())
-                return;
-
+        void operator() (std::vector<const char *> &msgs, std::vector<size_t> &lengths) {
             int max_c_index = -1;
-            for (size_t i = 0; i < n; i+=3)
-                max_c_index = std::max(max_c_index, data[i+1]);
+            for (size_t j = 0; j < msgs.size(); j++) {
+                const int *data = reinterpret_cast<const int *>(msgs[j]) + 1;
+                size_t n = lengths[j] / sizeof(int) - 1;
+                int src = *(data - 1);
+                if (src == m.pub_sub.ID())
+                    continue;
 
+                for (size_t i = 0; i < n; i+=3)
+                    max_c_index = std::max(max_c_index, data[i+1]);
+            }
             m.IncreaseC(max_c_index + 1);
 
             auto sess = m.GetSession(false);
+            for (size_t j = 0; j < msgs.size(); j++) {
+                const int *data = reinterpret_cast<const int *>(msgs[j]) + 1;
+                size_t n = lengths[j] / sizeof(int) - 1;
+                int src = *(data - 1);
+                if (src == m.pub_sub.ID())
+                    continue;
 
-            for (size_t i = 0; i < n; i+=3) {
-                sess.Inc(data[i], data[i+1], data[i+2]);
+                for (size_t i = 0; i < n; i+=3) {
+                    sess.Inc(data[i], data[i+1], data[i+2]);
+                }
             }
         }
     };

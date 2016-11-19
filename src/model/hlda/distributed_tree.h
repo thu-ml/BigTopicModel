@@ -20,7 +20,8 @@ public:
     };
     struct TOnRecv {
         TOnRecv(DistributedTree &t): t(t) {}
-        void operator() (const char *msg, size_t length);
+        void operator() (std::vector<const char *> &msg, 
+                std::vector<size_t> &length);
         DistributedTree &t;
     };
 
