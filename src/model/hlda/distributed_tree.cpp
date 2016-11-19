@@ -27,6 +27,7 @@ void DistributedTree::TOnRecv::operator()(const char *msg, size_t length) {
             auto source_thr = message[2];
             auto node_id = message[3];
 
+            std::lock_guard<std::mutex> lock(t.tree.tree_mutex);
             auto path_ids = t.tree.AddNodes(node_id);
             std::vector<int> send_message(4 + 2 * path_ids.size());
             send_message[0] = CreateFinish;

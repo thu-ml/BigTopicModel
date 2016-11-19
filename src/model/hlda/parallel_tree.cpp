@@ -52,8 +52,6 @@ ParallelTree::IncResult ParallelTree::IncNumDocs(int new_node_id) {
 }
 
 std::vector<ParallelTree::IDPos> ParallelTree::AddNodes(int node_id) {
-    std::lock_guard<std::mutex> guard(tree_mutex);
-
     Node *node = FindByID(node_id);
     std::vector<IDPos> result;
     while (node->depth + 1 < L) {
