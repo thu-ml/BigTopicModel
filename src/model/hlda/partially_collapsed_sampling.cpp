@@ -159,26 +159,36 @@ void PartiallyCollapsedSampling::SamplePhi() {
     }
 
     AllBarrier();
-    ComputePhi();
     UpdateICount();
+    ComputePhi();
 }
 
 void PartiallyCollapsedSampling::ComputePhi() {
     auto ret = tree.GetTree();
-    auto ck_sess = GetCkSessions();
-    auto count_sess = GetCountSessions();
     auto &generator = GetGenerator();
+    auto *ck = icount.rowMarginal();
+
+    Matrix<int> icount_dense(corpus.V, icount_offset.back());
+#pragma omp parallel for
+    for (int r = 0; r < corpus.V; r++) {
+        auto row = icount.row(r);
+        for (int i = 0; i < row.size(); i++)
+            icount_dense(r, row[i].k) += row[i].v;
+    }
+
     if (!sample_phi) {
         for (TLen l = 0; l < L; l++) {
             TTopic K = (TTopic) ret.num_nodes[l];
+            auto offset = icount_offset[l];
 
             vector<float> inv_normalization(K);
             for (TTopic k = 0; k < K; k++)
-                inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck_sess[l].Get(k));
+                inv_normalization[k] = 1.f / (beta[l] * corpus.V + ck[k+offset]);
 #pragma omp parallel for
             for (TWord v = 0; v < corpus.V; v++) {
                 for (TTopic k = 0; k < K; k++) {
-                    TProb prob = (count_sess[l].Get(v, k) + beta[l]) * inv_normalization[k];
+                    TProb prob = (icount_dense(v, k+offset) + beta[l]) 
+                                 * inv_normalization[k];
                     phi[l](v, k) = prob;
                     log_phi[l](v, k) = prob;
                 }
@@ -188,11 +198,12 @@ void PartiallyCollapsedSampling::ComputePhi() {
     } else {
         for (TLen l = 0; l < L; l++) {
             TTopic K = (TTopic) ret.num_nodes[l];
+            auto offset = icount_offset[l];
 
             for (TTopic k = 0; k < K; k++) {
                 TProb sum = 0;
                 for (TWord v = 0; v < corpus.V; v++) {
-                    TProb concentration = (TProb)(count_sess[l].Get(v, k) + beta[l]);
+                    TProb concentration = (TProb)(icount_dense(v, k+offset) + beta[l]);
                     gamma_distribution<TProb> gammarnd(concentration);
                     TProb p = gammarnd(generator);
                     phi[l](v, k) = p;
