@@ -182,7 +182,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
 #pragma omp parallel for
             for (TWord v = 0; v < corpus.V; v++) {
                 for (TTopic k = 0; k < K; k++) {
-                    TProb prob = (icount_dense(v, k+offset) + beta[l]) 
+                    TProb prob = (icount(v, k+offset) + beta[l]) 
                                  * inv_normalization[k];
                     phi[l](v, k) = prob;
                     log_phi[l](v, k) = prob;
@@ -198,7 +198,7 @@ void PartiallyCollapsedSampling::ComputePhi() {
             for (TTopic k = 0; k < K; k++) {
                 TProb sum = 0;
                 for (TWord v = 0; v < corpus.V; v++) {
-                    TProb concentration = (TProb)(icount_dense(v, k+offset) + beta[l]);
+                    TProb concentration = (TProb)(icount(v, k+offset) + beta[l]);
                     gamma_distribution<TProb> gammarnd(concentration);
                     TProb p = gammarnd(generator);
                     phi[l](v, k) = p;

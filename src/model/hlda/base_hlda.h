@@ -18,7 +18,7 @@
 #include "document.h"
 #include "atomic_matrix.h"
 #include "atomic_vector.h"
-#include "dcm.h"
+#include "dcm_dense.h"
 
 class Corpus;
 
@@ -76,9 +76,8 @@ protected:
 
     std::vector<AtomicMatrix<TCount>> count;
 
-    DCMSparse icount;
-    Matrix<int> icount_dense;
-    size_t *ck_dense;
+    DCMDense<TCount> icount;
+    TCount *ck_dense;
     std::vector<int> icount_offset;
 
     std::vector<AtomicVector<TCount>> ck;

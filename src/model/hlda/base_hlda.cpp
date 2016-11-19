@@ -24,9 +24,8 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         corpus(corpus), L(L), alpha(alpha), beta(beta), gamma(gamma),
         num_iters(num_iters), mc_samples(mc_samples), phi((size_t) L), log_phi((size_t) L),
         count((size_t) L),
-        icount(1, process_size, corpus.V, 1/*K*/, column_partition,
-               process_size, process_id, omp_get_max_threads(), separate,
-               -1),
+        icount(1, process_size, corpus.V, 1/*K*/, row_partition,
+               process_size, process_id),
         log_normalization(L, 1000), new_topic(true) {
 
     std::mt19937_64 rd;
@@ -188,7 +187,7 @@ void BaseHLDA::UpdateICount() {
     for (int l = 0; l < L; l++)
         icount_offset[l+1] = icount_offset[l] + ret.num_nodes[l];
 
-    icount.set_column_size(icount_offset.back());
+    icount.resize(corpus.V, icount_offset.back());
 
     // Count
     std::atomic<size_t> total_count(0);
@@ -201,7 +200,7 @@ void BaseHLDA::UpdateICount() {
                 TLen l = doc.z[n];
                 TTopic k = (TTopic)doc.c[l];
                 TWord v = doc.w[n];
-                icount.update(tid, v, k + icount_offset[l]);
+                icount.increase(v, k + icount_offset[l]);
             }
             total_count += doc.w.size();
         }
@@ -210,22 +209,13 @@ void BaseHLDA::UpdateICount() {
     // Sync
     icount.sync();
 
-    // Set count = icount
-    icount_dense.Resize(corpus.V, icount_offset.back());
-    icount_dense.Clear();
-#pragma omp parallel for
-    for (int r = 0; r < corpus.V; r++) {
-        auto row = icount.row(r);
-        for (int i = 0; i < row.size(); i++)
-            icount_dense(r, row[i].k) += row[i].v;
-    }
     ck_dense = icount.rowMarginal();
 
     for (int l = 0; l < L; l++) {
 #pragma omp parallel for
         for (int r = 0; r < corpus.V; r++)
             for (int c = ret.num_instantiated[l]; c < ret.num_nodes[l]; c++)
-                count[l].Set(r, c, icount_dense(r, c+icount_offset[l]));
+                count[l].Set(r, c, icount(r, c+icount_offset[l]));
         for (int c = ret.num_instantiated[l]; c < ret.num_nodes[l]; c++)
             ck[l].Set(c, ck_dense[c+icount_offset[l]]);
     }

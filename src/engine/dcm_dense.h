@@ -63,6 +63,8 @@ public:
         memset(wbuff.get(), 0, wbuff_capacity * sizeof(std::atomic<T>));
 	}
 
+    T operator() (int r, int c) { return rbuff[r * column_size + c]; }
+
 public:
     DCMDense(const int partition_size, const int copy_size, const int row_size, const int column_size,
                 PartitionType partition_type, const int process_size, const int process_id) :

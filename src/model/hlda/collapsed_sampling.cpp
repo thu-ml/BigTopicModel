@@ -349,7 +349,7 @@ double CollapsedSampling::Perplexity() {
             double prob = 0;
             TWord v = doc.w[n];
             for (int l = 0; l < L; l++) {
-                double phi = (icount_dense(v, doc.c[l]+icount_offset[l]) + beta[l]) /
+                double phi = (icount(v, doc.c[l]+icount_offset[l]) + beta[l]) /
                              (ck_dense[doc.c[l]+icount_offset[l]] + beta[l] * corpus.V);
 
                 prob += theta[l] * phi;
@@ -470,11 +470,11 @@ void CollapsedSampling::Check() {
 
         for (int r = 0; r < corpus.V; r++)
             for (int c = 0; c < count_sess[l].GetC(); c++) 
-                if (icount_dense(r, c+icount_offset[l]) != global_count2[l](r, c)) {
+                if (icount(r, c+icount_offset[l]) != global_count2[l](r, c)) {
                     LOG(WARNING) << "ICount error at " 
                               << l << "," << r << "," << c
                               << " expected " << global_count2[l](r, c) 
-                              << " get " << icount_dense(r, c+icount_offset[l]);
+                              << " get " << icount(r, c+icount_offset[l]);
                     if_error = true;
                 }
 
