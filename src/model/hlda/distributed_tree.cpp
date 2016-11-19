@@ -11,6 +11,7 @@
 
 void DistributedTree::TOnRecv::operator()
     (std::vector<const char *> &msgs, std::vector<size_t> &lengths) {
+        std::lock_guard<std::mutex> lock(t.tree.tree_mutex);
     for (int j = 0; j < msgs.size(); j++) {
         auto *message = reinterpret_cast<const int*>(msgs[j]);
         auto type = static_cast<MessageType>(message[0]);
@@ -19,18 +20,17 @@ void DistributedTree::TOnRecv::operator()
         if (type == Decrease) {
             auto node_id = message[2];
             if (source != t.pub_sub.ID())
-                t.tree.DecNumDocs(node_id);
+                t.tree.DecNumDocs(node_id, false);
         } else if (type == Increase) {
             auto node_id = message[2];
             if (source != t.pub_sub.ID())
-                t.tree.IncNumDocs(node_id);
+                t.tree.IncNumDocs(node_id, false);
         } else if (type == Create) {
             if (t.pub_sub.ID() == 0) {
                 auto source_thr = message[2];
                 auto node_id = message[3];
 
-                std::lock_guard<std::mutex> lock(t.tree.tree_mutex);
-                auto path_ids = t.tree.AddNodes(node_id);
+                auto path_ids = t.tree.AddNodes(node_id, false);
                 std::vector<int> send_message(4 + 2 * path_ids.size());
                 send_message[0] = CreateFinish;
                 send_message[1] = source;
@@ -48,9 +48,9 @@ void DistributedTree::TOnRecv::operator()
             auto *id_pos = (ParallelTree::IDPos*)(message+4);
 
             if (t.pub_sub.ID() != 0)
-                t.tree.AddNodes(id_pos, path_len);
+                t.tree.AddNodes(id_pos, path_len, false);
 
-            auto result = t.tree.IncNumDocs(id_pos[path_len-1].id);
+            auto result = t.tree.IncNumDocs(id_pos[path_len-1].id, false);
             if (source == t.pub_sub.ID())
                 t.tasks[source_thr].put(result);
         } else {

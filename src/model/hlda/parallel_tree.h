@@ -53,12 +53,12 @@ public:
     ~ParallelTree();
 
     // Local operations
-    std::vector<IDPos> AddNodes(int node_id);
-    void AddNodes(IDPos *node_ids, int len);
+    std::vector<IDPos> AddNodes(int node_id, bool lock = true);
+    void AddNodes(IDPos *node_ids, int len, bool lock = true);
 
-    void DecNumDocs(int old_node_id);
+    void DecNumDocs(int old_node_id, bool lock = true);
 
-    IncResult IncNumDocs(int new_node_id);
+    IncResult IncNumDocs(int new_node_id, bool lock = true);
 
     RetTree GetTree(bool pos_instead_id = false);
 

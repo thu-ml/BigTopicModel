@@ -20,8 +20,8 @@ ParallelTree::~ParallelTree() {
         delete node;
 }
 
-void ParallelTree::DecNumDocs(int old_node_id) {
-    std::lock_guard<std::mutex> guard(tree_mutex);
+void ParallelTree::DecNumDocs(int old_node_id, bool lock) {
+    if (lock) tree_mutex.lock();
 
     Node *node = FindByID(old_node_id);
     if (node->depth + 1 != L)
@@ -31,10 +31,11 @@ void ParallelTree::DecNumDocs(int old_node_id) {
         --node->num_docs;
         node = node->parent;
     }
+    if (lock) tree_mutex.unlock();
 }
 
-ParallelTree::IncResult ParallelTree::IncNumDocs(int new_node_id) {
-    std::lock_guard<std::mutex> guard(tree_mutex);
+ParallelTree::IncResult ParallelTree::IncNumDocs(int new_node_id, bool lock) {
+    if (lock) tree_mutex.lock();
 
     Node *node = FindByID(new_node_id);
     while (node->depth + 1 < L)
@@ -48,10 +49,13 @@ ParallelTree::IncResult ParallelTree::IncNumDocs(int new_node_id) {
         node = node->parent;
     }
 
+    if (lock) tree_mutex.unlock();
     return std::move(result);
 }
 
-std::vector<ParallelTree::IDPos> ParallelTree::AddNodes(int node_id) {
+std::vector<ParallelTree::IDPos> ParallelTree::AddNodes(int node_id, bool lock) {
+    if (lock) tree_mutex.lock();
+
     Node *node = FindByID(node_id);
     std::vector<IDPos> result;
     while (node->depth + 1 < L) {
@@ -60,15 +64,18 @@ std::vector<ParallelTree::IDPos> ParallelTree::AddNodes(int node_id) {
     }
     result.push_back(IDPos{node->id, node->pos});
 
+    if (lock) tree_mutex.unlock();
     return std::move(result);
 }
 
-void ParallelTree::AddNodes(IDPos *node_ids, int len) {
-    std::lock_guard<std::mutex> guard(tree_mutex);
+void ParallelTree::AddNodes(IDPos *node_ids, int len, bool lock) {
+    if (lock) tree_mutex.lock();
 
     Node *node = FindByID(node_ids[0].id);
     for (int l = 1; l < len; l++)
         node = AddChildren(node, node_ids[l].id, node_ids[l].pos);
+
+    if (lock) tree_mutex.unlock();
 }
 
 ParallelTree::RetTree ParallelTree::GetTree(bool pos_instead_id) {
