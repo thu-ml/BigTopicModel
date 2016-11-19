@@ -1,8 +1,8 @@
-#include "lda.h"
-#include <atomic>
+#include "model/lda/lda.h"
 #include <omp.h>
+#include <xmmintrin.h>
 #include <glog/logging.h>
-#include "xmmintrin.h"
+#include <atomic>
 
 using std::atomic;
 using std::sort;
@@ -33,15 +33,17 @@ void LDA::iterWord() {
         auto &p2Prob = prior2Prob.Get(tid);
         p2Prob.clear();
         auto &p2Table = prior2Table.Get(tid);
-        for (auto entry: cwk_row) {
+        for (auto entry : cwk_row) {
             TTopic k = entry.k;
             phi[k] += entry.v * inv_ck[k];
             TProb p = alpha[k] * entry.v * inv_ck[k];
             p2Prob.push_back(prior2Sum += p);
             p2NNZ.push_back(k);
         }
-        if (Kw == 0) continue;
-        else p2Prob.back() = prior2Sum * 2 + 1;
+        if (Kw == 0)
+            continue;
+        else
+            p2Prob.back() = prior2Sum * 2 + 1;
         p2Table.Build(p2Prob.begin(), p2Prob.end(), prior2Sum);
 
         TProb priorSum = prior1Sum + prior2Sum;
@@ -49,7 +51,8 @@ void LDA::iterWord() {
             if (p < prior2Sum)
                 return (TTopic) p2NNZ[p2Table.Sample(p2Prob.begin(), p)];
             else
-                return (TTopic) prior1Table.Sample(prior1Prob.begin(), p - prior2Sum);
+                return (TTopic) prior1Table.Sample(prior1Prob.begin(),
+                                                   p - prior2Sum);
         };
         /*
         if (process_id == 0)
@@ -64,13 +67,15 @@ void LDA::iterWord() {
         // Advance PREFETCH_LENGTH tokens
         for (int i = 0; i < PREFETCH_LENGTH; i++) {
             size_t iPrefetchEnd = iPrefetchStart;
-            while (iPrefetchEnd < doc_per_word && wDoc[iPrefetchStart] == wDoc[iPrefetchEnd]) iPrefetchEnd++;
+            while (iPrefetchEnd < doc_per_word &&
+                    wDoc[iPrefetchStart] == wDoc[iPrefetchEnd]) iPrefetchEnd++;
             iPrefetchStart = iPrefetchEnd;
         }
-        size_t iEnd; // notice that iEnd was initialized in the inner loop
+        size_t iEnd;  // notice that iEnd was initialized in the inner loop
         for (size_t iStart = 0; iStart < doc_per_word; iStart = iEnd) {
             auto d = wDoc[iStart];
-            for (iEnd = iStart; iEnd < doc_per_word && wDoc[iEnd] == d; iEnd++);
+            for (iEnd = iStart; iEnd < doc_per_word && wDoc[iEnd] == d; iEnd++)
+                continue;
             auto count = iEnd - iStart;
             auto c = cdk.row(d);
             /*
@@ -95,26 +100,31 @@ void LDA::iterWord() {
                 int nextD = wDoc[iPrefetchStart];
                 auto next_cdk = cdk.row(nextD);
                 int nextKd = next_cdk.size();
-                for (int pos = 0; pos < Kd; pos += 8) { //TODO magic number
-                    _mm_prefetch((const char *) next_cdk.begin() + pos, _MM_HINT_T1);
+                // TODO(dong) : magic number
+                for (int pos = 0; pos < Kd; pos += 8) {
+                    _mm_prefetch((const char *) next_cdk.begin() + pos,
+                                 _MM_HINT_T1);
                 }
                 // Advance
                 size_t iPrefetchEnd = iPrefetchStart;
-                while (iPrefetchEnd < doc_per_word && wDoc[iPrefetchStart] == wDoc[iPrefetchEnd]) iPrefetchEnd++;
+                while (iPrefetchEnd < doc_per_word &&
+                        wDoc[iPrefetchStart] == wDoc[iPrefetchEnd])
+                    iPrefetchEnd++;
                 iPrefetchStart = iPrefetchEnd;
             }
 
             // Calculate the prob. for each topic O(K_d)
             TProb sum = 0;
-            // TODO : it feels like the optimization I made on hadoop
-            // to reduce the random access to factor[k] and reduce memory access
-            // prob = (cdk[k] + alpha[k]) * (cwk[w] + beta) / (ck[k] + betabar)
+            /* TODO : the code below is similar with the optimization I made on hadoop
+             * to reduce the random access to factor[k] and reduce memory access
+             * prob = (cdk[k] + alpha[k]) * (cwk[w] + beta) / (ck[k] + betabar)
+             */
             for (TTopic i = 0; i < Kd; i++) {
                 TTopic k = c[i].k;
                 TProb p = c[i].v * phi[k];
                 prob[i] = (sum += p);
             }
-            prob[Kd - 1] = prob[Kd - 1] * 2 + 1; // Guard
+            prob[Kd - 1] = prob[Kd - 1] * 2 + 1;  // Guard
 
             // Compute perplexity
             TProb marginalProb = (sum + priorSum) / (Ld + alphaBar);
@@ -132,21 +142,22 @@ void LDA::iterWord() {
                     int i = 0;
                     while (prob[i] < pos) i++;
                     k = c[i].k;
-                }
-                else
+                } else {
                     k = samplePrior(pos - sum);
+                }
 
                 assert(k >= 0 && k < K);
                 cwk.update(tid, local_w, k);
                 cdk.update(tid, d, k);
             }
         }
-        for (auto entry: cwk_row) {
+        for (auto entry : cwk_row) {
             TTopic k = entry.k;
             phi[k] -= entry.v * inv_ck[k];
         }
     }
-    LOG_IF(INFO, process_id == monitor_id) << "iterWord took " << clk.toc() << " s";
+    LOG_IF(INFO, process_id == monitor_id) << "iterWord took "
+                                           << clk.toc() << " s";
 }
 
 /**
@@ -157,18 +168,19 @@ void LDA::iterWord() {
 void LDA::Estimate() {
     Clock clk;
     clk.tic();
+    // TODO(dong) : using monolith style need a fixed corpus
+    // the code structure needs to be refactored
     if (monolith == local_merge_style) {
-        //LOG_IF(INFO, process_id == monitor_id) << "start set mono buf";
+        // LOG_IF(INFO, process_id == monitor_id) << "start set mono buf";
         vector<size_t> doc_count;
         vector<size_t> word_count;
         doc_count.resize(num_docs);
         word_count.resize(num_words);
         fill(doc_count.begin(), doc_count.end(), 0);
         fill(word_count.begin(), word_count.end(), 0);
-#pragma omp parallel for
         for (TWord v = 0; v < num_words; v++) {
             auto row = corpus.Get(v);
-            for (auto d: row) {
+            for (auto d : row) {
                 doc_count[d]++;
                 word_count[v]++;
             }
@@ -190,7 +202,7 @@ void LDA::Estimate() {
         int tid = omp_get_thread_num();
         auto &generator = generators.Get();
         auto row = corpus.Get(v);
-        for (auto d: row) {
+        for (auto d : row) {
             TTopic k = dice(generator);
             cwk.update(tid, v, k);
             cdk.update(tid, d, k);
@@ -202,7 +214,9 @@ void LDA::Estimate() {
         averageCount += cnt;
     }
     LOG(INFO) << "pid : " << process_id << " Initialized " << clk.toc()
-    << " s, avg_cnt = " << (double) corpus.size() / sizeof(int) / averageCount << endl;
+    << " s, avg_cnt = "
+    << static_cast<double>(corpus.size() / sizeof(int) / averageCount)
+    << endl;
 
     // The main iteration
     for (TIter iter = 0; iter < this->iter; iter++) {
@@ -216,7 +230,7 @@ void LDA::Estimate() {
             for (TDoc d = 0; d < num_docs; d++) {
                 auto row = cdk.row(d);
                 TLen L = 0;
-                for (auto &entry: row)
+                for (auto &entry : row)
                     L += entry.v;
                 word_per_doc[d] = L;
             }
@@ -227,7 +241,8 @@ void LDA::Estimate() {
                 cdk_size += cdk.row(i).size();
             }
             LOG(INFO) << "cdk_size : " << cdk_size << std::endl;
-            LOG(INFO) << "\x1b[31mpid : " << process_id << " - cdk sync : " << clk.toc() << "\x1b[0m" << std::endl;
+            LOG(INFO) << "\x1b[31mpid : " << process_id
+            << " - cdk sync : " << clk.toc() << "\x1b[0m" << std::endl;
         }
         // note that aggrGlobal must be used after sync
         // cdk.aggrGlobal();
@@ -241,7 +256,8 @@ void LDA::Estimate() {
                 cwk_size += cwk.row(i).size();
             }
             LOG(INFO) << "cwk_size : " << cwk_size << std::endl;
-            LOG(INFO) << "\x1b[31mpid : " << process_id << " - cwk sync : " << clk.toc() << "\x1b[0m" << std::endl;
+            LOG(INFO) << "\x1b[31mpid : " << process_id << " - cwk sync : "
+            << clk.toc() << "\x1b[0m" << std::endl;
         }
 
         /// sync ck and initialize prior1
@@ -255,19 +271,22 @@ void LDA::Estimate() {
             priorCwk[k] = inv_ck[k] * beta;
             prior1Prob[k] = prior1Sum += alpha[k] * priorCwk[k];
         }
-        for (auto &phi: phis)
+        for (auto &phi : phis)
             phi = priorCwk;
         prior1Prob[K - 1] = prior1Sum * 2 + 1;
         prior1Table.Build(prior1Prob.begin(), prior1Prob.end(), prior1Sum);
-        LOG_IF(INFO, process_id == monitor_id) << "\x1b[31mpid : " << process_id << " - ck sync : " << clk.toc() << "\x1b[0m" << std::endl;
+        LOG_IF(INFO, process_id == monitor_id)
+        << "\x1b[31mpid : " << process_id << " - ck sync : " << clk.toc()
+        << "\x1b[0m" << std::endl;
 
         iterWord();
 
         log_likelihood = 0;
-        for (auto llvalue: llthread)
+        for (auto llvalue : llthread)
             log_likelihood += llvalue;
         double llreduce = 0;
-        MPI_Allreduce(&log_likelihood, &llreduce, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&log_likelihood, &llreduce, 1,
+                      MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         LOG_IF(INFO, process_id == monitor_id) << "\x1b[32mpid : " << process_id
                 << " Iteration " << iter

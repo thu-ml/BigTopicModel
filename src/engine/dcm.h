@@ -18,6 +18,7 @@
 #include "cva.h"
 #include "thread_local.h"
 #include "sort.h"
+#include "glog/logging.h"
 #include <atomic>
 
 using std::vector;
@@ -187,7 +188,7 @@ private:
                 vector<Entry>().swap(wbuff_thread[tid]);
             }
             Sort::RadixSort(wbuff_sorted.data(), total_size, key_digits + value_digits);
-            if (process_id == 0)
+            if (process_id == monitor_id)
                 LOG(INFO) << "Bucket sort took " << clk.toc() << std::endl;
 
 #define get_value(x) ((x)&value_mask)
@@ -238,7 +239,7 @@ private:
             for (auto &buff: wbuff_thread)
                 buff.clear();
             vector<long long>().swap(wbuff_sorted);
-            if (process_id == 0)
+            if (process_id == monitor_id)
                 LOG(INFO) << "Count took " << clk.toc() << std::endl;
         }
     }
@@ -334,7 +335,7 @@ private:
 
             // Sort
             //std::sort(b.begin(), b.end(),
-            //		[](const SpEntry &a, const SpEntry &b) { return a.v > b.v; });
+            //        [](const SpEntry &a, const SpEntry &b) { return a.v > b.v; });
         }
         //       cout << "Count2 takes " << clk.toc() << endl; clk.tic();
         decltype(recv_buff)().swap(recv_buff);
@@ -343,7 +344,7 @@ private:
         // Gather
         buff.Allgather(intra_partition, copy_size, merged);
         size_t totalAllgatherSize = buff.size();
-        if (process_id == 0)
+        if (process_id == monitor_id)
             LOG(INFO) << "Allgather Communicated " << (double) totalAllgatherSize / 1048576 <<
             " MB. Alltoall communicated " << alltoall_size / 1048576 << " MB." << std::endl;
         //       cout << "Allgather takes " << clk.toc() << endl; clk.tic();
@@ -379,10 +380,10 @@ public:
         last_wbuff_thread_size.resize(thread_size);
         for (auto &s: last_wbuff_thread_size) s = 0;
         wbuff_sorted.resize(thread_size);
-        row_sum.resize(column_size);
-        row_sum_read.resize(column_size);
         local_merge_time_total = 0;
         global_merge_time_total = 0;
+        row_sum.resize(column_size);
+        row_sum_read.resize(column_size);
 
         /*!
          *            documents words   tokens      token per doc   token per word
@@ -419,6 +420,14 @@ public:
             wbuff_thread[tid].push_back(Entry{local_row_idx, key});
     }
 
+    // TODO (dong) : notice that set_column_size can only by invoked after sync/rowMarginal
+    // or column_size should be set as a parameter of sync/rowMarginal?
+    void set_column_size(TCoord new_column_size) {
+        column_size = new_column_size;
+        row_sum.resize(column_size);
+        row_sum_read.resize(column_size);
+    }
+
     size_t *rowMarginal() {
         // Compute row_sum
         std::fill(row_sum_read.begin(), row_sum_read.end(), 0);
@@ -442,11 +451,11 @@ public:
 
     void sync() {
         /*
-        for (int i = 0; i < mono_heads.size() - 1; ++i) {
-            LOG_IF(ERROR, mono_tails[i] != mono_heads[i + 1])
-            << "i : " << i << " head " << mono_heads[i + 1] << " tail " << mono_tails[i];
-        }
-         */
+           for (int i = 0; i < mono_heads.size() - 1; ++i) {
+           LOG_IF(ERROR, mono_tails[i] != mono_heads[i + 1])
+           << "i : " << i << " head " << mono_heads[i + 1] << " tail " << mono_tails[i];
+           }
+           */
         Clock clk;
         // merge inside single node
         clk.tic();
@@ -466,10 +475,10 @@ public:
         size_t wbuff_thread_size = 0;
         for (auto &v: wbuff_thread) wbuff_thread_size += v.capacity();
         LOG_IF(INFO, process_id == monitor_id) << "wbuff_thread " << wbuff_thread_size * sizeof(Entry)
-                << ", buff " << buff.size()
-                << ", merged " << merged.size()
-                << ", recv_buff " << recv_buff.capacity() * sizeof(SpEntry)
-                << std::endl;
+            << ", buff " << buff.size()
+            << ", merged " << merged.size()
+            << ", recv_buff " << recv_buff.capacity() * sizeof(SpEntry)
+            << std::endl;
     }
 
     // gather cdk/cwk from all nodes, do this for MedLDA

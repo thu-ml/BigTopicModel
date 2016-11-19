@@ -48,9 +48,21 @@ if [ ! -d "$CUR/third_party" ]; then
 		./b2 -j10 install
 		popd
 	fi
+	if [ ! -d "$DEP/dSFMT" ]; then
+		wget https://github.com/MersenneTwister-Lab/dSFMT/archive/c6bf8a8dab3710b7abd86c4b68d0e6b4aa5e6db1.zip
+		unzip c6bf8a8dab3710b7abd86c4b68d0e6b4aa5e6db1.zip
+		mv dSFMT-c6bf8a8dab3710b7abd86c4b68d0e6b4aa5e6db1 dSFMT
+		rm c6bf8a8dab3710b7abd86c4b68d0e6b4aa5e6db1.zip
+		mv $DEP/dSFMT/dSFMT.c $DEP/dSFMT/dSFMT.cpp
+	fi
+	if [ ! -d "$DEP/eigen3" ]; then
+		wget http://bitbucket.org/eigen/eigen/get/3.2.10.zip
+		unzip 3.2.10.zip
+		mv eigen-eigen-b9cd8366d4e8 eigen3
+	fi
 	popd
 else
-	echo "$CUR/third_party already exists, please make sure the code is set up correctlly!"
+	echo "$CUR/third_party already exists, please make sure the code is set up correctly!"
 fi
 
 exit 0
