@@ -104,7 +104,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
     // TODO: the first few topics will have a huge impact...
     // Read out all the required data
     auto tid = omp_get_thread_num();
-    //LockDoc(doc, count_sess); TODO lockdoc
+    LockDoc(doc);
 
     auto &generator = GetGenerator();
     for (size_t n = 0; n < doc.z.size(); n++) {
@@ -134,7 +134,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
             ++cdl[l];
         }
     }
-    //UnlockDoc(doc, count_sess);
+    UnlockDoc(doc);
     /*double sum = 0;
     for (TLen l = 0; l < L; l++)
         sum += (doc.theta[l] = cdl[l] + alpha[l]);

@@ -125,7 +125,7 @@ void CollapsedSampling::SampleZ(Document &doc,
     for (auto l: doc.z) cdl[l]++;
 
     auto tid = omp_get_thread_num();
-    //LockDoc(doc, count_sess); //TODO lockdoc
+    LockDoc(doc);
     auto &generator = GetGenerator();
     for (TLen n = 0; n < N; n++) {
         TWord v = doc.w[n];
@@ -149,7 +149,7 @@ void CollapsedSampling::SampleZ(Document &doc,
         }
         doc.z[n] = l;
     }
-    //UnlockDoc(doc, count_sess);
+    UnlockDoc(doc);
 
     /*double sum = 0;
     for (TLen l = 0; l < L; l++)
@@ -500,7 +500,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     for (TLen l = 0; l < L; l++)
         count.Grow(tid, l, doc.c[l] + 1);
 
-    //LockDoc(doc, count_sess); //TODO lockDoc and unlockDoc
+    LockDoc(doc);
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
@@ -522,7 +522,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
         }
     else
         throw std::runtime_error("Invalid delta");
-    //UnlockDoc(doc, count_sess);
+    UnlockDoc(doc);
 
     count.Publish(tid);
 }

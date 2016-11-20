@@ -19,6 +19,8 @@
 #include "dcm_dense.h"
 #include "adlm.h"
 
+#define MAX_NUM_TOPICS 100000
+
 class Corpus;
 
 class BaseHLDA {
@@ -39,12 +41,8 @@ protected:
 
     void PermuteC(std::vector<std::vector<int>> &perm);
 
-    /*void LockDoc(Document &doc,
-            std::vector<AtomicMatrix<TCount>::Session> &session);
-    void UnlockDoc(Document &doc,
-            std::vector<AtomicMatrix<TCount>::Session> &session);
-    std::vector<std::mutex*> GetDocLocks(Document &doc, 
-            std::vector<AtomicMatrix<TCount>::Session> &session);*/
+    void LockDoc(Document &doc);
+    void UnlockDoc(Document &doc);
 
     void AllBarrier();
 
@@ -79,7 +77,8 @@ protected:
 
     bool new_topic;
 
-    std::mutex model_mutex;
+    //std::mutex model_mutex;
+    std::vector<std::unique_ptr<std::mutex[]>> topic_mutexes;
 };
 
 #endif //HLDA_BASEHLDA_H

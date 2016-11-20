@@ -7,9 +7,6 @@
 #include <random>
 #include <omp.h>
 #include <thread>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/lock_algorithms.hpp>
-#include <boost/iterator/indirect_iterator.hpp>
 #include "base_hlda.h"
 #include "corpus.h"
 #include "clock.h"
@@ -60,6 +57,9 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
 
     MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
     MPI_Comm_size(MPI_COMM_WORLD, &process_size);
+
+    for (int l = 0; l < L; l++) 
+        topic_mutexes.emplace_back(new std::mutex[MAX_NUM_TOPICS]);
 }
 
 void BaseHLDA::Visualize(std::string fileName, int threshold) {
@@ -118,28 +118,17 @@ void BaseHLDA::PermuteC(std::vector<std::vector<int>> &perm) {
             doc.c[l] = inv_perm[l][doc.c[l]];
 }
 
-/*void BaseHLDA::LockDoc(Document &doc, 
-        std::vector<AtomicMatrix<TCount>::Session> &session) {
-    auto locks = GetDocLocks(doc, session);
-    boost::indirect_iterator<decltype(locks)::iterator> first(locks.begin()), 
-        last(locks.end());
-    boost::lock(first, last);
-}
-
-void BaseHLDA::UnlockDoc(Document &doc, 
-        std::vector<AtomicMatrix<TCount>::Session> &session) {
-    auto locks = GetDocLocks(doc, session);
-    for (auto *lock: locks) lock->unlock();
-}
-
-std::vector<std::mutex*> BaseHLDA::GetDocLocks(Document &doc,
-        std::vector<AtomicMatrix<TCount>::Session> &session) {
-    std::vector<std::mutex*> locks;
-    for (int l=0; l<L; l++)
+void BaseHLDA::LockDoc(Document &doc) {
+    for (int l = 0; l < L; l++)
         if (doc.c[l] >= num_instantiated[l])
-            locks.push_back(session[l].GetLock(doc.c[l]));
-    return std::move(locks);
-}*/
+            topic_mutexes[l][doc.c[l]].lock();
+}
+
+void BaseHLDA::UnlockDoc(Document &doc) {
+    for (int l = 0; l < L; l++)
+        if (doc.c[l] >= num_instantiated[l])
+            topic_mutexes[l][doc.c[l]].unlock();
+}
 
 xorshift& BaseHLDA::GetGenerator() {
     return generators[omp_get_thread_num()];
