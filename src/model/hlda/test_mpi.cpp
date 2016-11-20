@@ -16,6 +16,7 @@
 #include "atomic_vector.h"
 #include "dcm_dense.h"
 #include "concurrent_matrix.h"
+#include "matrix.h"
 
 using namespace std;
 
@@ -265,6 +266,8 @@ int main(int argc, char **argv) {
 //        }
 //        MPI_Barrier(MPI_COMM_WORLD);
 //    }
+
+    /*
     {
         ConcurrentMatrix<int> m(2, 1);
         auto PrintMatrix = [&]() {
@@ -304,6 +307,52 @@ int main(int argc, char **argv) {
 
         m.Compress();
         PrintMatrix();
+    }*/ 
+
+    {
+        int num_rows = 100;
+        int num_cols = 1;
+        int num_ops = 1000000;
+        float grow_prob = 0.01;
+        float compress_prob = 0.0001;
+        float inc_prob = 0.8;
+
+        Matrix<int> mat(num_rows, num_cols);
+        ConcurrentMatrix<int> con_mat(num_rows);
+        con_mat.Grow(num_cols);
+
+        std::mt19937 generator;
+        std::uniform_real_distribution<float> u01;
+        int C = num_cols;
+        for (int i = 0; i < num_ops; i++) {
+            float u = u01(generator);
+            if (u < compress_prob)
+                con_mat.Compress();
+            else if (u < grow_prob) {
+                con_mat.Grow(con_mat.GetC() + 1);
+                mat.SetC(++C);
+            } else {
+                auto r = generator() % num_rows;
+                auto c = generator() % C;
+                if (u < inc_prob) {
+                    mat(r, c)++;
+                    con_mat.Inc(r, c);
+                } else {
+                    mat(r, c)--;
+                    con_mat.Dec(r, c);
+                }
+            }
+        }
+
+        std::vector<int> sum(C);
+        // Check that con_mat = mat
+        for (int r = 0; r < num_rows; r++)
+            for (int c = 0; c < C; c++) {
+                LOG_IF(FATAL, con_mat.Get(r, c) != mat(r, c)) << "Incorrect value";
+                sum[c] += mat(r, c);
+            }
+        for (int c = 0; c < C; c++)
+            LOG_IF(FATAL, con_mat.GetSum(c) != sum[c]) << "Incorrect sum";
     }
 
     MPI_Finalize();

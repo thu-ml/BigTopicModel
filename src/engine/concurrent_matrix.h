@@ -24,7 +24,7 @@ public:
         row_shift = bsr(row_capacity);
 
         auto capacity = 1LL<<(base_column_shift+row_shift);
-        LOG(INFO) << "Capacity " << capacity;
+        //LOG(INFO) << "Capacity " << capacity;
         data[0].reset(new std::atomic<T>[capacity]);
         memset(data[0].get(), 0, sizeof(std::atomic<T>)*capacity);
     }
