@@ -23,10 +23,10 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         tree(L, gamma),
         corpus(corpus), L(L), alpha(alpha), beta(beta), gamma(gamma),
         num_iters(num_iters), mc_samples(mc_samples), phi((size_t) L), log_phi((size_t) L),
-        count((size_t) L),
+        count(L, corpus.V, omp_get_max_threads()),
         icount(1, process_size, corpus.V, 1/*K*/, row_partition,
                process_size, process_id),
-        log_normalization(L, 1000), new_topic(true) {
+        new_topic(true) {
 
     std::mt19937_64 rd;
     generators.resize(omp_get_max_threads());
@@ -57,16 +57,6 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         m.SetR(corpus.V, true);
         m.SetC(1, true);
     }
-    for (auto &m: count) {
-        m.SetR(corpus.V);
-        m.SetC(1);
-    }
-    ck.resize((size_t) L);
-    ck[0].EmplaceBack(0);
-
-    for (TLen l = 0; l < L; l++)
-        for (int i = 0; i < 1000; i++)
-            log_normalization(l, i) = logf(beta[l] + i);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
     MPI_Comm_size(MPI_COMM_WORLD, &process_size);
@@ -101,9 +91,8 @@ std::string BaseHLDA::TopWords(int l, int id) {
     TWord V = corpus.V;
     vector<pair<int, int>> rank((size_t) V);
     long long sum = 0;
-    auto count_sess = GetCountSessions();
     for (int v = 0; v < V; v++) {
-        auto c = count_sess[l].Get(v, id);
+        auto c = icount(v, id+icount_offset[l]);
         rank[v] = make_pair(-c, v);
         sum += c;
     }
@@ -115,20 +104,6 @@ std::string BaseHLDA::TopWords(int l, int id) {
         out << -rank[v].first << ' ' << corpus.vocab[rank[v].second] << "\n";
 
     return out.str();
-}
-
-std::vector<AtomicVector<TCount>::Session> BaseHLDA::GetCkSessions() {
-    std::vector<AtomicVector<TCount>::Session> sessions;
-    for (int l=0; l<L; l++)
-        sessions.emplace_back(std::move(ck[l].GetSession()));
-    return sessions;
-}
-
-std::vector<AtomicMatrix<TCount>::Session> BaseHLDA::GetCountSessions() {
-    std::vector<AtomicMatrix<TCount>::Session> sessions;
-    for (int l=0; l<L; l++)
-        sessions.emplace_back(std::move(count[l].GetSession()));
-    return sessions;
 }
 
 void BaseHLDA::PermuteC(std::vector<std::vector<int>> &perm) {
@@ -143,7 +118,7 @@ void BaseHLDA::PermuteC(std::vector<std::vector<int>> &perm) {
             doc.c[l] = inv_perm[l][doc.c[l]];
 }
 
-void BaseHLDA::LockDoc(Document &doc, 
+/*void BaseHLDA::LockDoc(Document &doc, 
         std::vector<AtomicMatrix<TCount>::Session> &session) {
     auto locks = GetDocLocks(doc, session);
     boost::indirect_iterator<decltype(locks)::iterator> first(locks.begin()), 
@@ -164,19 +139,17 @@ std::vector<std::mutex*> BaseHLDA::GetDocLocks(Document &doc,
         if (doc.c[l] >= num_instantiated[l])
             locks.push_back(session[l].GetLock(doc.c[l]));
     return std::move(locks);
-}
+}*/
 
 xorshift& BaseHLDA::GetGenerator() {
     return generators[omp_get_thread_num()];
 }
 
 void BaseHLDA::AllBarrier() {
-    std::vector<std::thread> threads;
-    for (auto &v: ck) threads.push_back(std::thread([&](){v.Barrier();}));
-    for (auto &m: count) threads.push_back(std::thread([&](){m.Barrier();}));
-    threads.push_back(std::thread([&](){tree.Barrier();}));
-    for (auto &thr: threads)
-        thr.join();
+    std::thread count_thread([&](){count.Compress();});
+    std::thread tree_thread([&](){tree.Barrier();});
+    count_thread.join();
+    tree_thread.join();
 }
 
 void BaseHLDA::UpdateICount() {
@@ -215,8 +188,8 @@ void BaseHLDA::UpdateICount() {
 #pragma omp parallel for
         for (int r = 0; r < corpus.V; r++)
             for (int c = ret.num_instantiated[l]; c < ret.num_nodes[l]; c++)
-                count[l].Set(r, c, icount(r, c+icount_offset[l]));
+                count.Set(l, r, c, icount(r, c+icount_offset[l]));
         for (int c = ret.num_instantiated[l]; c < ret.num_nodes[l]; c++)
-            ck[l].Set(c, ck_dense[c+icount_offset[l]]);
+            count.SetSum(l, c, ck_dense[c+icount_offset[l]]);
     }
 }

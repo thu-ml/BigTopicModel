@@ -11,6 +11,7 @@
 #include "utils.h"
 #include "mkl_vml.h"
 #include "global_lock.h"
+#include <omp.h>
 
 using namespace std;
 
@@ -123,42 +124,39 @@ void CollapsedSampling::SampleZ(Document &doc,
     std::vector<TCount> cdl((size_t) L);
     for (auto l: doc.z) cdl[l]++;
 
-    auto ck_sess = GetCkSessions();
-    auto count_sess = GetCountSessions();
     auto tid = omp_get_thread_num();
-    LockDoc(doc, count_sess);
+    //LockDoc(doc, count_sess); //TODO lockdoc
     auto &generator = GetGenerator();
     for (TLen n = 0; n < N; n++) {
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
 
         if (decrease_count) {
-            count_sess[l].Dec(v, pos[l]);
-            ck_sess[l].Dec((size_t)pos[l]);
+            count.Dec(tid, l, v, pos[l]);
             --cdl[l];
         }
 
         for (TTopic i = 0; i < L; i++)
             prob[i] = (cdl[i] + alpha[i]) *
-                      (count_sess[i].Get(v, pos[i]) + beta[i]) /
-                      (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
+                      (count.Get(i, v, pos[i]) + beta[i]) /
+                      (count.GetSum(i, pos[i]) + beta[i] * corpus.V);
 
         l = (TTopic)DiscreteSample(prob.begin(), prob.end(), generator);
 
         if (increase_count) {
-            count_sess[l].Inc(v, pos[l]);
-            ck_sess[l].Inc((size_t)pos[l]);
+            count.Inc(tid, l, v, pos[l]);
             ++cdl[l];
         }
         doc.z[n] = l;
     }
-    UnlockDoc(doc, count_sess);
+    //UnlockDoc(doc, count_sess);
 
     /*double sum = 0;
     for (TLen l = 0; l < L; l++)
         sum += (doc.theta[l] = cdl[l] + alpha[l]);
     for (TLen l = 0; l < L; l++)
         doc.theta[l] /= sum;*/
+    count.Publish(tid);
 }
 
 void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
@@ -268,13 +266,10 @@ TProb CollapsedSampling::WordScoreCollapsed(Document &doc, int l, int offset, in
     auto begin = doc.BeginLevel(l);
     auto end = doc.EndLevel(l);
 
-    auto local_count_sess = count[l].GetSession();
-    auto ck_sess = ck[l].GetSession();
+    const auto &local_count = count.GetMatrix(l);
 
     // Make sure that we do not access outside the boundary
-    int actual_num = std::min(num, 
-                              std::min(local_count_sess.GetC(), 
-                              static_cast<int>(ck_sess.Size())) - offset);
+    int actual_num = std::min(num, static_cast<int>(local_count.GetC()) - offset); 
     for (int k = actual_num; k < num; k++) 
         result[k] = -1e20f;
 
@@ -283,7 +278,7 @@ TProb CollapsedSampling::WordScoreCollapsed(Document &doc, int l, int offset, in
         auto v = doc.reordered_w[i];
 
         for (TTopic k = 0; k < actual_num; k++)
-            log_work[k] = (TProb) (local_count_sess.Get(v, offset+k) + c_offset + b);
+            log_work[k] = (TProb) (local_count.Get(v, offset+k) + c_offset + b);
         log_work.back() = c_offset + b;
 
         // VML ln
@@ -297,8 +292,8 @@ TProb CollapsedSampling::WordScoreCollapsed(Document &doc, int l, int offset, in
 
     auto w_count = end - begin;
     for (TTopic k = 0; k < actual_num; k++)
-        result[k] -= lgamma(ck_sess.Get(offset+k) + b_bar + w_count) -
-                lgamma(ck_sess.Get(offset+k) + b_bar);
+        result[k] -= lgamma(local_count.GetSum(offset+k) + b_bar + w_count) -
+                lgamma(local_count.GetSum(offset+k) + b_bar);
 
     empty_result -= lgamma(b_bar + w_count) - lgamma(b_bar);
     return empty_result;
@@ -326,10 +321,6 @@ TProb CollapsedSampling::WordScoreInstantiated(Document &doc, int l, int num, TP
 void CollapsedSampling::SamplePhi() {
     auto perm = tree.Compress();
     PermuteC(perm);
-    for (TLen l = 0; l < L; l++) {
-        count[l].PermuteColumns(perm[l]);
-        ck[l].Permute(perm[l]);
-    }
     UpdateICount();
 }
 
@@ -379,15 +370,14 @@ double CollapsedSampling::Perplexity() {
 }
 
 void CollapsedSampling::Check() {
-    auto ck_sess = GetCkSessions();
-    auto count_sess = GetCountSessions();
     int sum = 0;
     for (TLen l = 0; l < L; l++) {
-        for (TTopic k = 0; k < count_sess[l].GetC(); k++)
+        const auto &local_count = count.GetMatrix(l);
+        for (TTopic k = 0; k < local_count.GetC(); k++)
             for (TWord v = 0; v < corpus.V; v++) {
-                if (count_sess[l].Get(v, k) < 0) // TODO
+                if (local_count.Get(v, k) < 0) // TODO
                     throw runtime_error("Error!");
-                sum += count_sess[l].Get(v, k);
+                sum += local_count.Get(v, k);
             }
     }
     int local_size = 0;
@@ -429,12 +419,13 @@ void CollapsedSampling::Check() {
     std::vector<Matrix<int>> global_count2(L);
     std::vector<std::vector<int>> global_ck2(L);
     for (int l=0; l<L; l++) {
+        const auto &local_count = count.GetMatrix(l);
         count2[l].SetR(corpus.V);
-        count2[l].SetC(count_sess[l].GetC());
-        ck2[l].resize(count_sess[l].GetC());
+        count2[l].SetC(local_count.GetC());
+        ck2[l].resize(local_count.GetC());
         global_count2[l].SetR(corpus.V);
-        global_count2[l].SetC(count_sess[l].GetC());
-        global_ck2[l].resize(count_sess[l].GetC());
+        global_count2[l].SetC(local_count.GetC());
+        global_ck2[l].resize(local_count.GetC());
     }
     for (auto &doc: docs) if (doc.initialized) {
         for (size_t n = 0; n < doc.z.size(); n++) {
@@ -466,18 +457,19 @@ void CollapsedSampling::Check() {
 
     bool if_error = false;
     for (int l=0; l<L; l++) {
+        const auto &local_count = count.GetMatrix(l);
         for (int r = 0; r < corpus.V; r++)
-            for (int c = ret.num_instantiated[l]; c < count_sess[l].GetC(); c++)
-                if (count_sess[l].Get(r, c) != global_count2[l](r, c)) {
+            for (int c = ret.num_instantiated[l]; c < local_count.GetC(); c++)
+                if (local_count.Get(r, c) != global_count2[l](r, c)) {
                     LOG(WARNING) << "Count error at " 
                               << l << "," << r << "," << c
                               << " expected " << global_count2[l](r, c) 
-                              << " get " << count_sess[l].Get(r, c);
+                              << " get " << local_count.Get(r, c);
                     if_error = true;
                 }
 
         for (int r = 0; r < corpus.V; r++)
-            for (int c = 0; c < count_sess[l].GetC(); c++) 
+            for (int c = 0; c < local_count.GetC(); c++) 
                 if (icount(r, c+icount_offset[l]) != global_count2[l](r, c)) {
                     LOG(WARNING) << "ICount error at " 
                               << l << "," << r << "," << c
@@ -486,12 +478,12 @@ void CollapsedSampling::Check() {
                     if_error = true;
                 }
 
-        for (int c = ret.num_instantiated[l]; c < count_sess[l].GetC(); c++) 
-            if (ck_sess[l].Get(c) != global_ck2[l][c]) {
+        for (int c = ret.num_instantiated[l]; c < local_count.GetC(); c++) 
+            if (local_count.GetSum(c) != global_ck2[l][c]) {
                 LOG(WARNING) << "Ck error at " 
                           << l << "," << c
                           << " expected " << global_ck2[l][c]
-                          << " get " << ck_sess[l].Get(c);
+                          << " get " << local_count.GetSum(c);
                 if_error = true;
             }
     }
@@ -504,19 +496,11 @@ void CollapsedSampling::Check() {
 
 void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     // Update number of topics
-{
-    global_mutex.lock();
-    for (TLen l = 0; l < L; l++) {
-        count[l].IncreaseC(doc.c[l] + 1);
-        ck[l].IncreaseSize((size_t)(doc.c[l] + 1));
-    }
-    global_mutex.unlock();
-}
-
     auto tid = omp_get_thread_num();
-    auto ck_sess = GetCkSessions();
-    auto count_sess = GetCountSessions();
-    LockDoc(doc, count_sess);
+    for (TLen l = 0; l < L; l++)
+        count.Grow(tid, l, doc.c[l] + 1);
+
+    //LockDoc(doc, count_sess); //TODO lockDoc and unlockDoc
     TLen N = (TLen) doc.z.size();
     if (delta == 1)
         for (TLen n = 0; n < N; n++) {
@@ -524,8 +508,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
             TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
             if (k >= num_instantiated[l]) {
-                count_sess[l].Inc(v, k);
-                ck_sess[l].Inc(k);
+                count.Inc(tid, l, v, k);
             }
         }
     else if (delta == -1)
@@ -534,11 +517,12 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
             TTopic k = (TTopic)doc.c[l];
             TWord v = doc.w[n];
             if (k >= num_instantiated[l]) {
-                count_sess[l].Dec(v, k);
-                ck_sess[l].Dec(k);
+                count.Dec(tid, l, v, k);
             }
         }
     else
         throw std::runtime_error("Invalid delta");
-    UnlockDoc(doc, count_sess);
+    //UnlockDoc(doc, count_sess);
+
+    count.Publish(tid);
 }

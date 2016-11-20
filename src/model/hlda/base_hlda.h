@@ -16,9 +16,8 @@
 #include "xorshift.h"
 #include "types.h"
 #include "document.h"
-#include "atomic_matrix.h"
-#include "atomic_vector.h"
 #include "dcm_dense.h"
+#include "adlm.h"
 
 class Corpus;
 
@@ -38,18 +37,14 @@ public:
 protected:
     std::string TopWords(int l, int id);
 
-    std::vector<AtomicVector<TCount>::Session> GetCkSessions();
-
-    std::vector<AtomicMatrix<TCount>::Session> GetCountSessions();
-
     void PermuteC(std::vector<std::vector<int>> &perm);
 
-    void LockDoc(Document &doc,
+    /*void LockDoc(Document &doc,
             std::vector<AtomicMatrix<TCount>::Session> &session);
     void UnlockDoc(Document &doc,
             std::vector<AtomicMatrix<TCount>::Session> &session);
     std::vector<std::mutex*> GetDocLocks(Document &doc, 
-            std::vector<AtomicMatrix<TCount>::Session> &session);
+            std::vector<AtomicMatrix<TCount>::Session> &session);*/
 
     void AllBarrier();
 
@@ -74,22 +69,17 @@ protected:
     std::vector<Matrix<TProb> > phi;        // Depth * V * K
     std::vector<Matrix<TProb> > log_phi;
 
-    std::vector<AtomicMatrix<TCount>> count;
+    ADLM count;
 
     DCMDense<TCount> icount;
     TCount *ck_dense;
     std::vector<int> icount_offset;
 
-    std::vector<AtomicVector<TCount>> ck;
-
     std::vector<int> num_instantiated;
-
-    Matrix<TProb> log_normalization;
 
     bool new_topic;
 
     std::mutex model_mutex;
 };
-
 
 #endif //HLDA_BASEHLDA_H

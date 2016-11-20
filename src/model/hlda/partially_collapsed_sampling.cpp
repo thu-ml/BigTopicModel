@@ -103,27 +103,24 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
 
     // TODO: the first few topics will have a huge impact...
     // Read out all the required data
-    auto ck_sess = GetCkSessions();
-    auto count_sess = GetCountSessions();
-    LockDoc(doc, count_sess);
+    auto tid = omp_get_thread_num();
+    //LockDoc(doc, count_sess); TODO lockdoc
 
     auto &generator = GetGenerator();
     for (size_t n = 0; n < doc.z.size(); n++) {
         TWord v = doc.w[n];
         TTopic l = doc.z[n];
         if (decrease_count) {
-            if (pos[l] >= num_instantiated[l]) {
-                count_sess[l].Dec(v, pos[l]);
-                ck_sess[l].Dec((size_t)pos[l]);
-            }
+            if (pos[l] >= num_instantiated[l])
+                count.Dec(tid, l, v, pos[l]);
             --cdl[l];
         }
 
         for (TLen i = 0; i < L; i++)
             if (is_collapsed[i])
                 prob[i] = (cdl[i] + alpha[i]) *
-                          (count_sess[i].Get(v, pos[i]) + beta[i]) /
-                          (ck_sess[i].Get((size_t)pos[i]) + beta[i] * corpus.V);
+                          (count.Get(i, v, pos[i]) + beta[i]) /
+                          (count.GetSum(i, pos[i]) + beta[i] * corpus.V);
             else {
                 prob[i] = (alpha[i] + cdl[i]) * phi[i](v, pos[i]);
             }
@@ -132,19 +129,18 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
         doc.z[n] = l;
 
         if (increase_count) {
-            if (pos[l] >= num_instantiated[l]) {
-                count_sess[l].Inc(v, pos[l]);
-                ck_sess[l].Inc((size_t)pos[l]);
-            }
+            if (pos[l] >= num_instantiated[l])
+                count.Inc(tid, l, v, pos[l]);
             ++cdl[l];
         }
     }
-    UnlockDoc(doc, count_sess);
+    //UnlockDoc(doc, count_sess);
     /*double sum = 0;
     for (TLen l = 0; l < L; l++)
         sum += (doc.theta[l] = cdl[l] + alpha[l]);
     for (TLen l = 0; l < L; l++)
         doc.theta[l] /= sum;*/
+    count.Publish(tid);
 }
 
 void PartiallyCollapsedSampling::SamplePhi() {

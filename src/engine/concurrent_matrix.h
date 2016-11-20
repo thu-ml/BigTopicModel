@@ -65,7 +65,7 @@ public:
         At(r, c).store(value);
     }
 
-    T GetSum(size_t c) {
+    T GetSum(size_t c) const {
         return At(num_rows, c).load(std::memory_order_relaxed);
     }
 
@@ -88,7 +88,7 @@ public:
         At(num_rows, c)--;
     }
 
-    size_t GetC() { 
+    size_t GetC() const { 
         return num_columns; 
     }
 
