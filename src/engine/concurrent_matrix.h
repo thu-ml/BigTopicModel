@@ -29,6 +29,16 @@ public:
         memset(data[0].get(), 0, sizeof(std::atomic<T>)*capacity);
     }
 
+    ConcurrentMatrix(ConcurrentMatrix &&from) noexcept:
+        num(from.num), row_shift(from.row_shift),
+        base_column_shift(from.base_column_shift),
+        num_rows(from.num_rows),
+        num_columns(from.num_columns),
+        column_capacity(from.column_capacity),
+        data(std::move(from.data))
+    {
+    }
+
     void Grow(size_t new_num_columns) {
         std::lock_guard<std::mutex> guard(mutex);
         if (new_num_columns > column_capacity) {
@@ -39,25 +49,38 @@ public:
                 memset(data[num].get(), 0, sizeof(std::atomic<T>)*segment_size);
                 column_capacity += 1LL << (base_column_shift+num);
                 num++;
-                LOG(INFO) << "Resized " << column_capacity << " " 
-                          << num << " " << segment_size;
+                //LOG(INFO) << "Resized " << column_capacity << " " 
+                //          << num << " " << segment_size;
             }
         }
         if (new_num_columns > num_columns)
             num_columns = new_num_columns;
     }
 
-    T Get(size_t r, size_t c) {
+    T Get(size_t r, size_t c) const {
         return At(r, c).load(std::memory_order_relaxed);
+    }
+
+    void Set(size_t r, size_t c, T value) {
+        At(r, c).store(value);
     }
 
     T GetSum(size_t c) {
         return At(num_rows, c).load(std::memory_order_relaxed);
     }
 
+    void SetSum(size_t c, T value) {
+        At(num_rows, c).store(value);
+    }
+
     void Inc(size_t r, size_t c) {
         At(r, c)++;
         At(num_rows, c)++;
+    }
+
+    void Inc(size_t r, size_t c, T value) {
+        At(r, c) += value;
+        At(num_rows, c) += value;
     }
 
     void Dec(size_t r, size_t c) {
@@ -98,13 +121,13 @@ public:
             base_column_shift = bsr(column_capacity);
             for (int i = 1; i < 64; i++)
                 data[i].reset(nullptr);
-            LOG(INFO) << "Compressed " << base_column_shift << " " << column_capacity << " " << segment_size;
+            //LOG(INFO) << "Compressed " << base_column_shift << " " << column_capacity << " " << segment_size;
             num = 1;
         }
     }
 
 private:
-    std::atomic<T>& At(size_t r, size_t c) {
+    std::atomic<T>& At(size_t r, size_t c) const {
         if (c < (1LL<<base_column_shift))
             return data[0][(r<<base_column_shift) + c];
         else {

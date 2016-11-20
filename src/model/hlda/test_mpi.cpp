@@ -17,6 +17,7 @@
 #include "dcm_dense.h"
 #include "concurrent_matrix.h"
 #include "matrix.h"
+#include "adlm.h"
 
 using namespace std;
 
@@ -267,93 +268,109 @@ int main(int argc, char **argv) {
 //        MPI_Barrier(MPI_COMM_WORLD);
 //    }
 
-    /*
-    {
-        ConcurrentMatrix<int> m(2, 1);
-        auto PrintMatrix = [&]() {
-            cout << "Matrix of " << m.GetC() << " columns." << endl;
-            for (int r = 0; r < 2; r++) {
-                for (int c = 0; c < m.GetC(); c++)
-                    cout << m.Get(r, c) << ' ';
-                cout << endl;
-            }
-            cout << "Sum"  << endl;
-            for (int c = 0; c < m.GetC(); c++)
-                cout << m.GetSum(c) << ' ';
-            cout << endl;
-        };
+    //{
+    //    ADLM m(1, 2, 1, 1);
+    //    auto PrintMatrix = [&]() {
+    //        m.Barrier();
+    //        for (int p = 0; p < process_size; p++) {
+    //            if (p == process_id) {
+    //                cout << "Node " << p << " Matrix of " 
+    //                    << m.GetC(0) << " columns." << endl;
+    //                for (int r = 0; r < 2; r++) {
+    //                    for (int c = 0; c < m.GetC(0); c++)
+    //                        cout << m.Get(0, r, c) << ' ';
+    //                    cout << endl;
+    //                }
+    //                cout << "Sum"  << endl;
+    //                for (int c = 0; c < m.GetC(0); c++)
+    //                    cout << m.GetSum(0, c) << ' ';
+    //                cout << endl;
+    //            }
+    //            MPI_Barrier(MPI_COMM_WORLD);
+    //        }
+    //    };
 
-        m.Grow(3);
-        m.Inc(0, 1); 
-        m.Inc(1, 2);
-        m.Inc(0, 1);
-        PrintMatrix();
+    //    m.Grow(0, 0, 3);
+    //    m.Inc(0, 0, 0, 1); 
+    //    m.Inc(0, 0, 1, 2);
+    //    m.Inc(0, 0, 0, 1);
+    //    PrintMatrix();
 
-        m.Grow(7);
-        m.Inc(0, 4);
-        m.Inc(0, 6);
-        PrintMatrix();
+    //    m.Grow(0, 0, 7);
+    //    m.Inc(0, 0, 0, 4);
+    //    m.Inc(0, 0, 0, 6);
+    //    PrintMatrix();
 
-        m.Compress();
-        PrintMatrix();
+    //    m.Compress();
+    //    PrintMatrix();
 
-        m.Grow(10);
-        m.Inc(1, 9);
-        PrintMatrix();
+    //    m.Grow(0, 0, 10);
+    //    m.Inc(0, 0, 1, 9);
+    //    PrintMatrix();
 
-        m.Grow(20);
-        m.Inc(1, 19);
-        PrintMatrix();
+    //    m.Grow(0, 0, 20);
+    //    m.Inc(0, 0, 1, 19);
+    //    PrintMatrix();
 
-        m.Compress();
-        PrintMatrix();
-    }*/ 
+    //    m.Compress();
+    //    PrintMatrix();
+    //}
 
-    {
-        int num_rows = 100;
-        int num_cols = 1;
-        int num_ops = 1000000;
-        float grow_prob = 0.01;
-        float compress_prob = 0.0001;
-        float inc_prob = 0.8;
+    //{
+    //    int num_rows = 100;
+    //    int num_cols = 1;
+    //    int num_ops = 1000000;
+    //    float grow_prob = 0.01;
+    //    float compress_prob = 0.0001;
+    //    float inc_prob = 0.8;
 
-        Matrix<int> mat(num_rows, num_cols);
-        ConcurrentMatrix<int> con_mat(num_rows);
-        con_mat.Grow(num_cols);
+    //    Matrix<int> mat(num_rows, num_cols);
+    //    ADLM con_mat(1, num_rows, 1);
+    //    if (process_id == 0)
+    //        con_mat.Grow(0, 0, num_cols);
 
-        std::mt19937 generator;
-        std::uniform_real_distribution<float> u01;
-        int C = num_cols;
-        for (int i = 0; i < num_ops; i++) {
-            float u = u01(generator);
-            if (u < compress_prob)
-                con_mat.Compress();
-            else if (u < grow_prob) {
-                con_mat.Grow(con_mat.GetC() + 1);
-                mat.SetC(++C);
-            } else {
-                auto r = generator() % num_rows;
-                auto c = generator() % C;
-                if (u < inc_prob) {
-                    mat(r, c)++;
-                    con_mat.Inc(r, c);
-                } else {
-                    mat(r, c)--;
-                    con_mat.Dec(r, c);
-                }
-            }
-        }
+    //    std::mt19937 generator;
+    //    std::uniform_real_distribution<float> u01;
+    //    int C = num_cols;
+    //    for (int i = 0; i < num_ops; i++) {
+    //        float u = u01(generator);
+    //        if (u < compress_prob) {
+    //            con_mat.Publish(0);
+    //        }
+    //        else if (u < grow_prob) {
+    //            ++C;
+    //            if (process_id == 0)
+    //                con_mat.Grow(0, 0, C);
+    //            mat.SetC(C);
+    //        } else {
+    //            auto r = generator() % num_rows;
+    //            auto c = generator() % C;
+    //            if (u < inc_prob) {
+    //                mat(r, c)++;
+    //                if (process_id == 0) 
+    //                    con_mat.Inc(0, 0, r, c);
+    //            } else {
+    //                mat(r, c)--;
+    //                if (process_id == 0)
+    //                    con_mat.Dec(0, 0, r, c);
+    //            }
+    //        }
+    //    }
+    //    con_mat.Publish(0);
+    //    con_mat.Barrier();
 
-        std::vector<int> sum(C);
-        // Check that con_mat = mat
-        for (int r = 0; r < num_rows; r++)
-            for (int c = 0; c < C; c++) {
-                LOG_IF(FATAL, con_mat.Get(r, c) != mat(r, c)) << "Incorrect value";
-                sum[c] += mat(r, c);
-            }
-        for (int c = 0; c < C; c++)
-            LOG_IF(FATAL, con_mat.GetSum(c) != sum[c]) << "Incorrect sum";
-    }
+    //    std::vector<int> sum(C);
+    //    // Check that con_mat = mat
+    //    for (int r = 0; r < num_rows; r++)
+    //        for (int c = 0; c < C; c++) {
+    //            LOG_IF(FATAL, con_mat.Get(0, r, c) != mat(r, c)) 
+    //                << "Incorrect value at (" << r << ", " << c
+    //                << ") expected " << mat(r, c) << " got " << con_mat.Get(0, r, c);
+    //            sum[c] += mat(r, c);
+    //        }
+    //    for (int c = 0; c < C; c++)
+    //        LOG_IF(FATAL, con_mat.GetSum(0, c) != sum[c]) << "Incorrect sum";
+    //}
 
     MPI_Finalize();
 }
