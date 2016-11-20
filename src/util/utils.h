@@ -160,4 +160,8 @@ std::ostream& operator << (std::ostream &out, const std::vector<T> &v) {
     return out;
 }
 
+int bsr(int x);
+
+#define lowbit(x) ((x)&(-x))
+
 #endif

@@ -15,6 +15,7 @@
 #include <atomic_matrix.h>
 #include "atomic_vector.h"
 #include "dcm_dense.h"
+#include "concurrent_vector.h"
 
 using namespace std;
 
@@ -238,31 +239,56 @@ int main(int argc, char **argv) {
 //        auto sess = v.GetSession();
 //        auto sess2 = std::move(sess);
 //    }
-    DCMDense<int> dcm(1, process_size, 5, 1, row_partition, process_size, process_id);
-    dcm.resize(5, 3);
-    if (process_id == 0) {
-        dcm.increase(3, 1);
-        dcm.increase(2, 0);
-    } else {
-        dcm.increase(1, 1);
-    }
-    dcm.sync();
-    for (int p = 0; p < process_size; p++) {
-        if (p == process_id) {
-            cout << "Node " << p << endl;
-            for (int r = 0; r < 5; r++) {
-                auto *row = dcm.row(r);
-                for (int c = 0; c < 3; c++)
-                    cout << row[c] << ' ';
-                cout << endl;
-            }
-            cout << "Marginal" << endl;
-            auto *m = dcm.rowMarginal();
-            for (int c = 0; c < 3; c++)
-                cout << m[c] << ' ';
-            cout << endl;
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
+//    DCMDense<int> dcm(1, process_size, 5, 1, row_partition, process_size, process_id);
+//    dcm.resize(5, 3);
+//    if (process_id == 0) {
+//        dcm.increase(3, 1);
+//        dcm.increase(2, 0);
+//    } else {
+//        dcm.increase(1, 1);
+//    }
+//    dcm.sync();
+//    for (int p = 0; p < process_size; p++) {
+//        if (p == process_id) {
+//            cout << "Node " << p << endl;
+//            for (int r = 0; r < 5; r++) {
+//                auto *row = dcm.row(r);
+//                for (int c = 0; c < 3; c++)
+//                    cout << row[c] << ' ';
+//                cout << endl;
+//            }
+//            cout << "Marginal" << endl;
+//            auto *m = dcm.rowMarginal();
+//            for (int c = 0; c < 3; c++)
+//                cout << m[c] << ' ';
+//            cout << endl;
+//        }
+//        MPI_Barrier(MPI_COMM_WORLD);
+//    }
+    {
+        ConcurrentVector<int> v(1);
+        v.Inc(1); 
+        cout << "Data" << endl;
+        for (int i = 0; i < 2; i++)
+            cout << v.Get(i) << endl;
+        v.Increase(3);
+        v.Inc(0);
+        v.Inc(1);
+        v.Inc(2);
+        v.Increase(7);
+        v.Inc(4);
+        v.Inc(6);
+        v.Compress();
+
+        cout << "Data" << endl;
+        for (int i = 0; i < 7; i++)
+            cout << v.Get(i) << endl;
+
+        v.Increase(8);
+        v.Inc(7);
+        cout << "New" << endl;
+        for (int i = 0; i < 8; i++)
+            cout << v.Get(i) << endl;
     }
 
     MPI_Finalize();

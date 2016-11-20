@@ -17,3 +17,8 @@ extern double LogSum(double log_a, double log_b) {
     if (log_a > log_b) std::swap(log_a, log_b);
     return log_b + log(exp(log_a - log_b) + 1);
 }
+
+int bsr(int x)
+{
+    return _bit_scan_reverse(x);
+}
