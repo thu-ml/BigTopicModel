@@ -26,9 +26,7 @@ include_directories(${MPI_INCLUDE_PATH})
 include_directories(${ZLIB_INCLUDE_PATH})
 include_directories(third_party/glog/build/include)
 include_directories(third_party/gflags/build/include)
-include_directories(third_party/boost/build/include)
 include_directories(${googletest_SOURCE_DIR}/include ${googletest_SOURCE_DIR})
-link_directories(${BigTopicModel_SOURCE_DIR}/third_party/boost/build/lib)
 
 # Do we need to collect all header files together into a single directory?
 include_directories(src)

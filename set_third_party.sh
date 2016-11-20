@@ -38,16 +38,6 @@ if [ ! -d "$CUR/third_party" ]; then
 		unzip release-1.8.0.zip
 		ln -s googletest-release-1.8.0 googletest
 	fi
-	if [ ! -d "$DEP/boost" ]; then
-		wget http://ml.cs.tsinghua.edu.cn/~jianfei/static/boost_1_62_0.tar.bz2
-		tar jxf boost_1_62_0.tar.bz2
-		ln -s boost_1_62_0 boost
-		pushd boost
-		mkdir -p build
-		./bootstrap.sh --prefix=$PWD/build
-		./b2 -j10 install
-		popd
-	fi
 	if [ ! -d "$DEP/dSFMT" ]; then
 		wget https://github.com/MersenneTwister-Lab/dSFMT/archive/c6bf8a8dab3710b7abd86c4b68d0e6b4aa5e6db1.zip
 		unzip c6bf8a8dab3710b7abd86c4b68d0e6b4aa5e6db1.zip

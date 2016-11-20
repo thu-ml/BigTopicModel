@@ -12,8 +12,6 @@
 #include <chrono>
 #include "glog/logging.h"
 #include <sstream>
-#include <atomic_matrix.h>
-#include "atomic_vector.h"
 #include "dcm_dense.h"
 #include "concurrent_matrix.h"
 #include "matrix.h"
