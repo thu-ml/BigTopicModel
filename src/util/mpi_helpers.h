@@ -805,13 +805,13 @@ public:
             MPI_Status status;
             int e;
             if (recv_from == -1) {
-                e = MPI_Send(buf_out, size, MPI_CHAR, send_to, code, MPI_COMM_WORLD);
+                e = MPI_Send((void*)buf_out, size, MPI_CHAR, send_to, code, MPI_COMM_WORLD);
             }
             else if (send_to == -1) {
                 e = MPI_Recv(buf_in, size, MPI_CHAR, recv_from, code, MPI_COMM_WORLD, &status);
             }
             else {
-                e = MPI_Sendrecv(buf_out, size, MPI_CHAR, send_to, code,
+                e = MPI_Sendrecv((void*)buf_out, size, MPI_CHAR, send_to, code,
                         buf_in, size, MPI_CHAR, recv_from, code, MPI_COMM_WORLD, &status);
             }
             assert(e == MPI_SUCCESS);
