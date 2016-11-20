@@ -15,7 +15,7 @@
 #include <atomic_matrix.h>
 #include "atomic_vector.h"
 #include "dcm_dense.h"
-#include "concurrent_vector.h"
+#include "concurrent_matrix.h"
 
 using namespace std;
 
@@ -266,29 +266,44 @@ int main(int argc, char **argv) {
 //        MPI_Barrier(MPI_COMM_WORLD);
 //    }
     {
-        ConcurrentVector<int> v(1);
-        v.Inc(1); 
-        cout << "Data" << endl;
-        for (int i = 0; i < 2; i++)
-            cout << v.Get(i) << endl;
-        v.Increase(3);
-        v.Inc(0);
-        v.Inc(1);
-        v.Inc(2);
-        v.Increase(7);
-        v.Inc(4);
-        v.Inc(6);
-        v.Compress();
+        ConcurrentMatrix<int> m(2, 1);
+        auto PrintMatrix = [&]() {
+            cout << "Matrix of " << m.GetC() << " columns." << endl;
+            for (int r = 0; r < 2; r++) {
+                for (int c = 0; c < m.GetC(); c++)
+                    cout << m.Get(r, c) << ' ';
+                cout << endl;
+            }
+            cout << "Sum"  << endl;
+            for (int c = 0; c < m.GetC(); c++)
+                cout << m.GetSum(c) << ' ';
+            cout << endl;
+        };
 
-        cout << "Data" << endl;
-        for (int i = 0; i < 7; i++)
-            cout << v.Get(i) << endl;
+        m.Grow(3);
+        m.Inc(0, 1); 
+        m.Inc(1, 2);
+        m.Inc(0, 1);
+        PrintMatrix();
 
-        v.Increase(8);
-        v.Inc(7);
-        cout << "New" << endl;
-        for (int i = 0; i < 8; i++)
-            cout << v.Get(i) << endl;
+        m.Grow(7);
+        m.Inc(0, 4);
+        m.Inc(0, 6);
+        PrintMatrix();
+
+        m.Compress();
+        PrintMatrix();
+
+        m.Grow(10);
+        m.Inc(1, 9);
+        PrintMatrix();
+
+        m.Grow(20);
+        m.Inc(1, 19);
+        PrintMatrix();
+
+        m.Compress();
+        PrintMatrix();
     }
 
     MPI_Finalize();
