@@ -5,9 +5,7 @@
 #include <iostream>
 #include <mpi.h>
 #include "glog/logging.h"
-#include "parallel_tree.h"
 #include "distributed_tree.h"
-#include "distributed_tree2.h"
 #include "mpi_helpers.h"
 #include <random>
 using namespace std;
@@ -30,91 +28,91 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &process_size);
     LOG(INFO) << process_id << ' ' << process_size;
 
-    {
-        int num_layers = 5;
-        int num_documents = 1000;
-
-        std::vector<double> gamma{1.0, 0.5, 0.25, 0.1};
-        ParallelTree tree(5, gamma);
-        DistributedTree2 d_tree(5, gamma);
-
-        std::mt19937 generator;
-        // Add nodes on node 0
-        std::vector<Operation> init_operations;
-        std::vector<Operation> operations;
-        std::vector<size_t> recv_offsets;
-        std::vector<Operation> global_operations;
-        for (int d = 0; d < num_documents; d++) {
-            auto ret = tree.GetTree();
-            auto tree_size = ret.nodes.size();
-            Operation op{0, static_cast<int>(generator() % tree_size)};
-            tree.IncNumDocs(op.id);
-            init_operations.push_back(op);
-        }
-
-        // Generate the other operations
-        generator.seed(process_id);
-        auto ret = tree.GetTree();
-        auto tree_size = tree.GetTree().nodes.size();
-        for (int d = 0; d < num_documents; d++) {
-            Operation op;
-            while (1) {
-                op = Operation{static_cast<int>(generator() % 2),
-                               static_cast<int>(generator() % tree_size)};
-                if (ret.nodes[op.id].depth == 4) break;
-            }
-            operations.push_back(op);
-        };
-
-        // Gather operations
-        global_operations.resize(num_documents * process_size);
-        MPI_Allgather(operations.data(), num_documents * 2, MPI_INT,
-            global_operations.data(), num_documents * 2, MPI_INT,
-            MPI_COMM_WORLD);
-
-        // Apply global_operations to tree
-        for (auto &op: global_operations)
-            if (op.type == 0)
-                tree.IncNumDocs(op.id);
-            else
-                tree.DecNumDocs(op.id);
-
-        if (process_id == 0) {
-            for (auto &op: init_operations) {
-                //LOG(INFO) << op.id;
-                d_tree.IncNumDocs(op.id);
-            }
-        }
-        d_tree.Barrier();
-
-        for (auto &op: operations)
-            if (op.type == 0)
-                d_tree.IncNumDocs(op.id);
-            else
-                d_tree.DecNumDocs(op.id);
-        d_tree.Barrier();
-
-        // Compare tree and d_tree
-        /*if (process_id == 0) {
-            for (auto &op: global_operations)
-                LOG(INFO) << op.type << " " << op.id;
-
-            LOG(INFO) << "\n" << tree.GetTree();
-            LOG(INFO) << "\n" << d_tree.GetTree();
-        }*/
-
-        auto ret1 = tree.GetTree();
-        auto ret2 = d_tree.GetTree();
-        LOG_IF(FATAL, ret1.nodes.size() != ret2.nodes.size()) << "Size mismatch";
-        for (size_t i=0; i<ret1.nodes.size(); i++) {
-            auto node1 = ret1.nodes[i];
-            auto node2 = ret2.nodes[i];
-            LOG_IF(FATAL, node1.parent != node2.parent_id) << "Parent mismatch";
-            LOG_IF(FATAL, node1.num_docs != node2.num_docs) << "Num docs mismatch";
-            LOG_IF(FATAL, node1.pos != node2.pos) << "pos mismatch";
-            LOG_IF(FATAL, node1.depth != node2.depth) << "depth mismatch";
-        }
-    }
+//    {
+//        int num_layers = 5;
+//        int num_documents = 1000;
+//
+//        std::vector<double> gamma{1.0, 0.5, 0.25, 0.1};
+//        ParallelTree tree(5, gamma);
+//        DistributedTree2 d_tree(5, gamma);
+//
+//        std::mt19937 generator;
+//        // Add nodes on node 0
+//        std::vector<Operation> init_operations;
+//        std::vector<Operation> operations;
+//        std::vector<size_t> recv_offsets;
+//        std::vector<Operation> global_operations;
+//        for (int d = 0; d < num_documents; d++) {
+//            auto ret = tree.GetTree();
+//            auto tree_size = ret.nodes.size();
+//            Operation op{0, static_cast<int>(generator() % tree_size)};
+//            tree.IncNumDocs(op.id);
+//            init_operations.push_back(op);
+//        }
+//
+//        // Generate the other operations
+//        generator.seed(process_id);
+//        auto ret = tree.GetTree();
+//        auto tree_size = tree.GetTree().nodes.size();
+//        for (int d = 0; d < num_documents; d++) {
+//            Operation op;
+//            while (1) {
+//                op = Operation{static_cast<int>(generator() % 2),
+//                               static_cast<int>(generator() % tree_size)};
+//                if (ret.nodes[op.id].depth == 4) break;
+//            }
+//            operations.push_back(op);
+//        };
+//
+//        // Gather operations
+//        global_operations.resize(num_documents * process_size);
+//        MPI_Allgather(operations.data(), num_documents * 2, MPI_INT,
+//            global_operations.data(), num_documents * 2, MPI_INT,
+//            MPI_COMM_WORLD);
+//
+//        // Apply global_operations to tree
+//        for (auto &op: global_operations)
+//            if (op.type == 0)
+//                tree.IncNumDocs(op.id);
+//            else
+//                tree.DecNumDocs(op.id);
+//
+//        if (process_id == 0) {
+//            for (auto &op: init_operations) {
+//                //LOG(INFO) << op.id;
+//                d_tree.IncNumDocs(op.id);
+//            }
+//        }
+//        d_tree.Barrier();
+//
+//        for (auto &op: operations)
+//            if (op.type == 0)
+//                d_tree.IncNumDocs(op.id);
+//            else
+//                d_tree.DecNumDocs(op.id);
+//        d_tree.Barrier();
+//
+//        // Compare tree and d_tree
+//        /*if (process_id == 0) {
+//            for (auto &op: global_operations)
+//                LOG(INFO) << op.type << " " << op.id;
+//
+//            LOG(INFO) << "\n" << tree.GetTree();
+//            LOG(INFO) << "\n" << d_tree.GetTree();
+//        }*/
+//
+//        auto ret1 = tree.GetTree();
+//        auto ret2 = d_tree.GetTree();
+//        LOG_IF(FATAL, ret1.nodes.size() != ret2.nodes.size()) << "Size mismatch";
+//        for (size_t i=0; i<ret1.nodes.size(); i++) {
+//            auto node1 = ret1.nodes[i];
+//            auto node2 = ret2.nodes[i];
+//            LOG_IF(FATAL, node1.parent != node2.parent_id) << "Parent mismatch";
+//            LOG_IF(FATAL, node1.num_docs != node2.num_docs) << "Num docs mismatch";
+//            LOG_IF(FATAL, node1.pos != node2.pos) << "pos mismatch";
+//            LOG_IF(FATAL, node1.depth != node2.depth) << "depth mismatch";
+//        }
+//    }
 
 //    {
 //        DistributedTree2 tree(3, std::vector<double>{1.0, 0.5});

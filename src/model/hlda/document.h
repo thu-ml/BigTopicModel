@@ -7,7 +7,6 @@
 
 #include <vector>
 #include "types.h"
-#include "tree.h"
 
 // Size a document = 3 ints / token
 struct Document {
