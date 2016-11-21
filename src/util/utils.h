@@ -156,7 +156,7 @@ void Permute(std::vector<T> &a, std::vector<int> perm) {
 template <class T>
 std::ostream& operator << (std::ostream &out, const std::vector<T> &v) {
     for (const T& elem: v)
-        out << elem;
+        out << elem << ' ';
     return out;
 }
 

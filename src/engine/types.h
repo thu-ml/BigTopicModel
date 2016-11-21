@@ -32,5 +32,6 @@ typedef struct {
 } SpEntry;
 
 #define ALIGN_SIZE 32
+#define MAX_NUM_TOPICS 100000
 
 #endif

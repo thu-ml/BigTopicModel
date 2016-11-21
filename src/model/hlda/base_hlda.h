@@ -19,8 +19,6 @@
 #include "dcm_dense.h"
 #include "adlm.h"
 
-#define MAX_NUM_TOPICS 100000
-
 class Corpus;
 
 class BaseHLDA {
