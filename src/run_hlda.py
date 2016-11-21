@@ -12,9 +12,11 @@ hosts = ""
 
 #################### LDA Parameters ####################
 exe_file = " ./src/model/hlda/hlda" 
-proc_number = 4
+proc_number = 2
 params = {
-'prefix': "nyp"
+'prefix': "nyp",
+'beta': "1.0,0.5,0.25,0.25",
+'gamma': "1e-20"
 }
 lda = mpi_cmd + str(proc_number) + hosts + exe_file
 for p, v in params.iteritems():

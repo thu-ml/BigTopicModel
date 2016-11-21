@@ -13,7 +13,7 @@ public:
                       std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
                       int num_iters,
                       int mc_samples, int mc_iters,
-                      int topic_limit, int process_id, int process_size);
+                      int topic_limit, int process_id, int process_size, bool check);
 
     virtual void Initialize();
 

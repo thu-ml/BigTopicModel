@@ -37,6 +37,7 @@ DEFINE_string(vis_prefix, "../vis_result/tree", "Path of visualization");
 DEFINE_int32(threshold, 50, "Threshold for a topic to be instantiated.");
 DEFINE_int32(branching_factor, 2, "Branching factor for instantiated weight sampler.");
 DEFINE_bool(sample_phi, false, "Whether to sample phi or update it with expectation");
+DEFINE_bool(check, false, "Whether turn on checking");
 
 char hostname[100];
 
@@ -103,13 +104,13 @@ int main(int argc, char **argv) {
         model = new CollapsedSampling(corpus,
                                       FLAGS_L, alpha, beta, gamma,
                                       FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
-                                      FLAGS_topic_limit, process_id, process_size);
+                                      FLAGS_topic_limit, process_id, process_size, FLAGS_check);
     } else if (FLAGS_algo == "pcs") {
         model = new PartiallyCollapsedSampling(corpus,
                                                FLAGS_L, alpha, beta, gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                                (size_t) FLAGS_minibatch_size,
-                                               FLAGS_topic_limit, FLAGS_threshold, FLAGS_sample_phi, process_id, process_size);
+                                               FLAGS_topic_limit, FLAGS_threshold, FLAGS_sample_phi, process_id, process_size, FLAGS_check);
     } else if (FLAGS_algo == "is") {
         /*model = new InstantiatedWeightSampling(corpus,
                                                FLAGS_L, alpha, beta, gamma,

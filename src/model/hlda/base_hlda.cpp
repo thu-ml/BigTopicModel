@@ -15,7 +15,7 @@ using namespace std;
 
 BaseHLDA::BaseHLDA(Corpus &corpus, int L,
                    std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
-                   int num_iters, int mc_samples, int process_id, int process_size) :
+                   int num_iters, int mc_samples, int process_id, int process_size, bool check) :
         process_id(process_id), process_size(process_size),
         tree(L, gamma),
         corpus(corpus), L(L), alpha(alpha), beta(beta), gamma(gamma),
@@ -23,7 +23,7 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
         count(L, corpus.V, omp_get_max_threads()),
         icount(1, process_size, corpus.V, 1/*K*/, row_partition,
                process_size, process_id),
-        new_topic(true) {
+        new_topic(true), check(check) {
 
     std::mt19937_64 rd;
     generators.resize(omp_get_max_threads());
