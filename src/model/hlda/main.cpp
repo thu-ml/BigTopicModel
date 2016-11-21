@@ -30,7 +30,7 @@ DEFINE_string(gamma, "1e-40,1e-30,1e-20", "Parameter of nCRP, delimited by comma
 DEFINE_int32(n_iters, 70, "Number of iterations");
 DEFINE_int32(n_mc_samples, 5, "Number of Monte-Carlo samples, -1 for none.");
 DEFINE_int32(n_mc_iters, 30, "Number of Monte-Carl iterations, -1 for none.");
-DEFINE_int32(minibatch_size, 100, "Minibatch size for initialization (for pcs)");
+DEFINE_int32(minibatch_size, 100000, "Maximal allowed minibatch size for initialization (for pcs)");
 DEFINE_int32(topic_limit, 300, "Upper bound of number of topics to terminate.");
 DEFINE_string(model_path, "../hlda-c/out/run014", "Path of model for es");
 DEFINE_string(vis_prefix, "../vis_result/tree", "Path of visualization");

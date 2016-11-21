@@ -29,7 +29,7 @@ PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, ve
 void PartiallyCollapsedSampling::Initialize() {
     //CollapsedSampling::Initialize();
     current_it = -1;
-    
+
     if (minibatch_size == 0)
         minibatch_size = docs.size();
 
@@ -43,8 +43,12 @@ void PartiallyCollapsedSampling::Initialize() {
     omp_set_dynamic(0);
     Clock clk;
 
+    // Compute the minibatch size for this node
+    size_t local_mb_size = std::min(static_cast<size_t>(minibatch_size),
+                                    docs.size() / num_threads);
+
     size_t local_num_mbs, num_mbs;
-    local_num_mbs = (docs.size() - 1) / minibatch_size + 1;
+    local_num_mbs = (docs.size() - 1) / local_mb_size + 1;
     MPI_Allreduce(&local_num_mbs, &num_mbs, 1, MPI_UNSIGNED_LONG_LONG,
                   MPI_MAX, MPI_COMM_WORLD);
     LOG_IF(INFO, process_id == 0) << "Each node has " << num_mbs << " minibatches.";
