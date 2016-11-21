@@ -46,6 +46,8 @@ add_subdirectory(test)
 configure_file(src/run.py run.py)
 configure_file(src/run_tianhe.py run_tianhe.py)
 configure_file(src/format.py format.py)
+configure_file(src/run_hlda.py run_hlda.py)
+configure_file(src/format_hlda.py format_hlda.py)
 
 #add_library(glog STATIC IMPORTED)
 #set_target_properties(glog PROPERTIES IMPORTED_LOCATION )
