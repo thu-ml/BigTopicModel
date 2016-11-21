@@ -29,12 +29,10 @@ PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, ve
 void PartiallyCollapsedSampling::Initialize() {
     //CollapsedSampling::Initialize();
     current_it = -1;
-
-    cout << "Start initialize..." << endl;
+    
     if (minibatch_size == 0)
         minibatch_size = docs.size();
 
-    shuffle(docs.begin(), docs.end(), GetGenerator());
     if (!new_topic)
         SamplePhi();
 
@@ -44,14 +42,30 @@ void PartiallyCollapsedSampling::Initialize() {
     int mb_count = 0;
     omp_set_dynamic(0);
     Clock clk;
-    for (int process = 0; process < process_size; process++) {
-        size_t num_mbs = (docs.size() - 1) / minibatch_size + 1; 
-        MPI_Bcast(&num_mbs, 1, MPI_UNSIGNED_LONG_LONG, process, MPI_COMM_WORLD);
-        if (process == process_id) {
+
+    size_t local_num_mbs, num_mbs;
+    local_num_mbs = (docs.size() - 1) / minibatch_size + 1;
+    MPI_Allreduce(&local_num_mbs, &num_mbs, 1, MPI_UNSIGNED_LONG_LONG,
+                  MPI_MAX, MPI_COMM_WORLD);
+    LOG_IF(INFO, process_id == 0) << "Each node has " << num_mbs << " minibatches.";
+
+    int processed_node = 0, next_processed_node;
+    for (int degree_of_parallelism = 1; processed_node < process_size;
+         degree_of_parallelism++, processed_node = next_processed_node) {
+        next_processed_node = std::min(process_size,
+                                       processed_node + degree_of_parallelism);
+        LOG_IF(INFO, process_id == 0)
+                  << "Initializing node " << processed_node
+                  << " to node " << next_processed_node;
+
+        size_t minibatch_size = docs.size() / num_mbs + 1;
+        if (processed_node <= process_id && process_id < next_processed_node) {
             for (size_t d_start = 0; d_start < docs.size(); 
                     d_start += minibatch_size) {
                 auto d_end = min(docs.size(), d_start + minibatch_size);
-                omp_set_num_threads(min(++mb_count, num_threads));
+                if (degree_of_parallelism == 1)
+                    omp_set_num_threads(min(++mb_count, num_threads));
+
                 num_instantiated = tree.GetNumInstantiated();
 #pragma omp parallel for
                 for (size_t d = d_start; d < d_end; d++) {
@@ -70,12 +84,13 @@ void PartiallyCollapsedSampling::Initialize() {
                 AllBarrier();
                 //Check();
 
-                printf("Processed document [%lu, %lu) documents, %d topics\n", d_start, d_end,
-                       (int)tree.GetTree().nodes.size());
+                LOG(INFO) << "Node: " << process_id
+                          << " Processed document [" << d_start << ", " << d_end
+                          << ") documents, " << (int)tree.GetTree().nodes.size()
+                          << " topics.";
                 if ((int)tree.GetTree().nodes.size() > (size_t) topic_limit)
                     throw runtime_error("There are too many topics");
             }
-    	    cout << "Initialized with " << (int)tree.GetTree().nodes.size() << " topics." << endl;
         } else {
             for (size_t i = 0; i < num_mbs; i++) {
                 AllBarrier();
@@ -90,7 +105,7 @@ void PartiallyCollapsedSampling::Initialize() {
 
     SamplePhi();
     delayed_update = true;
-    LOG(INFO) << "Initialized in " << clk.toc() << " seconds";
+    LOG_IF(INFO, process_id == 0) << "Initialized in " << clk.toc() << " seconds";
 }
 
 void PartiallyCollapsedSampling::SampleZ(Document &doc,

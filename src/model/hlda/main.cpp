@@ -22,7 +22,6 @@
 using namespace std;
 
 DEFINE_string(prefix, "../data/nysmaller_parted", "prefix of the corpus");
-DEFINE_uint64(doc_part, 2, "document partition number");
 DEFINE_string(algo, "pcs", "Algorithm, cs, pcs, is, or es");
 DEFINE_int32(L, 4, "number of levels");
 DEFINE_string(alpha, "0.3", "Prior on level assignment, delimited by comma");
@@ -76,11 +75,6 @@ int main(int argc, char **argv) {
     int process_id, process_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
     MPI_Comm_size(MPI_COMM_WORLD, &process_size);
-
-    /// split corpus into doc_part * word_part
-    if (FLAGS_doc_part != process_size) {
-        throw runtime_error("Number of processes is incorrect");
-    }
 
     // Parse alpha, beta and gamma
     auto alpha_double = Parse(FLAGS_alpha, FLAGS_L, "alpha");
