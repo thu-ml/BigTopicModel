@@ -18,6 +18,7 @@
 #include "document.h"
 #include "dcm_dense.h"
 #include "adlm.h"
+#include "statistics.h"
 
 class Corpus;
 
@@ -77,6 +78,8 @@ protected:
 
     //std::mutex model_mutex;
     std::vector<std::unique_ptr<std::mutex[]>> topic_mutexes;
+
+    Statistics<double> lockdoc_time, s1_time, s2_time, s3_time, s4_time;
 };
 
 #endif //HLDA_BASEHLDA_H

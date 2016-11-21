@@ -39,6 +39,7 @@ void PartiallyCollapsedSampling::Initialize() {
         SamplePhi();
 
     int num_threads = omp_get_max_threads();
+    LOG(INFO) << "OpenMP: using " << num_threads << " threads";
     auto &generator = GetGenerator();
     int mb_count = 0;
     omp_set_dynamic(0);
@@ -64,6 +65,7 @@ void PartiallyCollapsedSampling::Initialize() {
                     SampleZ(doc, true, true);
                 }
                 AllBarrier();
+                omp_set_num_threads(num_threads);
                 SamplePhi();
                 AllBarrier();
                 //Check();
@@ -84,6 +86,7 @@ void PartiallyCollapsedSampling::Initialize() {
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
+    omp_set_num_threads(num_threads);
 
     SamplePhi();
     delayed_update = true;
