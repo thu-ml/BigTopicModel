@@ -133,6 +133,12 @@ std::vector<std::vector<int>> ConcurrentTree::Compress() {
         for (size_t i = 0; i < max_id; i++)
             if (nodes[i].depth == l && nodes[i].num_docs)
                 rank.push_back(std::make_pair(-nodes[i].num_docs, i));
+            else if (!nodes[i].num_docs) {
+                //LOG(INFO) << "Node " << i << " is dead.";
+                // Kill the node
+                nodes[i].parent_id = nodes[i].pos = 
+                    nodes[i].depth = 0;
+            }
 
         std::sort(rank.begin(), rank.end());
         num_instantiated[l] = 0;

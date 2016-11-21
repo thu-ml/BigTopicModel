@@ -404,11 +404,12 @@ void CollapsedSampling::Check() {
     }
     MPI_Allreduce(num_docs.data(), total_num_docs.data(), 10000,
             MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    for (size_t i = 0; i < nodes.size(); i++)
-        total_num_docs[i] -= nodes[i].num_docs;
-    for (int id = 0; id < 10000; id++)
-        LOG_IF(FATAL, total_num_docs[id] != 0) 
-            << "Num docs error. expected 0 got " << total_num_docs[id];
+    for (int id = 0; id < ret.nodes.size(); id++)
+        LOG_IF(FATAL, total_num_docs[id] != nodes[id].num_docs) 
+            << "Num docs error at " << id 
+            << " expected " << total_num_docs[id] 
+            << " got " << nodes[id].num_docs
+            << " tree \n" << ret;
 
     // Check the count matrix
     std::vector<Matrix<int>> count2(L);
@@ -456,7 +457,7 @@ void CollapsedSampling::Check() {
     for (int l=0; l<L; l++) {
         const auto &local_count = count.GetMatrix(l);
         for (int r = 0; r < corpus.V; r++)
-            for (int c = num_instantiated[l]; c < local_count.GetC(); c++)
+            for (int c = num_instantiated[l]; c < ret.num_nodes[l]; c++)
                 if (local_count.Get(r, c) != global_count2[l](r, c)) {
                     LOG(WARNING) << "Count error at " 
                               << l << "," << r << "," << c
@@ -466,16 +467,16 @@ void CollapsedSampling::Check() {
                 }
 
         for (int r = 0; r < corpus.V; r++)
-            for (int c = 0; c < local_count.GetC(); c++) 
+            for (int c = 0; c < ret.num_nodes[l]; c++) 
                 if (icount(r, c+icount_offset[l]) != global_count2[l](r, c)) {
-                    LOG(WARNING) << "ICount error at " 
+                    LOG(FATAL) << "ICount error at " 
                               << l << "," << r << "," << c
                               << " expected " << global_count2[l](r, c) 
                               << " get " << icount(r, c+icount_offset[l]);
                     if_error = true;
                 }
 
-        for (int c = num_instantiated[l]; c < local_count.GetC(); c++)
+        for (int c = num_instantiated[l]; c < ret.num_nodes[l]; c++)
             if (local_count.GetSum(c) != global_ck2[l][c]) {
                 LOG(WARNING) << "Ck error at " 
                           << l << "," << c
