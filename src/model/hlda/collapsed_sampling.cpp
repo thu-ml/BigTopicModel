@@ -75,21 +75,26 @@ void CollapsedSampling::Estimate() {
             SampleZ(doc, true, true);
             z_time.Add(clk.toc()); clk.tic();
         }
-        LOG(INFO) << "C took " << c_time.Sum() << " cpu seconds";
-        LOG(INFO) << "Z took " << z_time.Sum() << " cpu seconds";
-        LOG(INFO) << "LockDoc took " << lockdoc_time.Sum() << " cpu seconds";
-        LOG(INFO) << "S1 took " << s1_time.Sum() << " cpu seconds";
-        LOG(INFO) << "S2 took " << s2_time.Sum() << " cpu seconds";
-        LOG(INFO) << "S3 took " << s3_time.Sum() << " cpu seconds";
-        LOG(INFO) << "S4 took " << s4_time.Sum() << " cpu seconds";
-        LOG(INFO) << "Sample took " << clk2.toc() << " seconds"; clk2.tic();
+        if (process_id == 0) {
+            LOG(INFO) << "C took " << c_time.Sum() << " cpu seconds";
+            LOG(INFO) << "Z took " << z_time.Sum() << " cpu seconds";
+            LOG(INFO) << "LockDoc took " << lockdoc_time.Sum() << " cpu seconds";
+            LOG(INFO) << "S1 took " << s1_time.Sum() << " cpu seconds";
+            LOG(INFO) << "S2 took " << s2_time.Sum() << " cpu seconds";
+            LOG(INFO) << "S3 took " << s3_time.Sum() << " cpu seconds";
+            LOG(INFO) << "S4 took " << s4_time.Sum() << " cpu seconds";
+            LOG(INFO) << "Sample took " << clk2.toc() << " seconds"; clk2.tic();
+        }
         AllBarrier();
-        LOG(INFO) << "Barrier took " << clk2.toc() << " seconds"; clk2.tic();
+        if (process_id == 0) 
+            LOG(INFO) << "Barrier took " << clk2.toc() << " seconds"; clk2.tic();
 
         SamplePhi();
-        LOG(INFO) << "SamplePhi took " << clk2.toc() << " seconds"; clk2.tic();
+        if (process_id == 0) 
+            LOG(INFO) << "SamplePhi took " << clk2.toc() << " seconds"; clk2.tic();
         AllBarrier();
-        LOG(INFO) << "Barrier2 took " << clk2.toc() << " seconds"; clk2.tic();
+        if (process_id == 0) 
+            LOG(INFO) << "Barrier2 took " << clk2.toc() << " seconds"; clk2.tic();
 
         auto ret = tree.GetTree();
         int num_big_nodes = 0;
@@ -114,7 +119,8 @@ void CollapsedSampling::Estimate() {
 
         double throughput = corpus.T / time / 1048576;
         double perplexity = Perplexity();
-        LOG(INFO) << "Perplexity took " << clk2.toc() << " seconds"; clk2.tic();
+        if (process_id == 0) 
+            LOG(INFO) << "Perplexity took " << clk2.toc() << " seconds"; clk2.tic();
         LOG_IF(INFO, process_id == 0) 
             << std::fixed << std::setprecision(2)
             << "\x1b[32mIteration " << it 
