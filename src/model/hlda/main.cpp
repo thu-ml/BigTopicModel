@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 
     model->Initialize();
     model->Estimate();
-    model->Visualize(FLAGS_vis_prefix, -1);
+    model->Visualize(FLAGS_vis_prefix, 0);
     delete model;
 
 
