@@ -371,41 +371,41 @@ int main(int argc, char **argv) {
     //        LOG_IF(FATAL, con_mat.GetSum(0, c) != sum[c]) << "Incorrect sum";
     //}
 
-    {
-        ConcurrentTree tree(3, std::vector<double>{1, 2});
-        cout << tree.GetTree() << endl;
-
-        cout << tree.AddNodes(0) << endl;
-        cout << tree.GetTree() << endl;
-
-        cout << tree.IncNumDocs(2) << endl;
-        cout << tree.GetTree() << endl;
-
-        cout << tree.AddNodes(1) << endl;
-        cout << tree.IncNumDocs(3) << endl;
-        cout << tree.GetTree() << endl;
-
-        cout << tree.AddNodes(0) << endl;
-        cout << tree.IncNumDocs(5) << endl;
-        cout << tree.GetTree() << endl;
-
-        tree.IncNumDocs(2);
-        tree.IncNumDocs(3);
-        tree.IncNumDocs(3);
-        tree.IncNumDocs(3);
-        tree.IncNumDocs(5);
-        tree.IncNumDocs(5);
-
-        ConcurrentTree::IDPos idpos[2] = {{4, 2}, {7, 5}};
-        tree.AddNodes(idpos, 2);
-        cout << tree.IncNumDocs(7) << endl;
-        cout << tree.GetTree() << endl;
-        tree.SetThreshold(2);
-
-        cout << tree.Compress() << endl;
-        cout << tree.GetNumInstantiated() << endl;
-        cout << tree.GetTree() << endl;
-    }
+//    {
+//        ConcurrentTree tree(3, std::vector<double>{1, 2});
+//        cout << tree.GetTree() << endl;
+//
+//        cout << tree.AddNodes(0) << endl;
+//        cout << tree.GetTree() << endl;
+//
+//        cout << tree.IncNumDocs(2) << endl;
+//        cout << tree.GetTree() << endl;
+//
+//        cout << tree.AddNodes(1) << endl;
+//        cout << tree.IncNumDocs(3) << endl;
+//        cout << tree.GetTree() << endl;
+//
+//        cout << tree.AddNodes(0) << endl;
+//        cout << tree.IncNumDocs(5) << endl;
+//        cout << tree.GetTree() << endl;
+//
+//        tree.IncNumDocs(2);
+//        tree.IncNumDocs(3);
+//        tree.IncNumDocs(3);
+//        tree.IncNumDocs(3);
+//        tree.IncNumDocs(5);
+//        tree.IncNumDocs(5);
+//
+//        ConcurrentTree::IDPos idpos[2] = {{4, 2}, {7, 5}};
+//        tree.AddNodes(idpos, 2);
+//        cout << tree.IncNumDocs(7) << endl;
+//        cout << tree.GetTree() << endl;
+//        tree.SetThreshold(2);
+//
+//        cout << tree.Compress() << endl;
+//        cout << tree.GetNumInstantiated() << endl;
+//        cout << tree.GetTree() << endl;
+//    }
 
     MPI_Finalize();
 }

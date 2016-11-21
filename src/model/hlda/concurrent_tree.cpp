@@ -18,6 +18,9 @@ bool ConcurrentTree::IsLeaf(int node_id) {
 }
 
 void ConcurrentTree::DecNumDocs(int old_node_id) {
+    LOG_IF(FATAL, !IsLeaf(old_node_id))
+        << "DecNumDocs receives non-leaf";
+
     while (old_node_id != -1) {
         auto &node = nodes[old_node_id];
         --node.num_docs;

@@ -7,6 +7,7 @@
 #include "glog/logging.h"
 #include "parallel_tree.h"
 #include "distributed_tree.h"
+#include "distributed_tree2.h"
 #include "mpi_helpers.h"
 #include <random>
 using namespace std;
@@ -31,12 +32,11 @@ int main(int argc, char **argv) {
 
     {
         int num_layers = 5;
-        int num_documents = 10000;
+        int num_documents = 1000;
 
         std::vector<double> gamma{1.0, 0.5, 0.25, 0.1};
         ParallelTree tree(5, gamma);
-        DistributedTree d_tree(5, gamma);
-
+        DistributedTree2 d_tree(5, gamma);
 
         std::mt19937 generator;
         // Add nodes on node 0
@@ -80,8 +80,10 @@ int main(int argc, char **argv) {
                 tree.DecNumDocs(op.id);
 
         if (process_id == 0) {
-            for (auto &op: init_operations)
+            for (auto &op: init_operations) {
+                //LOG(INFO) << op.id;
                 d_tree.IncNumDocs(op.id);
+            }
         }
         d_tree.Barrier();
 
@@ -107,62 +109,61 @@ int main(int argc, char **argv) {
         for (size_t i=0; i<ret1.nodes.size(); i++) {
             auto node1 = ret1.nodes[i];
             auto node2 = ret2.nodes[i];
-            LOG_IF(FATAL, node1.id != node2.id) << "ID mismatch";
-            LOG_IF(FATAL, node1.parent != node2.parent) << "Parent mismatch";
+            LOG_IF(FATAL, node1.parent != node2.parent_id) << "Parent mismatch";
             LOG_IF(FATAL, node1.num_docs != node2.num_docs) << "Num docs mismatch";
             LOG_IF(FATAL, node1.pos != node2.pos) << "pos mismatch";
             LOG_IF(FATAL, node1.depth != node2.depth) << "depth mismatch";
         }
     }
 
-    /*{
-        DistributedTree tree(3, std::vector<double>{1.0, 0.5});
-
-        auto PrintTree = [&]() {
-            tree.Barrier();
-            for (int i = 0; i < process_size; i++) {
-                if (i == process_id) {
-                    LOG(INFO) << "Node " << i;
-                    LOG(INFO) << "\n" << tree.GetTree();
-                }
-                MPI_Barrier(MPI_COMM_WORLD);
-            }
-        };
-
-        if (process_id == 0)
-            tree.IncNumDocs(0);
-        PrintTree();
-
-        if (process_id == 1)
-            tree.IncNumDocs(1);
-        PrintTree();
-
-        if (process_id == 1)
-            tree.IncNumDocs(0);
-        PrintTree();
-
-        if (process_id == 0) {
-            tree.IncNumDocs(3);
-            tree.IncNumDocs(5);
-            tree.IncNumDocs(2);
-        }
-        if (process_id == 1) {
-            tree.IncNumDocs(3);
-            tree.IncNumDocs(3);
-            tree.IncNumDocs(5);
-        }
-        PrintTree();
-
-        auto id_map = tree.Compress();
-        PrintTree();
-
-        for (int i = 0; i < process_size; i++) {
-            if (i == process_id) {
-                LOG(INFO) << "Node " << i << "\n" << id_map;
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-    }*/
+//    {
+//        DistributedTree2 tree(3, std::vector<double>{1.0, 0.5});
+//
+//        auto PrintTree = [&]() {
+//            tree.Barrier();
+//            for (int i = 0; i < process_size; i++) {
+//                if (i == process_id) {
+//                    LOG(INFO) << "Node " << i;
+//                    LOG(INFO) << "\n" << tree.GetTree();
+//                }
+//                MPI_Barrier(MPI_COMM_WORLD);
+//            }
+//        };
+//
+//        if (process_id == 0)
+//            tree.IncNumDocs(0);
+//        PrintTree();
+//
+//        if (process_id == 1)
+//            tree.IncNumDocs(1);
+//        PrintTree();
+//
+//        if (process_id == 1)
+//            tree.IncNumDocs(0);
+//        PrintTree();
+//
+//        if (process_id == 0) {
+//            tree.IncNumDocs(3);
+//            tree.IncNumDocs(5);
+//            tree.IncNumDocs(2);
+//        }
+//        if (process_id == 1) {
+//            tree.IncNumDocs(3);
+//            tree.IncNumDocs(3);
+//            tree.IncNumDocs(5);
+//        }
+//        PrintTree();
+//
+//        auto id_map = tree.Compress();
+//        PrintTree();
+//
+//        for (int i = 0; i < process_size; i++) {
+//            if (i == process_id) {
+//                LOG(INFO) << "Node " << i << "\n" << id_map;
+//            }
+//            MPI_Barrier(MPI_COMM_WORLD);
+//        }
+//    }
 
     MPI_Finalize();
 }
