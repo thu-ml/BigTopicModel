@@ -12,7 +12,7 @@
 #include <mutex>
 #include <mpi.h>
 #include "matrix.h"
-#include "distributed_tree.h"
+#include "distributed_tree2.h"
 #include "xorshift.h"
 #include "types.h"
 #include "document.h"
@@ -49,7 +49,7 @@ protected:
     xorshift& GetGenerator();
 
     int process_id, process_size;
-    DistributedTree tree;
+    DistributedTree2 tree;
     Corpus &corpus;
     int L;
     std::vector<TProb> alpha;

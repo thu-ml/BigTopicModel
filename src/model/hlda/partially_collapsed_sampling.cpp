@@ -50,8 +50,7 @@ void PartiallyCollapsedSampling::Initialize() {
                     d_start += minibatch_size) {
                 auto d_end = min(docs.size(), d_start + minibatch_size);
                 omp_set_num_threads(min(++mb_count, num_threads));
-                auto ret = tree.GetTree();
-                num_instantiated = ret.num_instantiated;
+                num_instantiated = tree.GetNumInstantiated();
 #pragma omp parallel for
                 for (size_t d = d_start; d < d_end; d++) {
                     auto &doc = docs[d];
@@ -146,6 +145,7 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
 void PartiallyCollapsedSampling::SamplePhi() {
     // Output the tree and the assignment for every document
     auto perm = tree.Compress();
+    num_instantiated = tree.GetNumInstantiated();
     auto ret = tree.GetTree();
     PermuteC(perm);
 

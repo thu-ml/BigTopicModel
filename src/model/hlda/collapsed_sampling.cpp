@@ -27,8 +27,7 @@ void CollapsedSampling::Initialize() {
     current_it = -1;
 
     cout << "Start initialize..." << endl;
-    auto ret = tree.GetTree();
-    num_instantiated = ret.num_instantiated;
+    num_instantiated = tree.GetNumInstantiated();
     for (int process = 0; process < process_size; process++) {
         if (process == process_id) {
             for (auto &doc: docs) {
@@ -59,9 +58,6 @@ void CollapsedSampling::Estimate() {
         if (current_it >= mc_iters)
             mc_samples = -1;
 
-        auto ret = tree.GetTree();
-        num_instantiated = ret.num_instantiated;
-
         Clock clk2;
         #pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
@@ -78,7 +74,7 @@ void CollapsedSampling::Estimate() {
         AllBarrier();
         LOG(INFO) << "Barrier2 took " << clk2.toc() << " seconds"; clk2.tic();
 
-        ret = tree.GetTree();
+        auto ret = tree.GetTree();
         int num_big_nodes = 0;
         int num_docs_big = 0;
         for (auto &node: ret.nodes)
@@ -204,13 +200,13 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
 
         auto &scores = all_scores[s];
         for (TLen l = 0; l < L; l++) {
-            TTopic num_instantiated = (TTopic)ret.num_instantiated[l];
-            TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_instantiated);
+            TTopic num_i = (TTopic)num_instantiated[l];
+            TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_i);
 
-            scores[l].resize(num_instantiated + num_collapsed + 1);
+            scores[l].resize(num_i + num_collapsed + 1);
             scores[l].back() = WordScoreCollapsed(doc, l,
-                                                  num_instantiated, num_collapsed,
-                                                  scores[l].data()+num_instantiated);
+                                                  num_i, num_collapsed,
+                                                  scores[l].data()+num_i);
         }
 
         vector<TProb> emptyProbability((size_t) L, 0);
@@ -225,7 +221,7 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
                 sum_log_prob[i] = scores[node.depth][node.pos];
             else
                 sum_log_prob[i] = scores[node.depth][node.pos]
-                                  + sum_log_prob[node.parent];
+                                  + sum_log_prob[node.parent_id];
 
             if (node.depth + 1 == L) {
                 prob[i*S+s] = (TProb)(sum_log_prob[i] + node.log_path_weight);
@@ -243,7 +239,7 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
     if (node_number < 0 || node_number >= (int) nodes.size())
         throw runtime_error("Invalid node number");
 
-    auto leaf_id = nodes[node_number].id;
+    auto leaf_id = node_number;
 
     // Increase num_docs
     if (increase_count) {
@@ -320,6 +316,7 @@ TProb CollapsedSampling::WordScoreInstantiated(Document &doc, int l, int num, TP
 
 void CollapsedSampling::SamplePhi() {
     auto perm = tree.Compress();
+    num_instantiated = tree.GetNumInstantiated();
     PermuteC(perm);
     UpdateICount();
 }
@@ -398,17 +395,17 @@ void CollapsedSampling::Check() {
             auto pos = doc.c[l];
             // Find node by pos
             auto it = find_if(nodes.begin(), nodes.end(), 
-                    [&](const ParallelTree::RetNode& node) { 
+                    [&](const ConcurrentTree::RetNode& node) {
                         return node.depth == l && node.pos == pos; });
             LOG_IF(FATAL, it == nodes.end()) << "Check error: pos not found";
 
-            num_docs[it->id]++;
+            num_docs[it - nodes.begin()]++;
         }
     }
     MPI_Allreduce(num_docs.data(), total_num_docs.data(), 10000,
             MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    for (auto &node: nodes)
-        total_num_docs[node.id] -= node.num_docs;
+    for (size_t i = 0; i < nodes.size(); i++)
+        total_num_docs[i] -= nodes[i].num_docs;
     for (int id = 0; id < 10000; id++)
         LOG_IF(FATAL, total_num_docs[id] != 0) 
             << "Num docs error. expected 0 got " << total_num_docs[id];
@@ -459,7 +456,7 @@ void CollapsedSampling::Check() {
     for (int l=0; l<L; l++) {
         const auto &local_count = count.GetMatrix(l);
         for (int r = 0; r < corpus.V; r++)
-            for (int c = ret.num_instantiated[l]; c < local_count.GetC(); c++)
+            for (int c = num_instantiated[l]; c < local_count.GetC(); c++)
                 if (local_count.Get(r, c) != global_count2[l](r, c)) {
                     LOG(WARNING) << "Count error at " 
                               << l << "," << r << "," << c
@@ -478,7 +475,7 @@ void CollapsedSampling::Check() {
                     if_error = true;
                 }
 
-        for (int c = ret.num_instantiated[l]; c < local_count.GetC(); c++) 
+        for (int c = num_instantiated[l]; c < local_count.GetC(); c++)
             if (local_count.GetSum(c) != global_ck2[l][c]) {
                 LOG(WARNING) << "Ck error at " 
                           << l << "," << c

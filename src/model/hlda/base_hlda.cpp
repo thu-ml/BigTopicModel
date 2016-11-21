@@ -69,20 +69,24 @@ void BaseHLDA::Visualize(std::string fileName, int threshold) {
     fout << "graph tree {";
     // Output nodes
     auto ret = tree.GetTree();
-    for (auto &node: ret.nodes)
+    for (size_t i = 0; i < ret.nodes.size(); i++) {
+        auto &node = ret.nodes[i];
         if (node.num_docs > threshold)
-            fout << "Node" << node.id << " [label=\""
-                 << node.id << ' ' << node.pos << '\n'
+            fout << "Node" << i << " [label=\""
+                 << i << ' ' << node.pos << '\n'
                  << node.num_docs << "\n"
                  << TopWords(node.depth, node.pos) << "\"]\n";
+    }
 
     // Output edges
-    for (auto node: ret.nodes)
+    for (size_t i = 0; i < ret.nodes.size(); i++) {
+        auto &node = ret.nodes[i];
         if (node.depth != 0)
             if (node.num_docs > threshold &&
-                    ret.nodes[node.parent].num_docs > threshold)
-                fout << "Node" << ret.nodes[node.parent].id
-                     << " -- Node" << node.id << "\n";
+                ret.nodes[node.parent_id].num_docs > threshold)
+                fout << "Node" << node.parent_id
+                     << " -- Node" << i << "\n";
+    }
 
     fout << "}";
 }
@@ -176,9 +180,9 @@ void BaseHLDA::UpdateICount() {
     for (int l = 0; l < L; l++) {
 #pragma omp parallel for
         for (int r = 0; r < corpus.V; r++)
-            for (int c = ret.num_instantiated[l]; c < ret.num_nodes[l]; c++)
+            for (int c = num_instantiated[l]; c < ret.num_nodes[l]; c++)
                 count.Set(l, r, c, icount(r, c+icount_offset[l]));
-        for (int c = ret.num_instantiated[l]; c < ret.num_nodes[l]; c++)
+        for (int c = num_instantiated[l]; c < ret.num_nodes[l]; c++)
             count.SetSum(l, c, ck_dense[c+icount_offset[l]]);
     }
 }
