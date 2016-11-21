@@ -107,12 +107,8 @@ void CollapsedSampling::Estimate() {
             }
 
         if (process_id == 0) {
-            std::vector<int> cl((size_t) L);
-            for (auto &node: ret.nodes)
-                cl[node.depth]++;
-            for (int l=0; l<L; l++)
-                printf("%d ", cl[l]);
-            printf("\n");
+            LOG(INFO) << "Num nodes: " << ret.num_nodes;
+            LOG(INFO) << "Num instantiated: " << num_instantiated;
         }
 
         double time = clk.toc();
