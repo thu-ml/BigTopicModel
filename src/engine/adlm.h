@@ -1,4 +1,5 @@
 #ifndef __LDA_ADLM
+                //l.data[i].Grow(max_c_indices[i] + 1);
 #define __LDA_ADLM
 
 #include "concurrent_matrix.h"
@@ -21,7 +22,7 @@ public:
         auto &buffer = send_buffer[thread_id];
         buffer.push_back(index);
         buffer.push_back(0);
-        buffer.push_back(new_num_columns);
+        buffer.push_back(new_num_columns - 1);
         buffer.push_back(0);
     }
 
@@ -117,7 +118,7 @@ private:
                 }
             }
             for (size_t i = 0; i < max_c_indices.size(); i++)
-                l.data[i].Grow(max_c_indices[i]);
+                l.data[i].Grow(max_c_indices[i] + 1);
 
             // Loop 2: apply the changes
             for (size_t j = 0; j < msgs.size(); j++) {
