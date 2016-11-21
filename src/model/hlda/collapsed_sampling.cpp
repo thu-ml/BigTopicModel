@@ -12,6 +12,7 @@
 #include "mkl_vml.h"
 #include "global_lock.h"
 #include <omp.h>
+#include "statistics.h"
 
 using namespace std;
 
@@ -59,12 +60,18 @@ void CollapsedSampling::Estimate() {
             mc_samples = -1;
 
         Clock clk2;
+        Statistics<double> c_time, z_time;
         #pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
+            Clock clk;
             auto &doc = docs[d];
             SampleC(doc, true, true);
+            c_time.Add(clk.toc()); clk.tic();
             SampleZ(doc, true, true);
+            z_time.Add(clk.toc()); clk.tic();
         }
+        LOG(INFO) << "C took " << c_time.Sum() << " cpu seconds";
+        LOG(INFO) << "Z took " << z_time.Sum() << " cpu seconds";
         LOG(INFO) << "Sample took " << clk2.toc() << " seconds"; clk2.tic();
         AllBarrier();
         LOG(INFO) << "Barrier took " << clk2.toc() << " seconds"; clk2.tic();
