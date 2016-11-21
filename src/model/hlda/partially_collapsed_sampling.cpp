@@ -42,6 +42,7 @@ void PartiallyCollapsedSampling::Initialize() {
     auto &generator = GetGenerator();
     int mb_count = 0;
     omp_set_dynamic(0);
+    Clock clk;
     for (int process = 0; process < process_size; process++) {
         size_t num_mbs = (docs.size() - 1) / minibatch_size + 1; 
         MPI_Bcast(&num_mbs, 1, MPI_UNSIGNED_LONG_LONG, process, MPI_COMM_WORLD);
@@ -86,6 +87,7 @@ void PartiallyCollapsedSampling::Initialize() {
 
     SamplePhi();
     delayed_update = true;
+    LOG(INFO) << "Initialized in " << clk.toc() << " seconds";
 }
 
 void PartiallyCollapsedSampling::SampleZ(Document &doc,
