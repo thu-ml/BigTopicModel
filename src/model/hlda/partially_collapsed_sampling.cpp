@@ -88,11 +88,12 @@ void PartiallyCollapsedSampling::Initialize() {
                 AllBarrier();
                 //Check();
 
+                auto ret = tree.GetTree();
                 LOG(INFO) << "Node: " << process_id
                           << " Processed document [" << d_start << ", " << d_end
-                          << ") documents, " << (int)tree.GetTree().nodes.size()
+                          << ") documents, " << ret.nodes.size()
                           << " topics.";
-                if ((int)tree.GetTree().nodes.size() > (size_t) topic_limit)
+                if ((int)ret.nodes.size() > (size_t) topic_limit)
                     throw runtime_error("There are too many topics");
             }
         } else {
@@ -104,6 +105,9 @@ void PartiallyCollapsedSampling::Initialize() {
             }
         }
         MPI_Barrier(MPI_COMM_WORLD);
+        auto ret = tree.GetTree();
+        LOG_IF(INFO, process_id==0) << ANSI_YELLOW << "Num nodes: " << ret.num_nodes
+                             << "    Num instantiated: " << num_instantiated << ANSI_NOCOLOR;
     }
     omp_set_num_threads(num_threads);
 
