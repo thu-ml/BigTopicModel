@@ -124,6 +124,11 @@ std::string BaseHLDA::TopWords(int l, int id, int max_font_size, int min_font_si
     ostringstream out;
     int min_cnt = std::min(int(sum / V) + 1, -rank[5].first + 1);
     //out << sum << "\n";
+    out << "<FONT POINT-SIZE=\"6\">";
+    for (int v = 0; v < 5; v++)
+        if (-rank[v].first > min_cnt)
+            out << -rank[v].first << ' ';
+    out << "<BR/></FONT>";
     for (int v = 0; v < 5; v++) {
         auto wd = corpus.vocab[rank[v].second];
         if (wd[0] == 'z' && wd[1] == 'z' && wd[2] == 'z') {
@@ -141,7 +146,7 @@ std::string BaseHLDA::TopWords(int l, int id, int max_font_size, int min_font_si
         if (-rank[v].first > min_cnt) {
             auto font_size = calc_font_size(max_font_size, min_font_size, max_cnt, min_cnt, -rank[v].first);
             out << "<FONT POINT-SIZE=\"" << font_size << "\">"
-                << -rank[v].first << ' ' << wd << "</FONT><BR/>";
+                << wd << "</FONT><BR/>";
         }
     }
 
