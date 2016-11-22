@@ -81,6 +81,7 @@ protected:
 
     Statistics<double> lockdoc_time, s1_time, s2_time, s3_time, s4_time;
     bool check;
+    double compute_phi_time, count_time, sync_time, set_time;
 };
 
 #endif //HLDA_BASEHLDA_H

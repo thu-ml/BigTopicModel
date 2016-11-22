@@ -180,7 +180,9 @@ void PartiallyCollapsedSampling::SamplePhi() {
 
     AllBarrier();
     UpdateICount();
+    Clock clk;
     ComputePhi();
+    compute_phi_time = clk.toc();
 }
 
 void PartiallyCollapsedSampling::ComputePhi() {

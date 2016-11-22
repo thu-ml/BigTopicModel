@@ -34,4 +34,12 @@ typedef struct {
 #define ALIGN_SIZE 32
 #define MAX_NUM_TOPICS 100000
 
+#define ANSI_RED        "\x1b[31m"
+#define ANSI_GREEN      "\x1b[32m"
+#define ANSI_YELLOW     "\x1b[33m"
+#define ANSI_BLUE       "\x1b[34m"
+#define ANSI_MAGNETA    "\x1b[35m"
+#define ANSI_CYAN       "\x1b[36m"
+#define ANSI_NOCOLOR    "\x1b[0m"
+
 #endif

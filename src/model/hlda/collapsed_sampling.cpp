@@ -75,26 +75,13 @@ void CollapsedSampling::Estimate() {
             SampleZ(doc, true, true);
             z_time.Add(clk.toc()); clk.tic();
         }
-        if (process_id == 0) {
-            LOG(INFO) << "C took " << c_time.Sum() << " cpu seconds";
-            LOG(INFO) << "Z took " << z_time.Sum() << " cpu seconds";
-            LOG(INFO) << "LockDoc took " << lockdoc_time.Sum() << " cpu seconds";
-            LOG(INFO) << "S1 took " << s1_time.Sum() << " cpu seconds";
-            LOG(INFO) << "S2 took " << s2_time.Sum() << " cpu seconds";
-            LOG(INFO) << "S3 took " << s3_time.Sum() << " cpu seconds";
-            LOG(INFO) << "S4 took " << s4_time.Sum() << " cpu seconds";
-            LOG(INFO) << "Sample took " << clk2.toc() << " seconds"; clk2.tic();
-        }
+        auto sample_time = clk2.toc(); 
         AllBarrier();
-        if (process_id == 0) 
-            LOG(INFO) << "Barrier took " << clk2.toc() << " seconds"; clk2.tic();
 
+        clk2.tic();
         SamplePhi();
-        if (process_id == 0) 
-            LOG(INFO) << "SamplePhi took " << clk2.toc() << " seconds"; clk2.tic();
+        auto phi_time = clk2.toc();
         AllBarrier();
-        if (process_id == 0) 
-            LOG(INFO) << "Barrier2 took " << clk2.toc() << " seconds"; clk2.tic();
 
         auto ret = tree.GetTree();
         int num_big_nodes = 0;
@@ -107,27 +94,49 @@ void CollapsedSampling::Estimate() {
             }
 
         if (process_id == 0) {
-            LOG(INFO) << "Num nodes: " << ret.num_nodes;
-            LOG(INFO) << "Num instantiated: " << num_instantiated;
+            LOG(INFO) << ANSI_YELLOW << "Num nodes: " << ret.num_nodes
+                                 << "    Num instantiated: " << num_instantiated << ANSI_NOCOLOR;
         }
 
         double time = clk.toc();
 
         double throughput = corpus.T / time / 1048576;
+        clk2.tic();
         double perplexity = Perplexity();
-        if (process_id == 0) 
-            LOG(INFO) << "Perplexity took " << clk2.toc() << " seconds"; clk2.tic();
+        auto perplexity_time = clk2.toc();
         LOG_IF(INFO, process_id == 0) 
             << std::fixed << std::setprecision(2)
-            << "\x1b[32mIteration " << it 
+            << ANSI_GREEN << "Iteration " << it 
             << ", " << ret.nodes.size() << " topics (" 
             << num_big_nodes << ", " << num_docs_big << "), "
             << time << " seconds (" << throughput << " Mtoken/s), perplexity = "
-            << perplexity << "\x1b[0m";
+            << perplexity << ANSI_NOCOLOR;
 
-        if (check) Check();
-        tree.Check();
-        LOG(INFO) << "Check took " << clk2.toc() << " seconds"; clk2.tic();
+        double check_time = 0;
+        if (check) {
+            clk2.tic();
+            Check();
+            check_time = clk2.toc();
+            
+            tree.Check();
+        }
+        LOG_IF(INFO, process_id == 0) << "Time usage: "
+                  << std::fixed << std::setprecision(2)
+                  << " sample:" << sample_time
+                  << " phi:" << phi_time 
+                  << " perplexity:" << perplexity_time 
+                  << " check:" << check_time 
+                  << " c:" << c_time.Sum()
+                  << " z:" << z_time.Sum()
+                  << " l:" << lockdoc_time.Sum()
+                  << " 1:" << s1_time.Sum()
+                  << " 2:" << s2_time.Sum()
+                  << " 3:" << s3_time.Sum()
+                  << " 4:" << s4_time.Sum()
+                  << " cphi:" << compute_phi_time
+                  << " cnt:" << count_time
+                  << " sync:" << sync_time
+                  << " set:" << set_time;
     }
 }
 

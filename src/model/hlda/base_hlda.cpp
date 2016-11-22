@@ -149,6 +149,7 @@ void BaseHLDA::AllBarrier() {
 
 void BaseHLDA::UpdateICount() {
     // Compute icount_offset
+    Clock clk;
     icount_offset.resize(static_cast<int>(L+1));
     icount_offset[0] = 0;
     auto ret = tree.GetTree();
@@ -172,10 +173,12 @@ void BaseHLDA::UpdateICount() {
             }
             total_count += doc.w.size();
         }
+    count_time = clk.toc(); clk.tic();
     //LOG(INFO) << "Total count = " << total_count;
 
     // Sync
     icount.sync();
+    sync_time = clk.toc(); clk.tic();
 
     ck_dense = icount.rowMarginal();
 
@@ -187,4 +190,5 @@ void BaseHLDA::UpdateICount() {
         for (int c = num_instantiated[l]; c < ret.num_nodes[l]; c++)
             count.SetSum(l, c, ck_dense[c+icount_offset[l]]);
     }
+    set_time = clk.toc(); clk.tic();
 }
