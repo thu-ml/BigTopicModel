@@ -36,7 +36,7 @@ public:
     void Visualize(std::string fileName, int threshold = -1);
 
 protected:
-    std::string TopWords(int l, int id);
+    std::string TopWords(int l, int id, int max_font_size, int min_font_size);
 
     void PermuteC(std::vector<std::vector<int>> &perm);
 

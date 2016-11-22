@@ -125,7 +125,10 @@ int main(int argc, char **argv) {
 
     model->Initialize();
     model->Estimate();
-    model->Visualize(FLAGS_vis_prefix, 0);
+    if (process_id == 0) {
+        model->Visualize(FLAGS_vis_prefix, 0);
+        LOG(INFO) << "Generated visualization";
+    }
     delete model;
 
 

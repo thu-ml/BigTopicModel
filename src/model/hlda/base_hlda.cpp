@@ -13,6 +13,12 @@
 
 using namespace std;
 
+int calc_font_size(int max_font_size, int min_font_size, int max_size, int min_size, int my_size) {
+    double rate = (log(my_size) - log(min_size)) / (log(max_size) - log(min_size));
+    double size = (max_font_size - min_font_size) * rate + min_font_size;
+    return int(size);
+};
+
 BaseHLDA::BaseHLDA(Corpus &corpus, int L,
                    std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
                    int num_iters, int mc_samples, int process_id, int process_size, bool check) :
@@ -64,18 +70,29 @@ BaseHLDA::BaseHLDA(Corpus &corpus, int L,
 
 void BaseHLDA::Visualize(std::string fileName, int threshold) {
     string dotFileName = fileName + ".dot";
+    int max_font_size = 30, min_font_size = 6;
+
+    auto ret = tree.GetTree();
+    int min_node_size = 1;
+    int max_node_size = 0;
+    for (auto &node: ret.nodes)
+        max_node_size = std::max(max_node_size, node.num_docs);
 
     ofstream fout(dotFileName.c_str());
-    fout << "graph tree {";
+    fout << "graph tree {\nnode[shape=rectangle]\n";
     // Output nodes
-    auto ret = tree.GetTree();
     for (size_t i = 0; i < ret.nodes.size(); i++) {
         auto &node = ret.nodes[i];
-        if (node.num_docs > threshold)
-            fout << "Node" << i << " [label=\""
-                 << i << ' ' << node.pos << '\n'
-                 << node.num_docs << "\n"
-                 << TopWords(node.depth, node.pos) << "\"]\n";
+        if (node.num_docs > threshold) {
+            auto font_size = calc_font_size(max_font_size, min_font_size, 
+                    max_node_size, min_node_size, node.num_docs);
+            fout << "Node" << i << " [fontsize=" 
+                 << font_size
+                 << ",label=<<FONT POINT-SIZE=\"6\">"
+                 << i << "  " << node.pos << "  " 
+                 << node.num_docs << "<BR/></FONT>\n"
+                 << TopWords(node.depth, node.pos, font_size, min_font_size) << ">]\n";
+        }
     }
 
     // Output edges
@@ -91,21 +108,42 @@ void BaseHLDA::Visualize(std::string fileName, int threshold) {
     fout << "}";
 }
 
-std::string BaseHLDA::TopWords(int l, int id) {
+std::string BaseHLDA::TopWords(int l, int id, int max_font_size, int min_font_size) {
     TWord V = corpus.V;
     vector<pair<int, int>> rank((size_t) V);
     long long sum = 0;
+    int max_cnt = 0;
     for (int v = 0; v < V; v++) {
         auto c = icount(v, id+icount_offset[l]);
         rank[v] = make_pair(-c, v);
         sum += c;
+        max_cnt = std::max(max_cnt, int(c));
     }
     sort(rank.begin(), rank.end());
 
     ostringstream out;
-    out << sum << "\n";
-    for (int v = 0; v < 5; v++)
-        out << -rank[v].first << ' ' << corpus.vocab[rank[v].second] << "\n";
+    int min_cnt = std::min(int(sum / V) + 1, -rank[5].first + 1);
+    //out << sum << "\n";
+    for (int v = 0; v < 5; v++) {
+        auto wd = corpus.vocab[rank[v].second];
+        if (wd[0] == 'z' && wd[1] == 'z' && wd[2] == 'z') {
+            std::string new_str;
+            for (size_t i = 4; i < wd.size(); ) {
+                size_t next_ = i;
+                while (next_ < wd.size() && wd[next_] != '_') next_++;
+                new_str += toupper(wd[i]);
+                for (int j = i+1; j < next_; j++) new_str += wd[j];
+                if (next_ < wd.size()) new_str += ' ';
+                i = next_ + 1;
+            }
+            wd = new_str;
+        }
+        if (-rank[v].first > min_cnt) {
+            auto font_size = calc_font_size(max_font_size, min_font_size, max_cnt, min_cnt, -rank[v].first);
+            out << "<FONT POINT-SIZE=\"" << font_size << "\">"
+                << -rank[v].first << ' ' << wd << "</FONT><BR/>";
+        }
+    }
 
     return out.str();
 }
