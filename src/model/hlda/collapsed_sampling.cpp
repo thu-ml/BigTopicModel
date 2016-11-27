@@ -16,11 +16,11 @@
 
 using namespace std;
 
-CollapsedSampling::CollapsedSampling(Corpus &corpus, int L,
+CollapsedSampling::CollapsedSampling(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
                                      std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
                                      int num_iters, int mc_samples, int mc_iters,
                                      int topic_limit, int process_id, int process_size, bool check) :
-        BaseHLDA(corpus, L, alpha, beta, gamma, num_iters, mc_samples, process_id, process_size, check), 
+        BaseHLDA(corpus, to_corpus, th_corpus, L, alpha, beta, gamma, num_iters, mc_samples, process_id, process_size, check), 
         mc_iters(mc_iters),
         topic_limit(topic_limit) {}
 

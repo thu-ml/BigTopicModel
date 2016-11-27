@@ -19,12 +19,13 @@ int calc_font_size(int max_font_size, int min_font_size, int max_size, int min_s
     return int(size);
 };
 
-BaseHLDA::BaseHLDA(Corpus &corpus, int L,
+BaseHLDA::BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
                    std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
                    int num_iters, int mc_samples, int process_id, int process_size, bool check) :
         process_id(process_id), process_size(process_size),
         tree(L, gamma),
-        corpus(corpus), L(L), alpha(alpha), beta(beta), gamma(gamma),
+        corpus(corpus), to_corpus(to_corpus), th_corpus(th_corpus),
+        L(L), alpha(alpha), beta(beta), gamma(gamma),
         num_iters(num_iters), mc_samples(mc_samples), phi((size_t) L), log_phi((size_t) L),
         count(L, corpus.V, omp_get_max_threads()),
         icount(1, process_size, corpus.V, 1/*K*/, row_partition,

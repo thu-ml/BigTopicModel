@@ -64,7 +64,6 @@ int main(int argc, char **argv) {
     FLAGS_colorlogtostderr=true;
     LOG(INFO) << "Initialize google log done" << endl;
 
-    /// usage : vocab train_file to_file th_file K alpha beta iter
     google::SetUsageMessage("Usage : ./hlda [ flags... ]");
     google::ParseCommandLineFlags(&argc, &argv, true);
     vmlSetMode(VML_EP); // VML_HA VML_LA
@@ -90,8 +89,12 @@ int main(int argc, char **argv) {
         throw runtime_error("Invalid algorithm");
 
     string train_path = FLAGS_prefix + ".libsvm.train." + to_string(process_id);
+    string to_path = FLAGS_prefix + ".libsvm.to." + to_string(process_id);
+    string th_path = FLAGS_prefix + ".libsvm.th." + to_string(process_id);
     string vocab_path = FLAGS_prefix + ".vocab";
     Corpus corpus(vocab_path.c_str(), train_path.c_str());
+    Corpus to_corpus(vocab_path.c_str(), to_path.c_str());
+    Corpus th_corpus(vocab_path.c_str(), th_path.c_str());
 
     gethostname(hostname, 100);
     LOG(INFO) << hostname << " : Rank " << process_id << " has " << corpus.D << " docs, "
@@ -101,12 +104,12 @@ int main(int argc, char **argv) {
     // Train
     BaseHLDA *model = nullptr;
     if (FLAGS_algo == "cs") {
-        model = new CollapsedSampling(corpus,
+        model = new CollapsedSampling(corpus, to_corpus, th_corpus,
                                       FLAGS_L, alpha, beta, gamma,
                                       FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                       FLAGS_topic_limit, process_id, process_size, FLAGS_check);
     } else if (FLAGS_algo == "pcs") {
-        model = new PartiallyCollapsedSampling(corpus,
+        model = new PartiallyCollapsedSampling(corpus, to_corpus, th_corpus,
                                                FLAGS_L, alpha, beta, gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                                (size_t) FLAGS_minibatch_size,

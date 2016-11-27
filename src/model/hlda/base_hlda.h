@@ -25,7 +25,7 @@ class Corpus;
 class BaseHLDA {
 
 public:
-    BaseHLDA(Corpus &corpus, int L,
+    BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
              std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
              int num_iters, int mc_samples, int process_id, int process_size, bool check);
 
@@ -51,7 +51,7 @@ protected:
 
     int process_id, process_size;
     DistributedTree tree;
-    Corpus &corpus;
+    Corpus &corpus, &to_corpus, &th_corpus;
     int L;
     std::vector<TProb> alpha;
     double alpha_bar;
@@ -61,6 +61,8 @@ protected:
     std::vector<xorshift> generators;
 
     std::vector<Document> docs;
+    std::vector<Document> to_docs;
+    std::vector<Document> th_docs;
 
     // For pcs and is
     std::vector<Matrix<TProb> > phi;        // Depth * V * K

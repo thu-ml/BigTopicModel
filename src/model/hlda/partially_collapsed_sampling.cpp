@@ -13,12 +13,12 @@
 
 using namespace std;
 
-PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, int L, vector<TProb> alpha, vector<TProb> beta,
+PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L, vector<TProb> alpha, vector<TProb> beta,
                                                        vector<double> gamma,
                                                        int num_iters, int mc_samples, int mc_iters,
                                                        size_t minibatch_size,
                                                        int topic_limit, int threshold, bool sample_phi, int process_id, int process_size, bool check) :
-        CollapsedSampling(corpus, L, alpha, beta, gamma, num_iters, mc_samples, mc_iters,
+        CollapsedSampling(corpus, to_corpus, th_corpus, L, alpha, beta, gamma, num_iters, mc_samples, mc_iters,
                           topic_limit, process_id, process_size, check),
         minibatch_size(minibatch_size), threshold(threshold), sample_phi(sample_phi) {
     current_it = -1;
