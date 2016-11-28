@@ -17,32 +17,8 @@ public:
 
     virtual void Initialize();
 
-    virtual void Estimate() override;
-
 protected:
-    virtual void SampleZ(Document &doc, bool decrease_count, bool increase_count,
-            bool allow_new_topic = true);
-
-    virtual void SampleC(Document &doc, bool decrease_count, bool increase_count, 
-            bool allow_new_topic = true);
-
-    virtual void SamplePhi();
-
-    TProb WordScoreCollapsed(Document &doc, int l, int offset, int num, TProb *result);
-
-    TProb WordScoreInstantiated(Document &doc, int l, int num, TProb *result);
-
-    double Perplexity();
-
-    double PredictivePerplexity();
-
-    void Check();
-
-    void UpdateDocCount(Document &doc, int delta);
-
-    int current_it, mc_iters, topic_limit;
-
-    std::vector<double> doc_avg_likelihood;
+    virtual void SamplePhi() override;
 };
 
 
