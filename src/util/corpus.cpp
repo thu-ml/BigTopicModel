@@ -29,7 +29,7 @@ Corpus::Corpus(const char *vocabPath, const char *dataPath) {
 
 		vector<TWord> doc;
 		// Read id
-		string doc_id;
+		int doc_id;
 		for (auto &ch: line)
 			if (ch == ':') ch = ' ';
 		istringstream sin(line);

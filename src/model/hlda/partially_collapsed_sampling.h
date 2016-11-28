@@ -18,7 +18,8 @@ public:
     void Initialize() override;
 
 protected:
-    void SampleZ(Document &doc, bool decrease_count, bool increase_count) override;
+    void SampleZ(Document &doc, bool decrease_count, bool increase_count,
+            bool allow_new_topic = true) override;
 
     virtual void SamplePhi() override;
 

@@ -50,7 +50,7 @@ public:
 
     void DecNumDocs(int old_node_id);
 
-    IncResult IncNumDocs(int new_node_id);
+    IncResult IncNumDocs(int new_node_id, int delta = 1);
 
     RetTree GetTree();
 

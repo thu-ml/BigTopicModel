@@ -32,6 +32,8 @@ public:
 
     ConcurrentTree::IncResult IncNumDocs(int new_node_id);
 
+    ConcurrentTree::IncResult GetPath(int leaf_id);
+
     ConcurrentTree::RetTree GetTree();
 
     // Global operations
@@ -49,6 +51,7 @@ private:
     ConcurrentTree tree;
     TOnRecv on_recv;
     PublisherSubscriber<TOnRecv> pub_sub;
+    std::vector<int> num_instantiated;
 
     std::unique_ptr<channel<ConcurrentTree::IncResult>[]> tasks;
     MPI_Comm comm;

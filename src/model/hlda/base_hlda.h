@@ -35,6 +35,8 @@ public:
 
     void Visualize(std::string fileName, int threshold = -1);
 
+    virtual double PredictivePerplexity() = 0;
+
 protected:
     std::string TopWords(int l, int id, int max_font_size, int min_font_size);
 

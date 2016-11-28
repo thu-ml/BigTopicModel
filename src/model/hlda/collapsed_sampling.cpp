@@ -141,7 +141,8 @@ void CollapsedSampling::Estimate() {
 }
 
 void CollapsedSampling::SampleZ(Document &doc,
-                                bool decrease_count, bool increase_count) {
+                                bool decrease_count, bool increase_count,
+                                bool allow_new_topic) {
     TLen N = (TLen) doc.z.size();
     auto &pos = doc.c;
     std::vector<TProb> prob((size_t) L);
@@ -184,7 +185,8 @@ void CollapsedSampling::SampleZ(Document &doc,
 }
 
 void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
-                                bool increase_count) {
+                                bool increase_count,
+                                bool allow_new_topic) {
     Clock clk;
     // Sample
     int S = max(mc_samples, 1);
@@ -235,9 +237,15 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
             TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_i);
 
             scores[l].resize(num_i + num_collapsed + 1);
-            scores[l].back() = WordScoreCollapsed(doc, l,
+            if (allow_new_topic) {
+                scores[l].back() = WordScoreCollapsed(doc, l,
                                                   num_i, num_collapsed,
                                                   scores[l].data()+num_i);
+            } else {
+                WordScoreInstantiated(doc, l, num_i + num_collapsed, 
+                        scores[l].data());
+                scores[l].back() = -1e20f;
+            }
         }
 
         vector<TProb> emptyProbability((size_t) L, 0);
@@ -265,6 +273,7 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
     }
 
     // Sample
+    //auto old_prob = prob; // TODO
     Softmax(prob.begin(), prob.end());
     int node_number = DiscreteSample(prob.begin(), prob.end(), generator) / S;
     if (node_number < 0 || node_number >= (int) nodes.size())
@@ -279,6 +288,10 @@ void CollapsedSampling::SampleC(Document &doc, bool decrease_count,
         doc.leaf_id = ret.id;
         doc.c = ret.pos;
         UpdateDocCount(doc, 1);
+    }
+    if (!allow_new_topic) {
+        //LOG(INFO) << leaf_id << " " << old_prob;
+        doc.c = tree.GetPath(leaf_id).pos;
     }
     s4_time.Add(clk.toc()); clk.tic();
 }
@@ -390,6 +403,8 @@ double CollapsedSampling::Perplexity() {
             T += doc.z.size();
             log_likelihood += doc_log_likelihood;
         }
+        for (int l=0; l<L; l++)
+            doc.theta[l] = theta[l];
     }
 
     double global_log_likelihood;
@@ -556,4 +571,120 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
     UnlockDoc(doc);
 
     count.Publish(tid);
+}
+
+double CollapsedSampling::PredictivePerplexity() {
+    int num_test_c_samples = 5;
+    int num_test_z_burnin = 20;
+    int num_test_z_samples = 20;
+
+    double local_log_likelihood = 0;
+    size_t local_T = 0;
+#pragma omp parallel for
+    for (int d = 0; d < to_corpus.D; d++) {
+        auto &generator = GetGenerator();
+        auto &to_doc = to_docs[d];
+        auto &th_doc = th_docs[d];
+
+        double doc_log_likelihood = -1e20;
+        std::vector<double> theta(L);
+        for (int ncs = 0; ncs < num_test_c_samples; ncs++) {
+            double sample_log_likelihood = 0;
+            // Reset z
+            for (auto &l: to_doc.z) l = generator() % L;
+            fill(theta.begin(), theta.end(), 0);
+
+            // Sample c and z
+            for (int nz = 0; nz < num_test_z_burnin+num_test_z_samples; nz++) {
+                SampleC(to_doc, false, false, false);
+                //LOG(INFO) << "SampleC " << to_doc.c;
+                SampleZ(to_doc, false, false, false);
+                //LOG(INFO) << "SampleZ";
+                if (nz >= num_test_z_burnin) {
+                    for (auto l: to_doc.z)
+                        theta[l]++;
+                }
+            }
+
+            // Compute likelihood
+            double inv_normalization = 1. / (to_doc.w.size() + alpha_bar) 
+                / num_test_z_samples;
+            for (int l = 0; l < L; l++)
+                theta[l] = (theta[l] + alpha[l]*num_test_z_samples) 
+                    * inv_normalization;
+            for (int n = 0; n < th_doc.w.size(); n++) {
+                auto v = th_doc.w[n];
+                double ll = 0;
+                for (int l = 0; l < L; l++) {
+                    auto p = phi[l](v, to_doc.c[l]);
+                    ll += theta[l] * p;
+                }
+                //LOG(INFO) << v << " " << corpus.vocab[v] << ' ' << ll;
+                sample_log_likelihood += log(ll);
+            }
+            //LOG(INFO) << "Theta " << theta << " c " << to_doc.c;
+            //LOG(INFO) << "Oracle Theta " << docs[0].theta << " c " << docs[0].c << ' ' << to_doc.w.size() << ' ' << docs[0].w.size();
+            //LOG(INFO) << doc_log_likelihood << " " << exp(-doc_log_likelihood / th_doc.w.size());
+
+            //double dl = 0;
+            //double dl2 = 0;
+            //for (int n = 0; n < th_doc.w.size(); n++) {
+            //    auto v = th_doc.w[n];
+            //    double ll = 0;
+            //    double ll2 = 0;
+            //    for (int l = 0; l < L; l++) {
+            //        auto p = phi[l](v, docs[0].c[l]);
+            //        auto p2 = (icount(v, docs[0].c[l]+icount_offset[l]) + beta[l]) /
+            //                 (ck_dense[docs[0].c[l]+icount_offset[l]] + beta[l] * corpus.V);
+            //        ll += docs[0].theta[l] * p;
+            //        ll2 += docs[0].theta[l] * p2;
+            //    }
+            //    LOG(INFO) << v << " " << corpus.vocab[v] << ' ' << ll << ' ' << ll2;
+            //    dl += log(ll);
+            //    dl2 += log(ll2);
+            //}
+            //LOG(INFO) << dl << " " << exp(-dl / th_doc.w.size()) << ' ' << dl2;
+
+            //auto ret = tree.GetTree();
+            ////theta = {1.0, 0.0, 0.0, 0.0};
+            ////fill(theta.begin(), theta.end(), 0.25);
+            //for (size_t i = 0; i < ret.nodes.size(); i++) {
+            //    auto &node = ret.nodes[i];
+            //    if (node.depth + 1 < L) continue;
+            //    to_doc.c = tree.GetPath(i).pos;
+            //    double dl = 0;
+            //    for (int n = 0; n < th_doc.w.size(); n++) {
+            //        auto v = th_doc.w[n];
+            //        double ll = 0;
+            //        for (int l = 0; l < L; l++) {
+            //            auto p = phi[l](v, to_doc.c[l]);
+            //            ll += theta[l] * p;
+            //        }
+            //        dl += log(ll);
+            //    }
+            //    LOG(INFO) << i << ": " << to_doc.c << " " << dl;
+            //}
+            //
+            //exit(0);
+            //LOG(INFO) << sample_log_likelihood;
+            doc_log_likelihood = LogSum(doc_log_likelihood, sample_log_likelihood);
+        }
+#pragma omp critical
+        {
+            local_log_likelihood += doc_log_likelihood - log(num_test_c_samples);
+            local_T += th_doc.w.size();
+        }
+        //LOG(INFO) << local_log_likelihood << ' ' << exp(-local_log_likelihood / local_T);
+        //exit(0);
+    }
+
+    double global_log_likelihood;
+    size_t global_T;
+    MPI_Allreduce(&local_log_likelihood, &global_log_likelihood, 
+            1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_T, &global_T, 
+            1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+    LOG(INFO) <<  local_log_likelihood << " " << local_T <<  " " << 
+        global_log_likelihood << " " << global_T;
+    return exp(-global_log_likelihood / global_T);
 }

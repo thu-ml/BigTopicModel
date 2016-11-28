@@ -28,7 +28,7 @@ void ConcurrentTree::DecNumDocs(int old_node_id) {
     }
 }
 
-ConcurrentTree::IncResult ConcurrentTree::IncNumDocs(int new_node_id) {
+ConcurrentTree::IncResult ConcurrentTree::IncNumDocs(int new_node_id, int delta) {
     LOG_IF(FATAL, !IsLeaf(new_node_id))
            << "IncNumDocs receives non-leaf";
 
@@ -38,7 +38,7 @@ ConcurrentTree::IncResult ConcurrentTree::IncNumDocs(int new_node_id) {
         auto &node = nodes[new_node_id];
 
         result.pos[l] = node.pos;
-        ++node.num_docs;
+        node.num_docs += delta;
 
         new_node_id = node.parent_id;
         l--;

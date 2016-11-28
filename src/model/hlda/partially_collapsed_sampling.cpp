@@ -117,7 +117,8 @@ void PartiallyCollapsedSampling::Initialize() {
 }
 
 void PartiallyCollapsedSampling::SampleZ(Document &doc,
-                                         bool decrease_count, bool increase_count) {
+                                         bool decrease_count, bool increase_count,
+                                         bool allow_new_topic) {
     //std::lock_guard<std::mutex> lock(model_mutex);
     std::vector<TCount> cdl((size_t) L);
     std::vector<TProb> prob((size_t) L);
@@ -125,8 +126,10 @@ void PartiallyCollapsedSampling::SampleZ(Document &doc,
 
     auto &pos = doc.c;
     std::vector<bool> is_collapsed((size_t) L);
-    for (int l = 0; l < L; l++) is_collapsed[l] =
-                                        doc.c[l] >= num_instantiated[l];
+    for (int l = 0; l < L; l++) {
+        is_collapsed[l] = !allow_new_topic ? false :
+                             doc.c[l] >= num_instantiated[l];
+    }
 
     // TODO: the first few topics will have a huge impact...
     // Read out all the required data

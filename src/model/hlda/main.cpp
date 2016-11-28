@@ -132,6 +132,9 @@ int main(int argc, char **argv) {
         model->Visualize(FLAGS_vis_prefix, 0);
         LOG(INFO) << "Generated visualization";
     }
+    auto predictive_perplexity = model->PredictivePerplexity();
+    LOG_IF(INFO, process_id == 0) 
+        << "Predictive perplexity = " << predictive_perplexity;
     delete model;
 
 

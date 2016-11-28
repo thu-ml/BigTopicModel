@@ -94,6 +94,10 @@ ConcurrentTree::IncResult DistributedTree::IncNumDocs(int new_node_id) {
     }
 }
 
+ConcurrentTree::IncResult DistributedTree::GetPath(int new_node_id) {
+    return tree.IncNumDocs(new_node_id, 0);
+}
+
 ConcurrentTree::RetTree DistributedTree::GetTree() {
     return tree.GetTree();
 }

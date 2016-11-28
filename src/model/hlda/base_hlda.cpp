@@ -49,6 +49,20 @@ BaseHLDA::BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
         fill(doc.theta.begin(), doc.theta.end(), 1. / L);
         doc.initialized = false;
     }
+    LOG_IF(FATAL, to_corpus.D != th_corpus.D) 
+        << "The size of to and th corpus are different";
+
+    to_docs.resize(to_corpus.D);
+    th_docs.resize(th_corpus.D);
+    for (int d = 0; d < to_corpus.D; d++) {
+        to_docs[d].w = to_corpus.w[d];
+        to_docs[d].z.resize(to_docs[d].w.size());
+        to_docs[d].theta.resize(L);
+
+        th_docs[d].w = th_corpus.w[d];
+        th_docs[d].z.resize(th_docs[d].w.size());
+        th_docs[d].theta.resize(L);
+    }
     //shuffle(docs.begin(), docs.end(), generator);
 
     alpha_bar = accumulate(alpha.begin(), alpha.end(), 0.0);
