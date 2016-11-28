@@ -4,7 +4,7 @@ include_directories(${BigTopicModel_SOURCE_DIR}/src/engine)
 include_directories(/opt/intel/mkl/include)
 link_directories(/opt/intel/mkl/lib/intel64)
 
-add_library(hlda_lib base_hlda.cpp document.cpp partially_collapsed_sampling.cpp concurrent_tree.cpp distributed_tree.cpp)
+add_library(hlda_lib base_hlda.cpp document.cpp partially_collapsed_sampling.cpp block_gibbs_sampling.cpp concurrent_tree.cpp distributed_tree.cpp)
 add_executable(hlda main.cpp)
 target_link_libraries(hlda hlda_lib util ${MPI_LIBRARIES} ${GLOG} ${GFLAGS} mkl_intel_lp64 mkl_core mkl_sequential m dl)
 

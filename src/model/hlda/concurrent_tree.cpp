@@ -3,6 +3,7 @@
 #include <memory.h>
 #include <cmath>
 #include "glog/logging.h"
+#include "utils.h"
 
 ConcurrentTree::ConcurrentTree(int L, std::vector<double> gamma) :
     max_id(1), L(L), threshold(100000000), branching_factor(-1),
@@ -78,12 +79,16 @@ ConcurrentTree::RetTree ConcurrentTree::GetTree() {
         auto &node = ret.nodes[i];
         if (node.depth) {
             auto &parent = ret.nodes[node.parent_id];
-            node.log_path_weight = log(node.num_docs) 
-                - log(parent.num_docs + gamma[parent.depth])
-                + parent.log_path_weight;
+            if (branching_factor == -1)
+                node.log_path_weight = log(node.num_docs) 
+                    - log(parent.num_docs + gamma[parent.depth])
+                    + parent.log_path_weight;
+            else
+                node.log_path_weight = nodes[i].log_weight + 
+                    parent.log_path_weight;
         }
         // A nonexistent node
-        if (!Exist(i) || node.num_docs == 0)
+        if (!Exist(i) || (node.num_docs == 0 && branching_factor == -1))
             node.log_path_weight = -1e9;
         else
             ret.num_nodes[node.depth] = 
@@ -164,9 +169,9 @@ std::vector<std::vector<int>> ConcurrentTree::Compress() {
 
 void ConcurrentTree::Instantiate() {
     // Gather the children for each parent
-    std::vector<std::vector<int>> children(max_id);
+    std::vector<std::vector<int>> children(MAX_NUM_TOPICS);
     for (int i = 1; i < max_id; i++)
-        if (nodes[i].depth && Exist(i))
+        if (Exist(i))
             children[nodes[i].parent_id].push_back(i);
 
     for (int i = 0; i < max_id; i++)
@@ -177,26 +182,39 @@ void ConcurrentTree::Instantiate() {
                     return nodes[a].num_docs > nodes[b].num_docs;
             });
 
+            int num_empty = 0;
+            for (auto c: ch)
+                if (nodes[c].num_docs == 0)
+                    num_empty++;
+
             // Add new nodes if needed
-            while (ch.size() < branching_factor) {
+            for (int j = num_empty; j < branching_factor; j++) {
                 auto child = AddChildren(i);
                 ch.push_back(child);
+                //LOG(INFO) << "Add " << child << " to " << i;
             }
+            //LOG(INFO) << i << " ch: " << ch;
 
             std::vector<int> m_gt_i(ch.size());
             for (int n = (int)ch.size() - 2; n >= 0; n--)
-                m_gt_i[n] = m_gt_i[n+1] + nodes[ch[n]].num_docs;
+                m_gt_i[n] = m_gt_i[n+1] + nodes[ch[n+1]].num_docs;
 
             // Compute stick-breaking weight
             // Vi ~ Beta(1+mi, gamma+m>i)
             double log_stick_length = 0;
             for (size_t n = 0; n < ch.size(); n++) {
+                if (n + 1 == ch.size()) {
+                    nodes[ch[n]].log_weight = log_stick_length;
+                    break;
+                }
                 double a = 1.0 + nodes[ch[n]].num_docs;
                 double b = gamma[nodes[i].depth] + m_gt_i[n];
+                //LOG(INFO) << i << '-' << ch[n] << ' ' << a << ' ' << b;
 
                 nodes[ch[n]].log_weight = log_stick_length + log(a) - log(a + b);
                 log_stick_length += log(b) - log(a + b);
             }
+           // LOG(INFO) << i << ' ' << nodes[i].log_weight;
         }
 }
 

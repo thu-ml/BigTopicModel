@@ -17,6 +17,7 @@
 #include "mkl_vml.h"
 
 #include "partially_collapsed_sampling.h"
+#include "block_gibbs_sampling.h"
 
 using namespace std;
 
@@ -109,12 +110,12 @@ int main(int argc, char **argv) {
                                                (size_t) FLAGS_minibatch_size,
                                                FLAGS_topic_limit, FLAGS_threshold, FLAGS_sample_phi, process_id, process_size, FLAGS_check);
     } else if (FLAGS_algo == "is") {
-        /*model = new InstantiatedWeightSampling(corpus,
+        model = new BlockGibbsSampling(corpus, to_corpus, th_corpus,
                                                FLAGS_L, alpha, beta, gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                                (size_t) FLAGS_minibatch_size,
-                                               FLAGS_topic_limit, FLAGS_threshold, FLAGS_branching_factor,
-                                               FLAGS_sample_phi);*/
+                                               FLAGS_topic_limit, FLAGS_branching_factor, 
+                                               FLAGS_sample_phi, process_id, process_size, FLAGS_check);
     } else {
         /*model = new ExternalHLDA(corpus,
                                  FLAGS_L, alpha, beta, gamma, FLAGS_model_path);*/

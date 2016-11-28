@@ -28,6 +28,7 @@ public:
     BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
              std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
              int num_iters, int mc_samples, int mc_iters, size_t minibatch_size, int topic_limit,
+             bool sample_phi,
              int process_id, int process_size, bool check);
 
     virtual void Initialize();
@@ -63,6 +64,8 @@ protected:
             bool allow_new_topic = true);
 
     virtual void SamplePhi() = 0;
+
+    virtual void ComputePhi();
 
     double Perplexity();
 
@@ -108,6 +111,8 @@ protected:
     Statistics<double> lockdoc_time, s1_time, s2_time, s3_time, s4_time;
     bool check;
     double compute_phi_time, count_time, sync_time, set_time;
+
+    bool sample_phi;
 };
 
 #endif //HLDA_BASEHLDA_H

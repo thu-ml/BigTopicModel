@@ -16,16 +16,9 @@ public:
                                int process_id, int process_size, bool check);
 
 protected:
-    void SampleZ(Document &doc, bool decrease_count, bool increase_count,
-            bool allow_new_topic = true) override;
-
     virtual void SamplePhi() override;
 
-    void ComputePhi();
-
     int threshold;
-
-    bool sample_phi;
 };
 
 

@@ -107,6 +107,11 @@ void DistributedTree::SetThreshold(int threshold) {
     Barrier();
 }
 
+void DistributedTree::SetBranchingFactor(int branching_factor) {
+    tree.SetBranchingFactor(branching_factor);
+    Barrier();
+}
+
 void DistributedTree::Check() {
     //tree.Check();
 }
@@ -114,6 +119,11 @@ void DistributedTree::Check() {
 std::vector<std::vector<int>> DistributedTree::Compress() {
     Barrier();
     return tree.Compress();
+}
+
+void DistributedTree::Instantiate() {
+    Barrier();
+    tree.Instantiate();
 }
 
 std::vector<int> DistributedTree::GetNumInstantiated() {
