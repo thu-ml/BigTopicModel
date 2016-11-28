@@ -137,8 +137,8 @@ void ConcurrentTree::SetBranchingFactor(int branching_factor) {
 }
 
 std::vector<std::vector<int>> ConcurrentTree::Compress() {
-    LOG_IF(FATAL, !nodes[0].num_docs)
-           << "Compressing an empty tree";
+    //LOG_IF(FATAL, !nodes[0].num_docs)
+    //       << "Compressing an empty tree";
     // Sort the pos by decreasing order and remove zero nodes
     std::vector<std::vector<int>> pos_map(L);
     for (int l = 0; l < L; l++) {

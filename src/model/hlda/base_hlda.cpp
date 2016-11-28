@@ -101,9 +101,6 @@ void BaseHLDA::Initialize() {
     if (minibatch_size == 0)
         minibatch_size = docs.size();
 
-    if (!new_topic)
-        SamplePhi();
-
     int num_threads = omp_get_max_threads();
     LOG(INFO) << "OpenMP: using " << num_threads << " threads";
     auto &generator = GetGenerator();
@@ -226,9 +223,20 @@ void BaseHLDA::Estimate() {
                     num_docs_big += node.num_docs;
             }
 
+        size_t num_topics = 0;
         if (process_id == 0) {
-            LOG(INFO) << ANSI_YELLOW << "Num nodes: " << ret.num_nodes
-                                 << "    Num instantiated: " << num_instantiated << ANSI_NOCOLOR;
+            // Calculate num nodes and num instantiated
+            std::vector<int> num_nodes(L), num_i(L);
+            for (auto &node: ret.nodes)
+                if (node.num_docs) {
+                    num_nodes[node.depth]++;
+                    if (node.pos >= num_instantiated[node.depth]) 
+                        num_i[node.depth]++;
+                    num_topics++;
+                }
+
+            LOG(INFO) << ANSI_YELLOW << "Num nodes: " << num_nodes
+                                 << "    Num instantiated: " << num_i << ANSI_NOCOLOR;
         }
 
         double time = clk.toc();
@@ -240,7 +248,7 @@ void BaseHLDA::Estimate() {
         LOG_IF(INFO, process_id == 0) 
             << std::fixed << std::setprecision(2)
             << ANSI_GREEN << "Iteration " << it 
-            << ", " << ret.nodes.size() << " topics (" 
+            << ", " << num_topics << " topics (" 
             << num_big_nodes << ", " << num_docs_big << "), "
             << time << " seconds (" << throughput << " Mtoken/s), perplexity = "
             << perplexity << ANSI_NOCOLOR;
