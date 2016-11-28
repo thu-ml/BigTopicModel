@@ -15,8 +15,6 @@ public:
                                int topic_limit, int threshold, bool sample_phi, 
                                int process_id, int process_size, bool check);
 
-    void Initialize() override;
-
 protected:
     void SampleZ(Document &doc, bool decrease_count, bool increase_count,
             bool allow_new_topic = true) override;
@@ -29,7 +27,6 @@ protected:
     int threshold;
 
     bool sample_phi;
-    bool delayed_update;
 };
 
 

@@ -27,10 +27,10 @@ class BaseHLDA {
 public:
     BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
              std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
-             int num_iters, int mc_samples, int mc_iters, int topic_limit, 
+             int num_iters, int mc_samples, int mc_iters, size_t minibatch_size, int topic_limit,
              int process_id, int process_size, bool check);
 
-    virtual void Initialize() = 0;
+    virtual void Initialize();
 
     virtual void Estimate();
 
@@ -80,6 +80,7 @@ protected:
     std::vector<double> gamma;
     int num_iters, mc_samples;
     int current_it, mc_iters, topic_limit;
+    size_t minibatch_size;
 
     std::vector<xorshift> generators;
 
