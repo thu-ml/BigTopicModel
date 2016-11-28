@@ -574,7 +574,7 @@ void CollapsedSampling::UpdateDocCount(Document &doc, int delta) {
 }
 
 double CollapsedSampling::PredictivePerplexity() {
-    int num_test_c_samples = 5;
+    int num_test_c_samples = 20;
     int num_test_z_burnin = 20;
     int num_test_z_samples = 20;
 
@@ -684,7 +684,7 @@ double CollapsedSampling::PredictivePerplexity() {
             1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&local_T, &global_T, 
             1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
-    LOG(INFO) <<  local_log_likelihood << " " << local_T <<  " " << 
-        global_log_likelihood << " " << global_T;
+    //LOG(INFO) <<  local_log_likelihood << " " << local_T <<  " " << 
+    //    global_log_likelihood << " " << global_T;
     return exp(-global_log_likelihood / global_T);
 }
