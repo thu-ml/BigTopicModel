@@ -44,7 +44,9 @@ void BlockGibbsSampling::SamplePhi() {
     for (TLen l = 0; l < L; l++) {
         phi[l].SetC(ret.num_nodes[l]);
         log_phi[l].SetC(ret.num_nodes[l]);
+        count.Grow(0, l, ret.num_nodes[l]);
     }
+    count.Publish(0);
 
     AllBarrier();
     UpdateICount();
