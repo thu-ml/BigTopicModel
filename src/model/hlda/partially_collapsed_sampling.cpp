@@ -20,7 +20,7 @@ PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, Corpus &t
                                                        int topic_limit, int threshold, bool sample_phi, int process_id, int process_size, bool check) :
         BaseHLDA(corpus, to_corpus, th_corpus, L, alpha, beta, gamma, num_iters, mc_samples, mc_iters,
                           minibatch_size, topic_limit, process_id, process_size, check),
-        minibatch_size(minibatch_size), threshold(threshold), sample_phi(sample_phi) {
+        threshold(threshold), sample_phi(sample_phi) {
     tree.SetThreshold(threshold);
 }
 

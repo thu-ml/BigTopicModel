@@ -19,6 +19,7 @@ public:
     struct Node {
         int parent_id, pos, depth;
         std::atomic<int> num_docs;
+        double log_weight;
     };
 
     struct RetNode {
@@ -48,6 +49,8 @@ public:
     // Lock-free operations
     bool IsLeaf(int node_id);
 
+    bool Exist(int node_id);
+
     void DecNumDocs(int old_node_id);
 
     IncResult IncNumDocs(int new_node_id, int delta = 1);
@@ -62,9 +65,13 @@ public:
     // Global operations
     void SetThreshold(int threshold);
 
+    void SetBranchingFactor(int branching_factor);
+
     void Check();
 
     std::vector<std::vector<int>> Compress();
+
+    void Instantiate();
 
     std::vector<int> GetNumInstantiated();
 
@@ -74,7 +81,7 @@ private:
     void AddChildren(int parent_id, int child_id, int child_pos);
 
     std::array<Node, MAX_NUM_TOPICS> nodes;
-    int max_id, L, threshold;
+    int max_id, L, threshold, branching_factor;
     std::vector<double> gamma;
 
     std::vector<int> num_instantiated, num_nodes;

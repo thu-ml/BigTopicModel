@@ -23,7 +23,6 @@ protected:
 
     void ComputePhi();
 
-    size_t minibatch_size;
     int threshold;
 
     bool sample_phi;
