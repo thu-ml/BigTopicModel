@@ -18,7 +18,7 @@ PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, Corpus &t
                                                        int num_iters, int mc_samples, int mc_iters,
                                                        size_t minibatch_size,
                                                        int topic_limit, int threshold, bool sample_phi, int process_id, int process_size, bool check) :
-        CollapsedSampling(corpus, to_corpus, th_corpus, L, alpha, beta, gamma, num_iters, mc_samples, mc_iters,
+        BaseHLDA(corpus, to_corpus, th_corpus, L, alpha, beta, gamma, num_iters, mc_samples, mc_iters,
                           topic_limit, process_id, process_size, check),
         minibatch_size(minibatch_size), threshold(threshold), sample_phi(sample_phi) {
     current_it = -1;

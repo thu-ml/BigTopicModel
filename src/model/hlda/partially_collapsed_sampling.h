@@ -5,9 +5,9 @@
 #ifndef HLDA_PARTIALLYCOLLAPSEDSAMPLING_H
 #define HLDA_PARTIALLYCOLLAPSEDSAMPLING_H
 
-#include "collapsed_sampling.h"
+#include "base_hlda.h"
 
-class PartiallyCollapsedSampling : public CollapsedSampling {
+class PartiallyCollapsedSampling : public BaseHLDA {
 public:
     PartiallyCollapsedSampling(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
                                std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,

@@ -16,13 +16,12 @@
 #include "corpus.h"
 #include "mkl_vml.h"
 
-#include "collapsed_sampling.h"
 #include "partially_collapsed_sampling.h"
 
 using namespace std;
 
 DEFINE_string(prefix, "../data/nysmaller_parted", "prefix of the corpus");
-DEFINE_string(algo, "pcs", "Algorithm, cs, pcs, is, or es");
+DEFINE_string(algo, "pcs", "Algorithm: pcs, is, or es");
 DEFINE_int32(L, 4, "number of levels");
 DEFINE_string(alpha, "0.3", "Prior on level assignment, delimited by comma");
 DEFINE_string(beta, "1,0.4,0.3,0.2", "Prior on topics, delimited by comma");
@@ -103,12 +102,7 @@ int main(int argc, char **argv) {
 
     // Train
     BaseHLDA *model = nullptr;
-    if (FLAGS_algo == "cs") {
-        model = new CollapsedSampling(corpus, to_corpus, th_corpus,
-                                      FLAGS_L, alpha, beta, gamma,
-                                      FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
-                                      FLAGS_topic_limit, process_id, process_size, FLAGS_check);
-    } else if (FLAGS_algo == "pcs") {
+    if (FLAGS_algo == "pcs") {
         model = new PartiallyCollapsedSampling(corpus, to_corpus, th_corpus,
                                                FLAGS_L, alpha, beta, gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
