@@ -51,6 +51,8 @@ public:
 
     void Barrier();
 
+    int AddChildren(int parent_id, int num_docs);
+
 private:
     ConcurrentTree tree;
     TOnRecv on_recv;

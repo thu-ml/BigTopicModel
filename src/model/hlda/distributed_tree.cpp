@@ -133,3 +133,9 @@ std::vector<int> DistributedTree::GetNumInstantiated() {
 void DistributedTree::Barrier() {
     pub_sub.Barrier();
 }
+
+int DistributedTree::AddChildren(int parent_id, int num_docs) {
+    auto ret = tree.AddChildren(parent_id);
+    tree.nodes[ret].num_docs.store(num_docs);
+    return ret;
+}
