@@ -291,6 +291,12 @@ void BaseHLDA::Visualize(std::string fileName, int threshold) {
     for (auto &node: ret.nodes)
         max_node_size = std::max(max_node_size, node.num_docs);
 
+    vector<int> counts(L);
+    for (int l = 0; l < L; l++)
+        for (int k = 0; k < ret.num_nodes[l]; k++)
+            counts[l] += ck_dense[k + icount_offset[l]];
+    LOG(INFO) << "Layer weight: " << counts;
+
     ofstream fout(dotFileName.c_str());
     fout << "graph tree {\nnode[shape=rectangle]\n";
     // Output nodes
