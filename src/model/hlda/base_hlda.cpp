@@ -714,8 +714,6 @@ double BaseHLDA::Perplexity() {
             T += doc.z.size();
             log_likelihood += doc_log_likelihood;
         }
-        for (int l=0; l<L; l++)
-            doc.theta[l] = theta[l];
     }
 
     double global_log_likelihood;
