@@ -86,6 +86,12 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < beta_double.size(); i++) beta.push_back((TProb)beta_double[i]);
     auto gamma = Parse(FLAGS_gamma, FLAGS_L-1, "gamma");
 
+    if (FLAGS_threshold == -1) {
+        LOG_IF(INFO, process_id == 0)
+               << "Threshold is -1, using IS";
+        FLAGS_algo == "is";
+    }
+
     if (FLAGS_algo != "pcs" && FLAGS_algo != "cs" && FLAGS_algo != "es" && FLAGS_algo != "is")
         throw runtime_error("Invalid algorithm");
 
