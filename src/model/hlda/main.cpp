@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
     if (FLAGS_threshold == -1) {
         LOG_IF(INFO, process_id == 0)
                << "Threshold is -1, using IS";
-        FLAGS_algo == "is";
+        FLAGS_algo = "is";
     }
 
     if (FLAGS_algo != "pcs" && FLAGS_algo != "cs" && FLAGS_algo != "es" && FLAGS_algo != "is")
