@@ -25,14 +25,14 @@ plot(bgsa(:, 5), bgsa(:,6), 'bx');
 %
 plot(hldac(:,3), hldac(:,4), 'c^');
 
-%xlim([0 100]);
-%ylim([1400, 2800]);
+xlim([0 100]);
+ylim([2000, 3200]);
 
 xlabel('number of topics');
 ylabel('perplexity');
 
 %legend('cs', 'cs (mc)', 'pcs', 'pcs (mc)', 'pcs (mc, dir)', 'is', 'is (mc)', 'ic (mc, dir)', 'hlda-c');
-legend('cgs', 'cgsa', 'pcgs', 'pcgsa', 'bgs', 'bgsa', 'hlda-c');
+legend('CGS', 'CGS^a', 'PCGS', 'PCGS^a', 'BGS', 'BGS^a', 'hlda-c');
 
 set(gcf, 'PaperPosition', [0 0 5 5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
 set(gcf, 'PaperSize', [5 5]); %Keep the same paper size

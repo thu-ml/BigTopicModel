@@ -181,6 +181,7 @@ void BaseHLDA::Initialize() {
 }
 
 void BaseHLDA::Estimate() {
+    double total_time = 0;
     for (int it = 0; it < num_iters; it++) {
         //shuffle(docs.begin(), docs.end(), GetGenerator());
         current_it = it;
@@ -240,6 +241,7 @@ void BaseHLDA::Estimate() {
         }
 
         double time = clk.toc();
+        total_time += time;
 
         double throughput = corpus.T / time / 1048576;
         clk2.tic();
@@ -279,6 +281,7 @@ void BaseHLDA::Estimate() {
                   << " sync:" << sync_time
                   << " set:" << set_time;
     }
+    LOG_IF(INFO, process_id == 0) << "Finished in " << total_time << " seconds.";
 }
 
 void BaseHLDA::Visualize(std::string fileName, int threshold) {
@@ -563,6 +566,8 @@ void BaseHLDA::SampleC(Document &doc, bool decrease_count,
         for (TLen l = 0; l < L; l++) {
             TTopic num_i = (TTopic)num_instantiated[l];
             TTopic num_collapsed = (TTopic)(ret.num_nodes[l] - num_i);
+            LOG_IF(FATAL, (int)num_collapsed < 0)
+                << "Num collapsed < 0";
 
             scores[l].resize(num_i + num_collapsed + 1);
             if (allow_new_topic) {

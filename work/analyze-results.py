@@ -45,7 +45,7 @@ for g_setting in g_vals:
                 data = open(file_name).readlines()
                 result = data[-1].split()[-1]
                 result = str(float(result))
-                topic = str(int(data[-5].split()[6]))
+                topic = str(int(data[-6].split()[6]))
                 fout.write(' '.join(map(lambda x: str(x), setting)) 
                         + ' ' + topic + ' ' + result + '\n')
             except:
@@ -66,7 +66,7 @@ with open(result_file, 'w') as fout:
             data = open(file_name).readlines()
             result = data[-1].split()[-1]
             result = str(float(result))
-            topic = str(int(data[-4].split()[1]))
+            topic = str(int(data[-5].split()[1]))
             fout.write(' '.join(map(lambda x: str(x), setting)) 
                     + ' ' + topic + ' ' + result + '\n')
         except:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 from config import bin, data, num_jobs_per_node, num_parallel, params, generate_kv
-from config import L, hlda_params, hlda_c_bin, hlda_c_data
+from config import L, hlda_params, hlda_c_bin, hlda_c_data, num_machines
 
 os.system('rm scripts/*')
 
@@ -84,11 +84,8 @@ for i in range(0, len(file_names), num_jobs_per_node):
         fout.write('cat scripts/run_%d.list | xargs -n 1 -P %d sh\n' % (file_cnt, num_parallel))
     file_cnt += 1
 
-# Generate the yhrun script
-with open('run.list', 'w') as fout:
-    for i in range(file_cnt):
-        fout.write('scripts/run_%d.sh\n' % i)
-
-with open('run.sh', 'w') as fout:
-    fout.write('cat run.list | xargs -n 1 -P 20 yhrun -N 1 -p GPU sh\n')
+for m in range(num_machines):
+    with open('run_%d.sh' % m, 'w') as fout:
+        for i in range(m, file_cnt, num_machines):
+            fout.write('sh scripts/run_%d.sh\n' % i)
 

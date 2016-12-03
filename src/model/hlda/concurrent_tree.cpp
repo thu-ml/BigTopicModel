@@ -90,7 +90,7 @@ ConcurrentTree::RetTree ConcurrentTree::GetTree() {
         // A nonexistent node
         if (!Exist(i) || (node.num_docs == 0 && branching_factor == -1))
             node.log_path_weight = -1e9;
-        else
+        if (Exist(i))
             ret.num_nodes[node.depth] = 
                 std::max(ret.num_nodes[node.depth], node.pos + 1);
     }
