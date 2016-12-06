@@ -650,8 +650,6 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
     memset(result, 0, num*sizeof(TProb));
     TProb empty_result = 0;
 
-    std::vector<TProb> log_work((size_t) num+1);
-
     auto begin = doc.BeginLevel(l);
     auto end = doc.EndLevel(l);
 
@@ -668,16 +666,9 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
         auto v = doc.reordered_w[i];
 
         for (TTopic k = 0; k < actual_num; k++)
-            log_work[k] = (TProb) (local_count.Get(v, offset+k) + c_offset + b);
-        log_work.back() = c_offset + b;
+            result[k] += logf(local_count.Get(v, offset+k) + c_offset + b);
 
-        // VML ln
-        vsLn(num+1, log_work.data(), log_work.data());
-
-        for (TTopic k = 0; k < actual_num; k++)
-            result[k] += log_work[k];
-
-        empty_result += log_work[num];
+        empty_result += logf(c_offset + b);
     }
     t3_time.Add(clk.toc());
 
