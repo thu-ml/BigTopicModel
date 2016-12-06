@@ -32,6 +32,7 @@ typedef struct {
 } SpEntry;
 
 #define ALIGN_SIZE 32
+#define VECTOR_LENGTH 64
 #define MAX_NUM_TOPICS 100000
 
 #define ANSI_RED        "\x1b[31m"

@@ -113,6 +113,8 @@ protected:
     double compute_phi_time, count_time, sync_time, set_time;
 
     bool sample_phi;
+
+    std::vector<std::vector<TProb>> log_work;
 };
 
 #endif //HLDA_BASEHLDA_H

@@ -92,6 +92,8 @@ BaseHLDA::BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
 
     for (int l = 0; l < L; l++) 
         topic_mutexes.emplace_back(new std::mutex[MAX_NUM_TOPICS]);
+
+    log_work = decltype(log_work)(omp_get_max_threads(), std::vector<TProb>(VECTOR_LENGTH));
 }
 
 void BaseHLDA::Initialize() {
@@ -649,6 +651,7 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
 
     memset(result, 0, num*sizeof(TProb));
     TProb empty_result = 0;
+    auto &work = log_work[omp_get_thread_num()];
 
     auto begin = doc.BeginLevel(l);
     auto end = doc.EndLevel(l);
@@ -661,14 +664,39 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
         result[k] = -1e20f;
 
     t2_time.Add(clk.toc());
-    for (auto i = begin; i < end; i++) {
-        auto c_offset = doc.c_offsets[i];
-        auto v = doc.reordered_w[i];
 
-        for (TTopic k = 0; k < actual_num; k++)
-            result[k] += logf(local_count.Get(v, offset+k) + c_offset + b);
+    // Make a plan
+    int minibatch_size = actual_num + 1;
+    int num_minibatches;
+    if (minibatch_size > VECTOR_LENGTH) {
+        num_minibatches = 1;
+        work.resize(minibatch_size);
+    } else {
+        num_minibatches = VECTOR_LENGTH / minibatch_size;
+    }
 
-        empty_result += logf(c_offset + b);
+    for (auto iStart = begin; iStart < end; iStart += num_minibatches) {
+        auto iEnd = std::min(iStart + num_minibatches, end);
+
+        for (auto i = iStart; i < iEnd; i++) {
+            auto c_offset = doc.c_offsets[i];
+            auto v = doc.reordered_w[i];
+
+            auto *buff = &work[(i - iStart) * minibatch_size];
+            for (TTopic k = 0; k < actual_num; k++)
+                buff[k] = local_count.Get(v, offset+k) + c_offset + b;
+
+            buff[actual_num] = c_offset + b;
+        }
+
+        vsLn((iEnd - iStart) * minibatch_size, work.data(), work.data());
+
+        for (auto i = iStart; i < iEnd; i++) {
+            auto *buff = &work[(i - iStart) * minibatch_size];
+            for (TTopic k = 0; k < actual_num; k++)
+                result[k] += buff[k];
+            empty_result += buff[actual_num];
+        }
     }
     t3_time.Add(clk.toc());
 
