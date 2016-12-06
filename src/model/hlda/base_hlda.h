@@ -108,7 +108,7 @@ protected:
     //std::mutex model_mutex;
     std::vector<std::unique_ptr<std::mutex[]>> topic_mutexes;
 
-    Statistics<double> lockdoc_time, s1_time, s2_time, s3_time, s4_time;
+    Statistics<double> lockdoc_time, s1_time, s2_time, s3_time, s4_time, wsc_time, t1_time, t2_time, t3_time, t4_time;
     bool check;
     double compute_phi_time, count_time, sync_time, set_time;
 

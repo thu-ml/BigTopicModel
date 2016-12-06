@@ -197,6 +197,7 @@ void BaseHLDA::Estimate() {
         s2_time.Reset();
         s3_time.Reset();
         s4_time.Reset();
+        wsc_time.Reset();
         #pragma omp parallel for schedule(dynamic, 10)
         for (int d = 0; d < corpus.D; d++) {
             Clock clk;
@@ -231,7 +232,7 @@ void BaseHLDA::Estimate() {
             for (auto &node: ret.nodes)
                 if (node.num_docs) {
                     num_nodes[node.depth]++;
-                    if (node.pos >= num_instantiated[node.depth]) 
+                    if (node.pos < num_instantiated[node.depth]) 
                         num_i[node.depth]++;
                     num_topics++;
                 }
@@ -276,10 +277,18 @@ void BaseHLDA::Estimate() {
                   << " 2:" << s2_time.Sum()
                   << " 3:" << s3_time.Sum()
                   << " 4:" << s4_time.Sum()
+                  << " wsc:" << wsc_time.Mean()
                   << " cphi:" << compute_phi_time
                   << " cnt:" << count_time
                   << " sync:" << sync_time
                   << " set:" << set_time;
+
+        LOG_IF(INFO, process_id == 0) 
+            << t1_time.Sum() << ' '
+            << t2_time.Sum() << ' '
+            << t3_time.Sum() << ' '
+            << t4_time.Sum();
+                
     }
     LOG_IF(INFO, process_id == 0) << "Finished in " << total_time << " seconds.";
 }
@@ -580,6 +589,12 @@ void BaseHLDA::SampleC(Document &doc, bool decrease_count,
                 scores[l].back() = -1e20f;
             }
         }
+    }
+    s3_time.Add(clk.toc()); clk.tic();
+
+    // Stage 3
+    for (int s = 0; s < S; s++) {
+        auto &scores = all_scores[s];
 
         vector<TProb> emptyProbability((size_t) L, 0);
         for (int l = L - 2; l >= 0; l--)
@@ -613,7 +628,7 @@ void BaseHLDA::SampleC(Document &doc, bool decrease_count,
         throw runtime_error("Invalid node number");
 
     auto leaf_id = node_number;
-    s3_time.Add(clk.toc()); clk.tic();
+    s4_time.Add(clk.toc()); clk.tic();
 
     // Increase num_docs
     if (increase_count) {
@@ -625,10 +640,10 @@ void BaseHLDA::SampleC(Document &doc, bool decrease_count,
         //LOG(INFO) << leaf_id << " " << old_prob;
         doc.c = tree.GetPath(leaf_id).pos;
     }
-    s4_time.Add(clk.toc()); clk.tic();
 }
 
 TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TProb *result) {
+    Clock clk;
     auto b = beta[l];
     auto b_bar = b * corpus.V;
 
@@ -647,6 +662,7 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
     for (int k = actual_num; k < num; k++) 
         result[k] = -1e20f;
 
+    t2_time.Add(clk.toc());
     for (auto i = begin; i < end; i++) {
         auto c_offset = doc.c_offsets[i];
         auto v = doc.reordered_w[i];
@@ -663,6 +679,7 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
 
         empty_result += log_work[num];
     }
+    t3_time.Add(clk.toc());
 
     auto w_count = end - begin;
     for (TTopic k = 0; k < actual_num; k++)
@@ -670,10 +687,13 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
                 lgamma(local_count.GetSum(offset+k) + b_bar);
 
     empty_result -= lgamma(b_bar + w_count) - lgamma(b_bar);
+    wsc_time.Add(actual_num);
+    t4_time.Add(clk.toc());
     return empty_result;
 }
 
 TProb BaseHLDA::WordScoreInstantiated(Document &doc, int l, int num, TProb *result) {
+    Clock clk;
     memset(result, 0, num*sizeof(TProb));
 
     auto begin = doc.BeginLevel(l);
@@ -684,11 +704,13 @@ TProb BaseHLDA::WordScoreInstantiated(Document &doc, int l, int num, TProb *resu
     for (auto i = begin; i < end; i++) {
         auto v = doc.reordered_w[i];
 
+        auto *p = &local_log_phi(v, 0);
         for (TTopic k = 0; k < num; k++)
-            result[k] += local_log_phi(v, k);
+            result[k] += p[k];
     }
     
     TProb empty_result = logf(1./corpus.V) * (end - begin);
+    t1_time.Add(clk.toc());
     return empty_result;
 }
 
