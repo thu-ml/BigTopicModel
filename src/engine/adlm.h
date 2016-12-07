@@ -94,6 +94,14 @@ public:
             m.Compress();
     }
 
+    int GetNumSyncs() {
+        return pub_sub.GetNumSyncs();
+    }
+
+    size_t GetBytesCommunicated() {
+        return pub_sub.GetBytesCommunicated(); 
+    }
+
 private:
     struct TOnRecv {
         TOnRecv(ADLM &l): l(l) {}

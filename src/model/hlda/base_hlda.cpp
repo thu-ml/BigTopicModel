@@ -209,6 +209,8 @@ void BaseHLDA::Estimate() {
             SampleZ(doc, true, true);
             z_time.Add(clk.toc()); clk.tic();
         }
+        int num_syncs = count.GetNumSyncs();
+        auto bytes_communicated = count.GetBytesCommunicated();
         auto sample_time = clk2.toc(); 
         AllBarrier();
 
@@ -256,7 +258,9 @@ void BaseHLDA::Estimate() {
             << ", " << num_topics << " topics (" 
             << num_big_nodes << ", " << num_docs_big << "), "
             << time << " seconds (" << throughput << " Mtoken/s), perplexity = "
-            << perplexity << ANSI_NOCOLOR;
+            << perplexity 
+            << " (" << num_syncs/sample_time << " syncs/s, " << bytes_communicated/1048576 << " MB communicated.)"
+            << ANSI_NOCOLOR;
 
         double check_time = 0;
         if (check) {
@@ -285,11 +289,11 @@ void BaseHLDA::Estimate() {
                   << " sync:" << sync_time
                   << " set:" << set_time;
 
-        LOG_IF(INFO, process_id == 0) 
+        /*LOG_IF(INFO, process_id == 0) 
             << t1_time.Sum() << ' '
             << t2_time.Sum() << ' '
             << t3_time.Sum() << ' '
-            << t4_time.Sum();
+            << t4_time.Sum();*/
                 
     }
     LOG_IF(INFO, process_id == 0) << "Finished in " << total_time << " seconds.";

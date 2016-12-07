@@ -73,10 +73,13 @@ public:
         barrier_met = false;
         cv.wait(lock, [&](){ return barrier_met; });
         barrier = false;
+        num_syncs = 0;
+        bytes_communicated = 0;
         //std::this_thread::sleep_for(std::chrono::milliseconds(500)); //TODO
     }
 
     int GetNumSyncs() { return num_syncs; }
+    size_t GetBytesCommunicated() { return bytes_communicated; }
 
     int ID() { return process_id; }
 
@@ -100,7 +103,10 @@ private:
                 MPIHelpers::Allgatherv(comm, process_size,
                                        sending.size(), sending.data(),
                                        recv_offsets, recv_buffer);
-                ++num_syncs;
+                if (!recv_buffer.empty()) {
+                    ++num_syncs;
+                    bytes_communicated += recv_buffer.size();
+                }
 
                 // Invoke on_recv
                 if (is_subscriber) {
@@ -177,6 +183,7 @@ private:
     std::condition_variable cv;
 
     int process_id, process_size, num_syncs;
+    size_t bytes_communicated;
     MPI_Comm comm;
 };
 
