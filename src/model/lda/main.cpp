@@ -11,6 +11,7 @@
 #include "gflags/gflags.h"
 #include "engine/types.h"
 #include "model/lda/lda.h"
+#include "model/lda/fast_lda.h"
 
 DEFINE_string(prefix, "../data/nips", "input data path");
 DEFINE_uint64(K, 100, "the number of topic ");
@@ -19,6 +20,8 @@ DEFINE_double(beta, 0.01, "hyperparameter for topic");
 DEFINE_uint64(iter, 100, "iteration number of training");
 DEFINE_uint64(doc_part, 2, "document partition number");
 DEFINE_uint64(word_part, 2, "vocabulary partition number");
+DEFINE_uint64(update_interval, 2, "Interval of updating the active set");
+DEFINE_uint64(active_size, 8, "Size of the active set");
 
 bool compareByCount(const SpEntry &a, const SpEntry &b) {
     return a.v > b.v;
@@ -79,9 +82,14 @@ int main(int argc, char **argv) {
     << num_docs << " docs, " << num_words << " words, "
     << train_corpus.size() / sizeof(int) << " tokens." << endl;
 
-    LDA lda(FLAGS_iter, FLAGS_K, FLAGS_alpha, FLAGS_beta, train_corpus,
+    /*LDA lda(FLAGS_iter, FLAGS_K, FLAGS_alpha, FLAGS_beta, train_corpus,
             process_size, process_id, omp_get_max_threads(),
             num_docs, num_words, FLAGS_doc_part, FLAGS_word_part, monolith);
+    lda.Estimate();*/
+    FastLDA lda(FLAGS_iter, FLAGS_K, FLAGS_alpha, FLAGS_beta, train_corpus,
+            process_size, process_id, omp_get_max_threads(),
+            num_docs, num_words, FLAGS_doc_part, FLAGS_word_part, monolith,
+                FLAGS_update_interval, FLAGS_active_size);
     lda.Estimate();
 
     /// index -> string
