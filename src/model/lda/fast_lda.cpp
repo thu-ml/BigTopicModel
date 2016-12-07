@@ -152,21 +152,6 @@ void FastLDA::iterWord(bool is_fast_iteration) {
                 TProb ap_sum = active_sum + priorSum;
                 TProb inactive_sum = sum - active_sum;
 
-                /*TProb inactive_p = inactive_sum / (ap_sum + inactive_sum);
-                for (size_t i = 0; i < count; i++) {
-                    bool result = u01(generator) < inactive_p;
-                    is_inactive[i] = result;
-                    any_inactive = any_inactive || result;
-                }*/
-
-                //for (TTopic i = 0; i < Kd; i++)
-                    //LOG(INFO) << c[i].k << ' ' << c[i].v << ' ' << phi[c[i].k];
-
-                /*LOG(INFO) << inactive_sum << " " << active_sum << " " << priorSum
-                          << " " << inactive_p << " " << inactive_sum / (ap_sum + inactive_sum);
-                if (any_inactive)
-                    LOG(FATAL) << "Done";*/
-
                 for (TCount cc = 0; cc < count; cc++) {
                     TTopic k = 0;
                     if (is_inactive[cc]) {  // Inactive
@@ -184,15 +169,6 @@ void FastLDA::iterWord(bool is_fast_iteration) {
                             k = samplePrior(pos - active_sum);
                         }
                     }
-                    /*TProb pos = u01(generator) * (ap_sum + inactive_sum);
-                    TTopic k = 0;
-                    if (pos < active_sum + inactive_sum) {
-                        int i = 0;
-                        for (i = 0; i < Kd && prob[i] < pos; i++);
-                        k = c[i].k;
-                    } else {
-                        k = samplePrior(pos - active_sum - inactive_sum);
-                    }*/
                     assert(k >= 0 && k < K);
                     cwk.update(tid, local_w, k);
                     cdk.update(tid, d, k);
@@ -285,7 +261,8 @@ void FastLDA::Estimate() {
                 word_per_doc[d] = L;
             }
         }
-        bool is_fast_iteration = iter > 10 && iter%update_interval != 0;
+        //bool is_fast_iteration = iter > 10 && iter%update_interval != 0;
+        bool is_fast_iteration = iter % update_interval != 0;
         if (!is_fast_iteration)
             UpdateActiveSet();
 
