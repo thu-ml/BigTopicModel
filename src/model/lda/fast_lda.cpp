@@ -108,6 +108,7 @@ void FastLDA::iterWord(bool is_fast_iteration) {
 
                 // Set inactive ratio
                 inactive_ratio[local_w][iStart] = inactive_sum / (sum + priorSum);
+                inactive_proportion.Add(inactive_sum / (sum + priorSum));
 
                 // Compute perplexity
                 TProb marginalProb = (sum + priorSum) / (Ld + alphaBar);
@@ -141,6 +142,8 @@ void FastLDA::iterWord(bool is_fast_iteration) {
                     is_inactive[i] = result;
                     any_inactive = any_inactive || result;
                 }
+                for (size_t i = 0; i < count; i++)
+                    fast_probability.Add(!any_inactive);
 
                 if (any_inactive) {
                     for (TTopic i = num_a; i < Kd; i++) {
@@ -221,6 +224,8 @@ void FastLDA::Estimate() {
     std::uniform_int_distribution<int> dice(0, K - 1);
     atomic<size_t> averageCount{0};
     inactive_ratio.resize(num_words);
+    inactive_proportion.Reset();
+    fast_probability.Reset();
 #pragma omp parallel for
     for (TWord v = 0; v < num_words; v++) {
         int last = -1, cnt = 0;
@@ -328,6 +333,9 @@ void FastLDA::Estimate() {
                 << "\tperplexity = " << exp(-llreduce / global_token_number)
                 << "\t" << global_token_number / clk.timeSpan(iter_start) / 1e6
                 << " Mtoken/s\x1b[0m" << std::endl;
+        LOG_IF(INFO, process_id == monitor_id) << "\x1b[32minactive proportion : " <<
+            inactive_proportion.Mean() << " fast probability : " <<
+            fast_probability.Mean() << "\x1b[0m";
     }
     if (monolith == local_merge_style) {
         cdk.free_mono_buff();

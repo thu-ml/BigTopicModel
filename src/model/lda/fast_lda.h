@@ -19,6 +19,7 @@
 #include "util/thread_local.h"
 #include "util/hash_table.h"
 #include "util/distributions.h"
+#include "util/statistics.h"
 #include "glog/logging.h"
 
 
@@ -77,6 +78,7 @@ public :
     std::vector<std::vector<int>> active_set;
     std::vector<int> num_active;
     std::vector<std::vector<TProb>> inactive_ratio;
+    Statistics<TProb> inactive_proportion, fast_probability;
 
     FastLDA(TIter iter, TTopic K, TProb alpha, TProb beta, CVA<int> &corpus,
         const TId process_size, const TId process_id, const TLen thread_size,
