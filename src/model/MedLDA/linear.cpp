@@ -2262,7 +2262,7 @@ static double calc_start_C(const problem *prob, const parameter *param)
 //
 model* train(const problem *prob, const parameter *param)
 {
-	int i,j;
+	//int i,j;
 	int l = prob->l;
 	int n = prob->n;
 	int w_size = prob->n;
@@ -2279,7 +2279,7 @@ model* train(const problem *prob, const parameter *param)
 	if(check_regression_model(model_))
 	{
 		model_->w = Malloc(double, w_size);
-		for(i=0; i<w_size; i++)
+		for(int i=0; i<w_size; i++)
 			model_->w[i] = 0;
 		model_->nr_class = 2;
 		model_->label = NULL;
@@ -2301,7 +2301,7 @@ model* train(const problem *prob, const parameter *param)
 			model_ -> doc_mapping[i] = perm[i];
 		model_->nr_class=nr_class;
 		model_->label = Malloc(int,nr_class);
-		for(i=0;i<nr_class;i++)
+		for(int i=0;i<nr_class;i++)
 			model_->label[i] = label[i];
 
         // added by Jiarui Lu
@@ -2311,10 +2311,11 @@ model* train(const problem *prob, const parameter *param)
 
 		// calculate weighted C
 		double *weighted_C = Malloc(double, nr_class);
-		for(i=0;i<nr_class;i++)
+		for(int i=0;i<nr_class;i++)
 			weighted_C[i] = param->C;
-		for(i=0;i<param->nr_weight;i++)
+		for(int i=0;i<param->nr_weight;i++)
 		{
+			int j = 0;
 			for(j=0;j<nr_class;j++)
 				if(param->weight_label[i] == label[j])
 					break;
@@ -2326,7 +2327,7 @@ model* train(const problem *prob, const parameter *param)
 
 		// constructing the subproblem
 		feature_node **x = Malloc(feature_node *,l);
-		for(i=0;i<l;i++)
+		for(int i=0;i<l;i++)
 			x[i] = prob->x[perm[i]];
 
 		int k;
@@ -2343,8 +2344,8 @@ model* train(const problem *prob, const parameter *param)
 		if(param->solver_type == MCSVM_CS)
 		{
 			model_->w=Malloc(double, n*nr_class);
-			for(i=0;i<nr_class;i++)
-				for(j=start[i];j<start[i]+count[i];j++)
+			for(int i=0;i<nr_class;i++)
+				for(int j=start[i];j<start[i]+count[i];j++)
 					sub_prob.y[j] = i;
 			Solver_MCSVM_CS Solver(&sub_prob, nr_class, weighted_C, param->eps);
 			Solver.Solve(model_->w);
@@ -2363,10 +2364,10 @@ model* train(const problem *prob, const parameter *param)
 					sub_prob.y[k] = -1;
 
 				if(param->init_sol != NULL)
-					for(i=0;i<w_size;i++)
+					for(int i=0;i<w_size;i++)
 						model_->w[i] = param->init_sol[i];
 				else
-					for(i=0;i<w_size;i++)
+					for(int i=0;i<w_size;i++)
 						model_->w[i] = 0;
 
 				train_one(&sub_prob, param, model_->w, weighted_C[0], weighted_C[1], empty);
@@ -2375,7 +2376,7 @@ model* train(const problem *prob, const parameter *param)
 			{
 				model_->w=Malloc(double, w_size*nr_class);
 				double *w=Malloc(double, w_size);
-				for(i=0;i<nr_class;i++)
+				for(int i=0;i<nr_class;i++)
 				{
 					int si = start[i];
 					int ei = si+count[i];
@@ -2389,10 +2390,10 @@ model* train(const problem *prob, const parameter *param)
 						sub_prob.y[k] = -1;
 
 					if(param->init_sol != NULL)
-						for(j=0;j<w_size;j++)
+						for(int j=0;j<w_size;j++)
 							w[j] = param->init_sol[j*nr_class+i];
 					else
-						for(j=0;j<w_size;j++)
+						for(int j=0;j<w_size;j++)
 							w[j] = 0;
 
                     train_one(&sub_prob, param, w, weighted_C[i], param->C, model_ -> saved_alpha[i]);
