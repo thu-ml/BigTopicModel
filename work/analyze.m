@@ -47,8 +47,9 @@ subplot(2, 2, 1);
 plot(log2(m(:, 1)), m(:, 3));
 xlabel('M');
 ylabel('perplexity');
-set(gca, 'XTick', [0, 5, 10, 15]);
-set(gca, 'XTickLabel', {'2^0', '2^5', '2^{10}', '2^{15}'});
+set(gca, 'XTick', [0, 6, 12, 17]);
+xlim([0, 17]);
+set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
 
 subplot(2, 2, 2);
 topics = m(length(m):-1:1, 11:12);
@@ -56,27 +57,28 @@ bar(topics, 'stacked');
 xlabel('M');
 ylabel('topics');
 ylim([0, 1000]);
-xlim([0, 16]);
+xlim([0, 19]);
 legend('I', 'C');
-%set(gca, 'XTick', [0, 5, 10, 15]);
-%set(gca, 'XTickLabel', {'2^0', '2^5', '2^{10}', '2^{15}'});
-set(gca, 'XTickLabel', {'2^0', '', '', '', '', '2^5', '', '', '', '', '2^{10}', '', '', '', '', '2^{15}'});
+set(gca, 'XTick', [0 7 13 19]);
+set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
 
 subplot(2, 2, 3);
 times = m(length(m):-1:1, 7:9);
 bar(times, 'stacked');
 xlabel('M');
 ylabel('CPU time (s)');
-xlim([0, 16]);
+xlim([0, 19]);
 legend('I', 'C', 'Z', 'Location', 'northwest');
-set(gca, 'XTickLabel', {'2^0', '', '', '', '', '2^5', '', '', '', '', '2^{10}', '', '', '', '', '2^{15}'});
+set(gca, 'XTick', [0 7 13 19]);
+set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
 
 subplot(2, 2, 4);
 plot(log2(m(:, 1)), m(:, 5));
 xlabel('M');
 ylabel('sync.s / second');
-set(gca, 'XTick', [0, 5, 10, 15]);
-set(gca, 'XTickLabel', {'2^0', '2^5', '2^{10}', '2^{15}'});
+set(gca, 'XTick', [0, 6, 12, 17]);
+xlim([0, 17]);
+set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
 
 set(gcf, 'PaperPosition', [0 0 5 5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
 set(gcf, 'PaperSize', [5 5]); %Keep the same paper size

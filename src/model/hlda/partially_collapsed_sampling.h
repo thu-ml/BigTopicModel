@@ -13,7 +13,7 @@ public:
                                std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
                                int num_iters, int mc_samples, int mc_iters, size_t minibatch_size,
                                int topic_limit, int threshold, bool sample_phi, 
-                               int process_id, int process_size, bool check);
+                               int process_id, int process_size, bool check, bool random_start);
 
 protected:
     virtual void SamplePhi() override;

@@ -29,7 +29,7 @@ BaseHLDA::BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
                    std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
                    int num_iters, int mc_samples, int mc_iters, size_t minibatch_size,
                    int topic_limit, bool sample_phi,
-                   int process_id, int process_size, bool check) :
+                   int process_id, int process_size, bool check, bool random_start) :
         process_id(process_id), process_size(process_size),
         tree(L, gamma),
         corpus(corpus), to_corpus(to_corpus), th_corpus(th_corpus),
@@ -43,10 +43,16 @@ BaseHLDA::BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
                process_size, process_id),
         new_topic(true), check(check) {
 
-    std::mt19937_64 rd;
     generators.resize(omp_get_max_threads());
-    for (auto &gen: generators)
-        gen.seed(rd(), rd());
+    if (random_start) {
+        std::random_device rd;
+        for (auto &gen: generators)
+            gen.seed(rd(), rd());
+    } else {
+        std::mt19937_64 rd;
+        for (auto &gen: generators)
+            gen.seed(rd(), rd());
+    }
 
     TDoc D = corpus.D;
     docs.resize((size_t) D);
