@@ -676,6 +676,7 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
     t2_time.Add(clk.toc());
 
     // Make a plan
+#ifndef DONT_USE_VML
     int minibatch_size = actual_num + 1;
     int num_minibatches;
     if (minibatch_size > VECTOR_LENGTH) {
@@ -708,6 +709,16 @@ TProb BaseHLDA::WordScoreCollapsed(Document &doc, int l, int offset, int num, TP
             empty_result += buff[actual_num];
         }
     }
+#else
+    for (auto i = begin; i < end; i++) {
+        auto c_offset = doc.c_offsets[i];
+        auto v = doc.reordered_w[i];
+        for (TTopic k = 0; k < actual_num; k++)
+            result[k] += logf(local_count.Get(v, offset+k) + c_offset + b);
+
+        empty_result += logf(c_offset + b);
+    }
+#endif
     t3_time.Add(clk.toc());
 
     auto w_count = end - begin;
