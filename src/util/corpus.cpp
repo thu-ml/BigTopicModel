@@ -6,7 +6,7 @@ using namespace std;
 
 constexpr int READ_BUF_CAPACITY = 1 << 24;
 
-Corpus::Corpus(const char *vocabPath, const char *dataPath) {
+Corpus::Corpus(const char *vocabPath, const char *dataPath, int max_vocab_size) {
 	// Load vocab
 	int junk1, junk2;
 	string word;
@@ -18,6 +18,8 @@ Corpus::Corpus(const char *vocabPath, const char *dataPath) {
 		word2id[word] = (int) vocab.size();
 		vocab.push_back(word);
 	}
+    if (vocab.size() > max_vocab_size)
+        vocab.resize(max_vocab_size);
 
 	// Load
 	ReadBuf<ifstream> readBuf(dataPath, READ_BUF_CAPACITY);
@@ -37,7 +39,8 @@ Corpus::Corpus(const char *vocabPath, const char *dataPath) {
 
 		int idx, val;
 		while (sin >> idx >> val) {
-			while (val--) doc.push_back(idx);
+            if (idx < vocab.size())
+			    while (val--) doc.push_back(idx);
 		}
 
 		std::sort(doc.begin(), doc.end());

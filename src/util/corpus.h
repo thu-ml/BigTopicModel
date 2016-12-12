@@ -12,7 +12,7 @@ class Corpus {
 public:
 	Corpus() {}
 
-	Corpus(const char *vocabPath, const char *dataPath);
+	Corpus(const char *vocabPath, const char *dataPath, int max_vocab_size);
 
 	Corpus(const Corpus &from, int start, int end);
 

@@ -40,6 +40,7 @@ DEFINE_int32(branching_factor, 2, "Branching factor for instantiated weight samp
 DEFINE_bool(sample_phi, false, "Whether to sample phi or update it with expectation");
 DEFINE_bool(check, false, "Whether turn on checking");
 DEFINE_bool(random_start, false, "Whether start randomly");
+DEFINE_int32(max_vocab_size, 1000000, "Maximum vocabulary size.");
 
 char hostname[100];
 
@@ -100,9 +101,9 @@ int main(int argc, char **argv) {
     string to_path = FLAGS_prefix + ".libsvm.to." + to_string(process_id);
     string th_path = FLAGS_prefix + ".libsvm.th." + to_string(process_id);
     string vocab_path = FLAGS_prefix + ".vocab";
-    Corpus corpus(vocab_path.c_str(), train_path.c_str());
-    Corpus to_corpus(vocab_path.c_str(), to_path.c_str());
-    Corpus th_corpus(vocab_path.c_str(), th_path.c_str());
+    Corpus corpus(vocab_path.c_str(), train_path.c_str(), FLAGS_max_vocab_size);
+    Corpus to_corpus(vocab_path.c_str(), to_path.c_str(), FLAGS_max_vocab_size);
+    Corpus th_corpus(vocab_path.c_str(), th_path.c_str(), FLAGS_max_vocab_size);
 
     gethostname(hostname, 100);
     LOG(INFO) << hostname << " : Rank " << process_id << " has " << corpus.D << " docs, "
