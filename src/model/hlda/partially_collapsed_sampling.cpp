@@ -4,7 +4,7 @@
 
 #include "partially_collapsed_sampling.h"
 #include "clock.h"
-#include "corpus.h"
+#include "hlda_corpus.h"
 #include <iostream>
 #include <omp.h>
 #include "mkl_vml.h"
@@ -13,7 +13,7 @@
 
 using namespace std;
 
-PartiallyCollapsedSampling::PartiallyCollapsedSampling(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L, vector<TProb> alpha, vector<TProb> beta,
+PartiallyCollapsedSampling::PartiallyCollapsedSampling(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus, int L, vector<TProb> alpha, vector<TProb> beta,
                                                        vector<double> gamma,
                                                        int num_iters, int mc_samples, int mc_iters,
                                                        size_t minibatch_size,

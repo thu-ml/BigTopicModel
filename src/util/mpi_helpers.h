@@ -6,6 +6,7 @@
 
 #include <stdarg.h>
 #include <mpi.h>
+#include <cstring>
 
 /* Likely/Unlikely macros borrowed from MPICH via ARMCI-MPI */
 

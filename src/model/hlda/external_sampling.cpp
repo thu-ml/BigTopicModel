@@ -4,7 +4,7 @@
 
 #include "external_sampling.h"
 #include "clock.h"
-#include "corpus.h"
+#include "hlda_corpus.h"
 #include <iostream>
 #include <omp.h>
 #include "mkl_vml.h"
@@ -13,7 +13,7 @@
 
 using namespace std;
 
-ExternalSampling::ExternalSampling(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus,
+ExternalSampling::ExternalSampling(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus,
                                    int L, vector<TProb> alpha, vector<TProb> beta,
                                    vector<double> gamma,
                                    int process_id, int process_size, bool check, string prefix) :

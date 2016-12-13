@@ -20,12 +20,12 @@
 #include "adlm.h"
 #include "statistics.h"
 
-class Corpus;
+class HLDACorpus;
 
 class BaseHLDA {
 
 public:
-    BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
+    BaseHLDA(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus, int L,
              std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
              int num_iters, int mc_samples, int mc_iters, size_t minibatch_size, int topic_limit,
              bool sample_phi,
@@ -75,7 +75,7 @@ protected:
 
     int process_id, process_size;
     DistributedTree tree;
-    Corpus &corpus, &to_corpus, &th_corpus;
+    HLDACorpus &corpus, &to_corpus, &th_corpus;
     int L;
     std::vector<TProb> alpha;
     double alpha_bar;

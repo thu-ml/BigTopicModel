@@ -13,7 +13,7 @@
 
 #include "types.h"
 
-#include "corpus.h"
+#include "hlda_corpus.h"
 #include "mkl_vml.h"
 
 #include "partially_collapsed_sampling.h"
@@ -22,7 +22,7 @@
 
 using namespace std;
 
-DEFINE_string(prefix, "../data/nysmaller_parted", "prefix of the corpus");
+DEFINE_string(prefix, "../data/nysmalle", "prefix of the corpus");
 DEFINE_string(model_path, "../../hlda-c/out/run014", "Prefix of the model, for hlda-c");
 DEFINE_string(algo, "pcs", "Algorithm: pcs, is, or es");
 DEFINE_int32(L, 4, "number of levels");
@@ -96,17 +96,22 @@ int main(int argc, char **argv) {
     if (FLAGS_algo != "pcs" && FLAGS_algo != "cs" && FLAGS_algo != "es" && FLAGS_algo != "is")
         throw runtime_error("Invalid algorithm");
 
-    string train_path = FLAGS_prefix + ".libsvm.train." + to_string(process_id);
-    string to_path = FLAGS_prefix + ".libsvm.to." + to_string(process_id);
-    string th_path = FLAGS_prefix + ".libsvm.th." + to_string(process_id);
+    string train_path = FLAGS_prefix + ".train.bin." + to_string(process_id);
+    string to_path = FLAGS_prefix + ".to.bin." + to_string(process_id);
+    string th_path = FLAGS_prefix + ".th.bin." + to_string(process_id);
     string vocab_path = FLAGS_prefix + ".vocab";
-    Corpus corpus(vocab_path.c_str(), train_path.c_str());
-    Corpus to_corpus(vocab_path.c_str(), to_path.c_str());
-    Corpus th_corpus(vocab_path.c_str(), th_path.c_str());
+    HLDACorpus corpus(vocab_path.c_str(), train_path.c_str());
+    HLDACorpus to_corpus(vocab_path.c_str(), to_path.c_str());
+    HLDACorpus th_corpus(vocab_path.c_str(), th_path.c_str());
 
     gethostname(hostname, 100);
     LOG(INFO) << hostname << " : Rank " << process_id << " has " << corpus.D << " docs, "
               << corpus.V << " words, " << corpus.T << " tokens." << endl;
+
+    //LOG(INFO) << corpus.w;
+    //LOG(INFO) << to_corpus.w;
+    //LOG(INFO) << th_corpus.w;
+    //exit(0);
 
 
     // Train

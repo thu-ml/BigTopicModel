@@ -11,7 +11,7 @@
 #include <thread>
 #include "base_hlda.h"
 #include "clock.h"
-#include "corpus.h"
+#include "hlda_corpus.h"
 #include "utils.h"
 #include "mkl_vml.h"
 #include "global_lock.h"
@@ -25,7 +25,7 @@ int calc_font_size(int max_font_size, int min_font_size, int max_size, int min_s
     return int(size);
 };
 
-BaseHLDA::BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
+BaseHLDA::BaseHLDA(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus, int L,
                    std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
                    int num_iters, int mc_samples, int mc_iters, size_t minibatch_size,
                    int topic_limit, bool sample_phi,
