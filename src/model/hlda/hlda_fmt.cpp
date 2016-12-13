@@ -25,7 +25,7 @@ DEFINE_int32(num_blocks, 1, "Number of output binary files");
 DEFINE_int32(num_phases, 1, "Number of phases");
 
 DEFINE_int32(max_vocab_size, 1000000, "Maxmimum vocabulary size");
-DEFINE_int32(min_doc_length, 200, "Minimum document length");
+DEFINE_int32(min_doc_length, 0, "Minimum document length");
 DEFINE_int32(max_doc_length, 10000, "Maximum document length");
 
 struct Document {
@@ -54,7 +54,8 @@ int main(int argc, char **argv) {
 
     int thread_size = omp_get_max_threads();
 
-    std::mt19937 engine;
+    //std::mt19937 engine;
+    std::random_device engine;
     std::vector<xorshift> generators(omp_get_max_threads());
     for (auto &g: generators)
         g.seed(engine(), engine());
@@ -70,7 +71,7 @@ int main(int argc, char **argv) {
         // Open file handles
         vector<ofstream> bin_files(FLAGS_num_blocks);
         vector<ofstream> docid_files(FLAGS_num_blocks);
-        for (int blk_id = process_id; blk_id < FLAGS_num_blocks; blk_id++) {
+        for (int blk_id = process_id; blk_id < FLAGS_num_blocks; blk_id+=process_size) {
             LOG(INFO) << "Process " << process_id << " opens " << blk_id;
             bin_files[blk_id].open((FLAGS_prefix + ".bin." + to_string(blk_id)).c_str(), ios::binary);
             docid_files[blk_id].open((FLAGS_prefix + ".docmap." + to_string(blk_id)).c_str());
@@ -108,7 +109,8 @@ int main(int argc, char **argv) {
                     int doc_id, k, v;
                     sin >> doc_id;
                     while (sin >> k >> v) {
-                        while (v--) d.push_back(k);
+                        if (k < FLAGS_max_vocab_size)
+                            while (v--) d.push_back(k);
                     }
 
                     if (d.size() >= FLAGS_min_doc_length && 
