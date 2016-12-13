@@ -1,84 +1,123 @@
 clear all;
-
-cs = dlmread('result_threshold_10000000_n_mc_iters_-1.log');
-csa = dlmread('result_threshold_10000000_n_mc_iters_30.log');
-pcs = dlmread('result_threshold_50_n_mc_iters_-1.log');
-pcsa = dlmread('result_threshold_50_n_mc_iters_30.log');
-bgs = dlmread('result_threshold_-1_n_mc_iters_-1.log');
-bgsa = dlmread('result_threshold_-1_n_mc_iters_30.log');
-hldac = dlmread('hlda_c.log');
-
-hold off;
-fig = figure(1);
-plot(cs(:,5), cs(:,6), 'ro');
-hold on;
-plot(csa(:,5), csa(:,6), 'rx');
-
-plot(pcs(:,5), pcs(:,6), 'go');
-plot(pcsa(:, 5), pcsa(:,6), 'gx');
-
-plot(bgs(:,5), bgs(:,6), 'bo');
-plot(bgsa(:, 5), bgsa(:,6), 'bx');
-%plot(pcsmctrue(:, 1), pcsmctrue(:,2), 'gv');
-
-%plot(ismctrue(:, 1), ismctrue(:,2), 'bv');
-%
-plot(hldac(:,3), hldac(:,4), 'c^');
-
-xlim([0 100]);
-ylim([2000, 3200]);
-
-xlabel('number of topics');
-ylabel('perplexity');
-
-%legend('cs', 'cs (mc)', 'pcs', 'pcs (mc)', 'pcs (mc, dir)', 'is', 'is (mc)', 'ic (mc, dir)', 'hlda-c');
-legend('CGS', 'CGS^a', 'PCGS', 'PCGS^a', 'BGS', 'BGS^a', 'hlda-c');
-
-set(gcf, 'PaperPosition', [0 0 5 5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
-set(gcf, 'PaperSize', [5 5]); %Keep the same paper size
-saveas(gcf, 'quality', 'pdf');
+set(groot, 'defaultAxesTickLabelInterpreter','latex'); set(groot, 'defaultLegendInterpreter','latex');
 
 
-% -------------------------------------------------
+
+% ------------------------ NYSmaller ----------------------------
+files = {...
+'result_threshold_10000000_n_mc_iters_-1.log',...
+'result_threshold_10000000_n_mc_iters_30.log',...
+'result_threshold_50_n_mc_iters_-1.log',...
+'result_threshold_50_n_mc_iters_30.log',...
+'result_threshold_-1_n_mc_iters_-1.log',...
+'result_threshold_-1_n_mc_iters_30.log',...
+'hlda_c.log'};
+
+color = fliplr(repmat({[0.5 0 0], [1 0 0], [0 0.5 0], [0 1 0], [0 0 0.5], [0 0 1], [0 0 0]}, 1, 3));
+draw_box(5, files, [33, 66, 100], 5, 6, ...
+{'(0, 33]', '(33, 66]', '(66, 100]'}, ...
+color, {'CGS', 'CGS$^a$', 'PCGS', 'PCGS$^a$', 'BGS', 'BGS$^a$', 'hlda-c'}, 'quality', 'vertical', 'eastoutside', [2000 3500]);
+
+% ------------------------ NIPS ----------------------------
+files = {...
+'../../BTM-2/work/nips_results/result_threshold_10000000_n_mc_iters_-1.log',...
+'../../BTM-2/work/nips_results/result_threshold_10000000_n_mc_iters_30.log',...
+'../../BTM-2/work/nips_results/result_threshold_50_n_mc_iters_-1.log',...
+'../../BTM-2/work/nips_results/result_threshold_50_n_mc_iters_30.log',...
+'../../BTM-2/work/nips_results/result_threshold_-1_n_mc_iters_-1.log',...
+'../../BTM-2/work/nips_results/result_threshold_-1_n_mc_iters_30.log',...
+'../../BTM-2/work/nips_results/hlda_c.log'};
+
+color = fliplr(repmat({[0.5 0 0], [1 0 0], [0 0.5 0], [0 1 0], [0 0 0.5], [0 0 1], [0 0 0]}, 1, 3));
+draw_box(5, files, [33, 66, 100], 5, 6, ...
+{'(0, 33]', '(33, 66]', '(66, 100]'}, ...
+color, {'CGS', 'CGS$^a$', 'PCGS', 'PCGS$^a$', 'BGS', 'BGS$^a$', 'hlda-c'}, 'quality-nips', 'vertical', 'eastoutside', [1900 2800]);
+
+% ----------------------- Iters ----------------------------
+
+files = {'../../BTM-2/work/result_n_mc_iters_1.log','../../BTM-2/work/result_n_mc_iters_2.log','../../BTM-2/work/result_n_mc_iters_4.log','../../BTM-2/work/result_n_mc_iters_8.log','../../BTM-2/work/result_n_mc_iters_16.log','../../BTM-2/work/result_n_mc_iters_32.log','../../BTM-2/work/result_n_mc_iters_64.log'};
+color = cell(7, 1);
+for i = 1:7
+    color{i} = hsv2rgb([2.0 / 3 * (i-1) / 6  1  1]);
+end
+color = fliplr(repmat(color, 1, 3));
+draw_box(6, files, [50, 100, 150], 6, 7, ...
+{'(0, 50]', '(50, 100]', '(100, 150]'}, ...
+color, {'I=1', 'I=2', 'I=4', 'I=8', 'I=16', 'I=32', 'I=64'}, 'iters', 'vertical', 'northeast', [1900 2500]);
+
+% ----------------------- M --------------------------
 m = dlmread('m.log');
 fig = figure(2);
 
+for i = 1:size(m, 1)
+    if m(i, 1) == 1000000
+        m(i, 1) = 131072;
+    end
+end
+
 subplot(2, 2, 1);
-plot(log2(m(:, 1)), m(:, 3));
-xlabel('M');
-ylabel('perplexity');
-set(gca, 'XTick', [0, 6, 12, 17]);
-xlim([0, 17]);
-set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
+boxplot(m(:, 3), log2(m(:, 1)));
+%plot(log2(m(:, 1)), m(:, 3));
+%xlabel('M');
+%ylabel('perplexity');
+%set(gca, 'XTick', [0, 6, 12, 17]);
+%xlim([0, 17]);
+%set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
 
 subplot(2, 2, 2);
-topics = m(length(m):-1:1, 11:12);
-bar(topics, 'stacked');
+group_cnt = zeros(18, 1);
+group_i = zeros(18, 1);
+group_c = zeros(18, 1);
+for i = 1 : size(m, 1)
+    g = log2(m(i, 1)) + 1;
+    group_cnt(g) = group_cnt(g) + 1;
+    group_i(g) = group_i(g) + m(i, 11);
+    group_c(g) = group_c(g) + m(i, 12);
+end
+group_i = group_i ./ group_cnt;
+group_c = group_c ./ group_cnt;
+bar([group_i group_c], 'stacked');
 xlabel('M');
 ylabel('topics');
-ylim([0, 1000]);
-xlim([0, 19]);
-legend('I', 'C');
-set(gca, 'XTick', [0 7 13 19]);
-set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
-
+%ylim([0, 1000]);
+%xlim([0, 19]);
+%legend('I', 'C');
+%set(gca, 'XTick', [0 7 13 19]);
+%set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
+%
 subplot(2, 2, 3);
-times = m(length(m):-1:1, 7:9);
-bar(times, 'stacked');
-xlabel('M');
-ylabel('CPU time (s)');
-xlim([0, 19]);
-legend('I', 'C', 'Z', 'Location', 'northwest');
-set(gca, 'XTick', [0 7 13 19]);
-set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
-
+group_cnt = zeros(18, 1);
+group_times = zeros(18, 3);
+for i = 1 : size(m, 1)
+    g = log2(m(i, 1)) + 1;
+    group_cnt(g) = group_cnt(g) + 1;
+    group_times(g, :) = group_times(g, :) + m(i, 7:9);
+end
+group_times = group_times ./ repmat(group_cnt, 1, 3);
+bar(group_times, 'stacked');
+%xlabel('M');
+%ylabel('CPU time (s)');
+%xlim([0, 19]);
+%legend('I', 'C', 'Z', 'Location', 'northwest');
+%set(gca, 'XTick', [0 7 13 19]);
+%set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
+%
 subplot(2, 2, 4);
-plot(log2(m(:, 1)), m(:, 5));
-xlabel('M');
-ylabel('sync.s / second');
-set(gca, 'XTick', [0, 6, 12, 17]);
-xlim([0, 17]);
-set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
+group_cnt = zeros(18, 1);
+group_comm = zeros(18, 1);
+for i = 1 : size(m, 1)
+    g = log2(m(i, 1)) + 1;
+    group_cnt(g) = group_cnt(g) + 1;
+    group_comm(g) = group_comm(g) + m(i, 6);
+end
+group_comm = group_comm ./ group_cnt;
+plot(1:18, group_comm);
+%plot(log2(m(:, 1)), m(:, 5));
+%xlabel('M');
+%ylabel('sync.s / second');
+%set(gca, 'XTick', [0, 6, 12, 17]);
+%xlim([0, 17]);
+%set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
 
 set(gcf, 'PaperPosition', [0 0 5 5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
 set(gcf, 'PaperSize', [5 5]); %Keep the same paper size
@@ -86,3 +125,99 @@ saveas(gcf, 'm', 'pdf');
 
 % TODO num. collapsed vs num. instantiated
 % TODO amt. of communication
+
+% -------------------- Num docs ------------------
+num_docs = dlmread('num_docs.log');
+num_docs = wrev(num_docs);
+
+fig = figure(3);
+
+subplot(1, 2, 1);
+loglog(num_docs);
+xlim([0, length(num_docs)]);
+xlabel('rank');
+ylabel('number of documents');
+
+subplot(1, 2, 2);
+plot(cumsum(num_docs));
+hold on;
+plot([426, 426], [0, 10000000], 'r--');         % threshold = 128: 99.45% documents
+xlim([0, length(num_docs)]);
+ylim([0, sum(num_docs)]);
+xlabel('rank');
+ylabel('cumulative number of documents');
+
+set(gcf, 'PaperPosition', [0 0 5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [5 2.5]); %Keep the same paper size
+saveas(gcf, 'num_docs', 'pdf');
+
+% ------------------ Time -----------------------
+time = dlmread('time.log');
+
+fig = figure(4);
+bar(time, 'FaceColor', [0.5 0.5 1]);
+set(gca, 'yscale', 'log');
+set(gca, 'XTickLabel', {'hlda-c', 'CGS$^a$', 'PCGS$^a$', 'BGS$^a$'});
+ylabel('Time (seconds)');
+
+set(gcf, 'PaperPosition', [0 0 5 2]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [5 2]); %Keep the same paper size
+saveas(gcf, 'time', 'pdf');
+
+% ----------------------- Threads ----------------------------
+
+fig = figure(7);
+hold off;
+thr = dlmread('threads/nytimes.log');
+subplot(1, 2, 1);
+boxplot(thr(:, 2), thr(:, 1));
+xlabel('Number of threads');
+ylabel('Perplexity');
+ylim([3700 4100]);
+set(gca, 'FontSize', 8);
+
+subplot(1, 2, 2);
+serial_time = mean(thr(thr(:, 1) == 1, 3));
+boxplot(serial_time ./ thr(:, 3), thr(:, 1));
+hold on;
+xlabel('Number of threads');
+ylabel('SpeedUp');
+set(gca, 'FontSize', 8);
+
+plot(1:12, 1:12, 'r--');
+c = get(gca, 'Children');
+hleg1 = legend(c(1), 'Ideal', 'Location', 'northwest');
+ylim([0, 12]);
+
+set(gcf, 'PaperPosition', [0 0 5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [5 2.5]); %Keep the same paper size
+saveas(gcf, 'threads', 'pdf');
+
+% ----------------------- Machines-small ----------------------------
+fig = figure(8);
+hold off;
+thr = dlmread('machines/pubmed.log');
+subplot(1, 2, 1);
+boxplot(thr(:, 2), thr(:, 1));
+xlabel('Number of machines');
+ylabel('Perplexity');
+ylim([2950 3350]);
+set(gca, 'FontSize', 8);
+
+subplot(1, 2, 2);
+serial_time = mean(thr(thr(:, 1) == 1, 3));
+boxplot(serial_time ./ thr(:, 3), thr(:, 1));
+hold on;
+xlabel('Number of machines');
+ylabel('SpeedUp');
+set(gca, 'FontSize', 8);
+
+plot(1:10, 1:10, 'r--');
+c = get(gca, 'Children');
+hleg1 = legend(c(1), 'Ideal', 'Location', 'northwest');
+ylim([0, 10]);
+
+set(gcf, 'PaperPosition', [0 0 5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [5 2.5]); %Keep the same paper size
+saveas(gcf, 'machines-small', 'pdf');
+
