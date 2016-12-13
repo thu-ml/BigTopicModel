@@ -26,7 +26,7 @@ DEFINE_int32(num_phases, 1, "Number of phases");
 
 DEFINE_int32(max_vocab_size, 1000000, "Maxmimum vocabulary size");
 DEFINE_int32(min_doc_length, 0, "Minimum document length");
-DEFINE_int32(max_doc_length, 10000, "Maximum document length");
+DEFINE_int32(max_doc_length, 1000000, "Maximum document length");
 
 struct Document {
     int id;
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
         vector<string> phase_file_list;
         for (int phase_id = 0; phase_id < FLAGS_num_phases; phase_id++) {
             phase_file_list.clear();
-            for (size_t i = phase_id; i < file_list.size(); i++)
+            for (size_t i = phase_id; i < file_list.size(); i += FLAGS_num_phases)
                 phase_file_list.push_back(file_list[i]);
             for (auto &v: to_send) {
                 v.resize(FLAGS_num_blocks);
@@ -91,6 +91,7 @@ int main(int argc, char **argv) {
 
             for (size_t i = process_id; i < phase_file_list.size(); 
                     i += process_size) {
+                //LOG(INFO) << phase_file_list[i];
                 ReadBuf<ifstream> readbuf(phase_file_list[i].c_str(), 
                         100 * 1048576);
 
@@ -199,6 +200,8 @@ int main(int argc, char **argv) {
         }
     }
 
+    int local_D = 0;
+    size_t local_T = 0;
     LOG_IF(INFO, process_id == 0) << "Shuffling...";
     for (int blk_id = process_id; blk_id < FLAGS_num_blocks; 
             blk_id += process_size) {
@@ -248,6 +251,7 @@ int main(int argc, char **argv) {
 
         // Write back
         auto write_cva = [&](string file_name, vector<unique_ptr<Document>> &docs) {
+            size_t num_tokens = 0;
             CVA<int> cva(docs.size());
             for (size_t i = 0; i < docs.size(); i++)
                 cva.SetSize(i, docs[i]->data.size());
@@ -255,21 +259,29 @@ int main(int argc, char **argv) {
             for (size_t i = 0; i < docs.size(); i++) {
                 auto row = cva.Get(i);
                 copy(docs[i]->data.begin(), docs[i]->data.end(), (int*)(row.begin()));
+                num_tokens += row.size();
             }
             std::ofstream fbin(file_name.c_str(), ios::binary);
             cva.Store(fbin);
+
+            return num_tokens;
 
             //for (size_t i = 0; i < cva.R; i++)
             //    LOG(INFO) << vector<int>(cva.Get(i).begin(), cva.Get(i).end());
         };
 
         //LOG(INFO) << "Train";
-        write_cva(FLAGS_prefix + ".train.bin." + to_string(blk_id), train_docs);
+        auto train_T = write_cva(FLAGS_prefix + ".train.bin." + to_string(blk_id), train_docs);
         //LOG(INFO) << "Obs";
-        write_cva(FLAGS_prefix + ".to.bin." + to_string(blk_id), obs_docs);
+        auto to_T = write_cva(FLAGS_prefix + ".to.bin." + to_string(blk_id), obs_docs);
         //LOG(INFO) << "Hld";
-        write_cva(FLAGS_prefix + ".th.bin." + to_string(blk_id), hld_docs);
+        auto th_T = write_cva(FLAGS_prefix + ".th.bin." + to_string(blk_id), hld_docs);
         //LOG(INFO) << "Fin";
+
+        LOG(INFO) << "Block " << blk_id 
+            << " " << train_docs.size() << " docs (" << train_T << " tokens); "
+            << " " << obs_docs.size() << " docs (" << to_T << " tokens); "
+            << " " << hld_docs.size() << " docs (" << th_T << " tokens); ";
 
         std::ofstream f_train_docmap(
                 (FLAGS_prefix + ".train.docmap." + to_string(blk_id)).c_str());
@@ -280,7 +292,16 @@ int main(int argc, char **argv) {
                 (FLAGS_prefix + ".test.docmap." + to_string(blk_id)).c_str());
         for (size_t i = 0; i < obs_docs.size(); i++)
             f_test_docmap << obs_docs[i]->id << "\n";
+
+        local_D += train_docs.size() + obs_docs.size();
+        local_T += train_T + to_T + th_T;
     }
+
+    int global_D;
+    size_t global_T;
+    MPI_Reduce(&local_D, &global_D, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_T, &global_T, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    LOG_IF(INFO, process_id == 0) << "Finished. Processed " << global_D << " documents, " << global_T << " tokens.";
 
     MPI_Finalize();
     google::ShutdownGoogleLogging();
