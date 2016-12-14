@@ -25,7 +25,7 @@ public:
         DistributedTree &t;
     };
 
-    DistributedTree(int L, std::vector<double> gamma);
+    DistributedTree(int L, std::vector<double> log_gamma);
 
     // Local operations
     void DecNumDocs(int old_node_id);

@@ -44,7 +44,7 @@ public:
                 : id(id), pos(L) {}
     };
 
-    ConcurrentTree(int L, std::vector<double> gamma);
+    ConcurrentTree(int L, std::vector<double> log_gamma);
 
     // Lock-free operations
     bool IsLeaf(int node_id);
@@ -82,7 +82,7 @@ private:
 
     std::array<Node, MAX_NUM_TOPICS> nodes;
     int max_id, L, threshold, branching_factor;
-    std::vector<double> gamma;
+    std::vector<double> log_gamma;
 
     std::vector<int> num_instantiated, num_nodes;
 

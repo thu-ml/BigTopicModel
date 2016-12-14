@@ -58,8 +58,8 @@ void DistributedTree::TOnRecv::operator()
     }
 }
 
-DistributedTree::DistributedTree(int L, std::vector<double> gamma) :
-        tree(L, gamma), on_recv(*this), pub_sub(true, on_recv),
+DistributedTree::DistributedTree(int L, std::vector<double> log_gamma) :
+        tree(L, log_gamma), on_recv(*this), pub_sub(true, on_recv),
         tasks(new channel<ConcurrentTree::IncResult>[omp_get_max_threads()]){
 
     MPI_Comm_dup(MPI_COMM_WORLD, &comm);

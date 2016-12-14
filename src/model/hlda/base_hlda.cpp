@@ -11,7 +11,7 @@
 #include <thread>
 #include "base_hlda.h"
 #include "clock.h"
-#include "corpus.h"
+#include "hlda_corpus.h"
 #include "utils.h"
 #include "mkl_vml.h"
 #include "global_lock.h"
@@ -25,15 +25,15 @@ int calc_font_size(int max_font_size, int min_font_size, int max_size, int min_s
     return int(size);
 };
 
-BaseHLDA::BaseHLDA(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
-                   std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> gamma,
+BaseHLDA::BaseHLDA(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus, int L,
+                   std::vector<TProb> alpha, std::vector<TProb> beta, vector<double> log_gamma,
                    int num_iters, int mc_samples, int mc_iters, size_t minibatch_size,
                    int topic_limit, bool sample_phi,
                    int process_id, int process_size, bool check, bool random_start) :
         process_id(process_id), process_size(process_size),
-        tree(L, gamma),
+        tree(L, log_gamma),
         corpus(corpus), to_corpus(to_corpus), th_corpus(th_corpus),
-        L(L), alpha(alpha), beta(beta), gamma(gamma),
+        L(L), alpha(alpha), beta(beta), log_gamma(log_gamma),
         num_iters(num_iters), mc_samples(mc_samples), 
         current_it(-1), mc_iters(mc_iters), minibatch_size(minibatch_size),
         topic_limit(topic_limit), sample_phi(sample_phi),
@@ -994,6 +994,7 @@ double BaseHLDA::PredictivePerplexity() {
             for (int l = 0; l < L; l++)
                 theta[l] = (theta[l] + alpha[l]*num_test_z_samples) 
                     * inv_normalization;
+
             for (int n = 0; n < th_doc.w.size(); n++) {
                 auto v = th_doc.w[n];
                 double ll = 0;
@@ -1004,51 +1005,6 @@ double BaseHLDA::PredictivePerplexity() {
                 //LOG(INFO) << v << " " << corpus.vocab[v] << ' ' << ll;
                 sample_log_likelihood += log(ll);
             }
-            //LOG(INFO) << "Theta " << theta << " c " << to_doc.c;
-            //LOG(INFO) << "Oracle Theta " << docs[0].theta << " c " << docs[0].c << ' ' << to_doc.w.size() << ' ' << docs[0].w.size();
-            //LOG(INFO) << doc_log_likelihood << " " << exp(-doc_log_likelihood / th_doc.w.size());
-
-            //double dl = 0;
-            //double dl2 = 0;
-            //for (int n = 0; n < th_doc.w.size(); n++) {
-            //    auto v = th_doc.w[n];
-            //    double ll = 0;
-            //    double ll2 = 0;
-            //    for (int l = 0; l < L; l++) {
-            //        auto p = phi[l](v, docs[0].c[l]);
-            //        auto p2 = (icount(v, docs[0].c[l]+icount_offset[l]) + beta[l]) /
-            //                 (ck_dense[docs[0].c[l]+icount_offset[l]] + beta[l] * corpus.V);
-            //        ll += docs[0].theta[l] * p;
-            //        ll2 += docs[0].theta[l] * p2;
-            //    }
-            //    LOG(INFO) << v << " " << corpus.vocab[v] << ' ' << ll << ' ' << ll2;
-            //    dl += log(ll);
-            //    dl2 += log(ll2);
-            //}
-            //LOG(INFO) << dl << " " << exp(-dl / th_doc.w.size()) << ' ' << dl2;
-
-            //auto ret = tree.GetTree();
-            ////theta = {1.0, 0.0, 0.0, 0.0};
-            ////fill(theta.begin(), theta.end(), 0.25);
-            //for (size_t i = 0; i < ret.nodes.size(); i++) {
-            //    auto &node = ret.nodes[i];
-            //    if (node.depth + 1 < L) continue;
-            //    to_doc.c = tree.GetPath(i).pos;
-            //    double dl = 0;
-            //    for (int n = 0; n < th_doc.w.size(); n++) {
-            //        auto v = th_doc.w[n];
-            //        double ll = 0;
-            //        for (int l = 0; l < L; l++) {
-            //            auto p = phi[l](v, to_doc.c[l]);
-            //            ll += theta[l] * p;
-            //        }
-            //        dl += log(ll);
-            //    }
-            //    LOG(INFO) << i << ": " << to_doc.c << " " << dl;
-            //}
-            //
-            //exit(0);
-            //LOG(INFO) << sample_log_likelihood;
             doc_log_likelihood = LogSum(doc_log_likelihood, sample_log_likelihood);
         }
 #pragma omp critical

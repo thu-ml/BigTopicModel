@@ -13,7 +13,7 @@
 
 #include "types.h"
 
-#include "corpus.h"
+#include "hlda_corpus.h"
 #include "mkl_vml.h"
 
 #include "partially_collapsed_sampling.h"
@@ -22,13 +22,13 @@
 
 using namespace std;
 
-DEFINE_string(prefix, "../data/nysmaller_parted", "prefix of the corpus");
+DEFINE_string(prefix, "../data/nysmalle", "prefix of the corpus");
 DEFINE_string(model_path, "../../hlda-c/out/run014", "Prefix of the model, for hlda-c");
 DEFINE_string(algo, "pcs", "Algorithm: pcs, is, or es");
 DEFINE_int32(L, 4, "number of levels");
 DEFINE_string(alpha, "0.3", "Prior on level assignment, delimited by comma");
 DEFINE_string(beta, "1,0.4,0.3,0.2", "Prior on topics, delimited by comma");
-DEFINE_string(gamma, "1e-40,1e-30,1e-20", "Parameter of nCRP, delimited by comma");
+DEFINE_string(log_gamma, "-92", "Parameter of nCRP, delimited by comma");
 DEFINE_int32(n_iters, 70, "Number of iterations");
 DEFINE_int32(n_mc_samples, 5, "Number of Monte-Carlo samples, -1 for none.");
 DEFINE_int32(n_mc_iters, 30, "Number of Monte-Carl iterations, -1 for none.");
@@ -40,7 +40,6 @@ DEFINE_int32(branching_factor, 2, "Branching factor for instantiated weight samp
 DEFINE_bool(sample_phi, false, "Whether to sample phi or update it with expectation");
 DEFINE_bool(check, false, "Whether turn on checking");
 DEFINE_bool(random_start, false, "Whether start randomly");
-DEFINE_int32(max_vocab_size, 1000000, "Maximum vocabulary size.");
 
 char hostname[100];
 
@@ -86,7 +85,7 @@ int main(int argc, char **argv) {
     vector<TProb> beta;
     for (size_t i = 0; i < alpha_double.size(); i++) alpha.push_back((TProb)alpha_double[i]);
     for (size_t i = 0; i < beta_double.size(); i++) beta.push_back((TProb)beta_double[i]);
-    auto gamma = Parse(FLAGS_gamma, FLAGS_L-1, "gamma");
+    auto log_gamma = Parse(FLAGS_log_gamma, FLAGS_L-1, "log_gamma");
 
     if (FLAGS_threshold == -1) {
         LOG_IF(INFO, process_id == 0)
@@ -97,37 +96,42 @@ int main(int argc, char **argv) {
     if (FLAGS_algo != "pcs" && FLAGS_algo != "cs" && FLAGS_algo != "es" && FLAGS_algo != "is")
         throw runtime_error("Invalid algorithm");
 
-    string train_path = FLAGS_prefix + ".libsvm.train." + to_string(process_id);
-    string to_path = FLAGS_prefix + ".libsvm.to." + to_string(process_id);
-    string th_path = FLAGS_prefix + ".libsvm.th." + to_string(process_id);
+    string train_path = FLAGS_prefix + ".train.bin." + to_string(process_id);
+    string to_path = FLAGS_prefix + ".to.bin." + to_string(process_id);
+    string th_path = FLAGS_prefix + ".th.bin." + to_string(process_id);
     string vocab_path = FLAGS_prefix + ".vocab";
-    Corpus corpus(vocab_path.c_str(), train_path.c_str(), FLAGS_max_vocab_size);
-    Corpus to_corpus(vocab_path.c_str(), to_path.c_str(), FLAGS_max_vocab_size);
-    Corpus th_corpus(vocab_path.c_str(), th_path.c_str(), FLAGS_max_vocab_size);
+    HLDACorpus corpus(vocab_path.c_str(), train_path.c_str());
+    HLDACorpus to_corpus(vocab_path.c_str(), to_path.c_str());
+    HLDACorpus th_corpus(vocab_path.c_str(), th_path.c_str());
 
     gethostname(hostname, 100);
     LOG(INFO) << hostname << " : Rank " << process_id << " has " << corpus.D << " docs, "
               << corpus.V << " words, " << corpus.T << " tokens." << endl;
+
+    //LOG(INFO) << corpus.w;
+    //LOG(INFO) << to_corpus.w;
+    //LOG(INFO) << th_corpus.w;
+    //exit(0);
 
 
     // Train
     BaseHLDA *model = nullptr;
     if (FLAGS_algo == "pcs") {
         model = new PartiallyCollapsedSampling(corpus, to_corpus, th_corpus,
-                                               FLAGS_L, alpha, beta, gamma,
+                                               FLAGS_L, alpha, beta, log_gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                                (size_t) FLAGS_minibatch_size,
                                                FLAGS_topic_limit, FLAGS_threshold, FLAGS_sample_phi, process_id, process_size, FLAGS_check, FLAGS_random_start);
     } else if (FLAGS_algo == "is") {
         model = new BlockGibbsSampling(corpus, to_corpus, th_corpus,
-                                               FLAGS_L, alpha, beta, gamma,
+                                               FLAGS_L, alpha, beta, log_gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                                (size_t) FLAGS_minibatch_size,
                                                FLAGS_topic_limit, FLAGS_branching_factor, 
                                                FLAGS_sample_phi, process_id, process_size, FLAGS_check);
     } else {
         model = new ExternalSampling(corpus, to_corpus, th_corpus,
-                                     FLAGS_L, alpha, beta, gamma,
+                                     FLAGS_L, alpha, beta, log_gamma,
                                      process_id, process_size, FLAGS_check, FLAGS_model_path);
     }
 

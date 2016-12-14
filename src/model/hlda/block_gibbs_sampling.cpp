@@ -4,7 +4,7 @@
 
 #include "block_gibbs_sampling.h"
 #include "clock.h"
-#include "corpus.h"
+#include "hlda_corpus.h"
 #include <iostream>
 #include <omp.h>
 #include "mkl_vml.h"
@@ -13,14 +13,14 @@
 
 using namespace std;
 
-BlockGibbsSampling::BlockGibbsSampling(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L, vector<TProb> alpha, vector<TProb> beta,
-                                                       vector<double> gamma,
+BlockGibbsSampling::BlockGibbsSampling(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus, int L, vector<TProb> alpha, vector<TProb> beta,
+                                                       vector<double> log_gamma,
                                                        int num_iters, int mc_samples, int mc_iters,
                                                        size_t minibatch_size,
                                                        int topic_limit, int branching_factor,
                                                        bool sample_phi, 
                                                        int process_id, int process_size, bool check) :
-        BaseHLDA(corpus, to_corpus, th_corpus, L, alpha, beta, gamma, num_iters, mc_samples, mc_iters,
+        BaseHLDA(corpus, to_corpus, th_corpus, L, alpha, beta, log_gamma, num_iters, mc_samples, mc_iters,
                           minibatch_size, topic_limit, sample_phi, process_id, process_size, check)
         {
     tree.SetThreshold(-1);

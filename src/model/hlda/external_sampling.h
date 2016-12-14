@@ -10,8 +10,8 @@
 
 class ExternalSampling : public BaseHLDA {
 public:
-    ExternalSampling(Corpus &corpus, Corpus &to_corpus, Corpus &th_corpus, int L,
-                       std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
+    ExternalSampling(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus, int L,
+                       std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> log_gamma,
                        int process_id, int process_size, bool check, std::string prefix);
 
     virtual void Initialize() override;
