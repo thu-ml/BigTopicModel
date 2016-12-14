@@ -67,6 +67,8 @@ int main(int argc, char **argv) {
     while (fin >> file_name)
         file_list.push_back(file_name);
 
+    int discarded_D = 0;
+    size_t discarded_T = 0;
     {
         // Open file handles
         vector<ofstream> bin_files(FLAGS_num_blocks);
@@ -120,6 +122,12 @@ int main(int argc, char **argv) {
                         buf.push_back(doc_id);
                         buf.push_back(d.size());
                         buf.insert(buf.end(), d.begin(), d.end());
+                    } else {
+#pragma omp critical
+                        { 
+                            discarded_D++;
+                            discarded_T += d.size();
+                        }
                     }
                 });
             }
@@ -297,11 +305,14 @@ int main(int argc, char **argv) {
         local_T += train_T + to_T + th_T;
     }
 
-    int global_D;
-    size_t global_T;
+    int global_D, global_discarded_D;
+    size_t global_T, global_discarded_T;
     MPI_Reduce(&local_D, &global_D, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(&local_T, &global_T, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&discarded_D, &global_discarded_D, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&discarded_T, &global_discarded_T, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
     LOG_IF(INFO, process_id == 0) << "Finished. Processed " << global_D << " documents, " << global_T << " tokens.";
+    LOG_IF(INFO, process_id == 0) << "Discarded " << global_discarded_D << " documents, " << global_discarded_T << " tokens.";
 
     MPI_Finalize();
     google::ShutdownGoogleLogging();
