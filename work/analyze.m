@@ -1,4 +1,6 @@
 clear all;
+close all;
+clc;
 set(groot, 'defaultAxesTickLabelInterpreter','latex'); set(groot, 'defaultLegendInterpreter','latex');
 
 
@@ -47,24 +49,33 @@ color, {'I=1', 'I=2', 'I=4', 'I=8', 'I=16', 'I=32', 'I=64'}, 'iters', 'vertical'
 
 % ----------------------- M --------------------------
 m = dlmread('m.log');
-fig = figure(2);
-
 for i = 1:size(m, 1)
     if m(i, 1) == 1000000
         m(i, 1) = 131072;
     end
 end
 
-subplot(2, 2, 1);
-boxplot(m(:, 3), log2(m(:, 1)));
-%plot(log2(m(:, 1)), m(:, 3));
-%xlabel('M');
-%ylabel('perplexity');
-%set(gca, 'XTick', [0, 6, 12, 17]);
-%xlim([0, 17]);
-%set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
+%subplot(2, 2, 1);
+fig = figure(21);
+spacing = 0.15;
 
-subplot(2, 2, 2);
+boxplot(m(:, 3), log2(m(:, 1)));
+xlabel('M');
+ylabel('perplexity');
+set(gca, 'XTick', [1, 6, 11, 18]);
+%xlim([0, 17]);
+set(gca,'TickLabelInterpreter', 'tex');
+set(gca, 'XTickLabel', {'2^0', '2^5', '2^{10}', '\infty'});
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'm_1', 'pdf');
+
+%pos = get(gca, 'Position');
+%pos(1) = 0.055;
+%pos(3) = 0.9;
+%set(gca, 'Position', pos);
+
+fig = figure(22);
 group_cnt = zeros(18, 1);
 group_i = zeros(18, 1);
 group_c = zeros(18, 1);
@@ -79,13 +90,17 @@ group_c = group_c ./ group_cnt;
 bar([group_i group_c], 'stacked');
 xlabel('M');
 ylabel('topics');
-%ylim([0, 1000]);
-%xlim([0, 19]);
-%legend('I', 'C');
-%set(gca, 'XTick', [0 7 13 19]);
-%set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
+ylim([0, 1000]);
+xlim([0, 19]);
+legend('I', 'C');
+set(gca,'TickLabelInterpreter', 'tex');
+set(gca, 'XTick', [1 6 11 18]);
+set(gca, 'XTickLabel', {'2^0', '2^5', '2^{10}', '\infty'});
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'm_2', 'pdf');
 %
-subplot(2, 2, 3);
+fig = figure(23);
 group_cnt = zeros(18, 1);
 group_times = zeros(18, 3);
 for i = 1 : size(m, 1)
@@ -95,14 +110,18 @@ for i = 1 : size(m, 1)
 end
 group_times = group_times ./ repmat(group_cnt, 1, 3);
 bar(group_times, 'stacked');
-%xlabel('M');
-%ylabel('CPU time (s)');
-%xlim([0, 19]);
-%legend('I', 'C', 'Z', 'Location', 'northwest');
-%set(gca, 'XTick', [0 7 13 19]);
-%set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
+xlim([0, 19]);
+xlabel('M');
+ylabel('CPU time (s)');
+set(gca,'TickLabelInterpreter', 'tex');
+set(gca, 'XTick', [1 6 11 18]);
+set(gca, 'XTickLabel', {'2^0', '2^5', '2^{10}', '\infty'});
+legend('I', 'C', 'Z', 'Location', 'northwest');
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'm_3', 'pdf');
 %
-subplot(2, 2, 4);
+fig = figure(24);
 group_cnt = zeros(18, 1);
 group_comm = zeros(18, 1);
 for i = 1 : size(m, 1)
@@ -112,16 +131,15 @@ for i = 1 : size(m, 1)
 end
 group_comm = group_comm ./ group_cnt;
 plot(1:18, group_comm);
-%plot(log2(m(:, 1)), m(:, 5));
-%xlabel('M');
-%ylabel('sync.s / second');
-%set(gca, 'XTick', [0, 6, 12, 17]);
-%xlim([0, 17]);
-%set(gca, 'XTickLabel', {'2^0', '2^6', '2^{12}', '\infty'});
-
-set(gcf, 'PaperPosition', [0 0 5 5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
-set(gcf, 'PaperSize', [5 5]); %Keep the same paper size
-saveas(gcf, 'm', 'pdf');
+xlabel('M');
+ylabel('sync.s / second');
+xlim([0, 19]);
+set(gca,'TickLabelInterpreter', 'tex');
+set(gca, 'XTick', [1 6 11 18]);
+set(gca, 'XTickLabel', {'2^0', '2^5', '2^{10}', '\infty'});
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'm_4', 'pdf');
 
 % TODO num. collapsed vs num. instantiated
 % TODO amt. of communication
@@ -130,15 +148,17 @@ saveas(gcf, 'm', 'pdf');
 num_docs = dlmread('num_docs.log');
 num_docs = wrev(num_docs);
 
-fig = figure(3);
+fig = figure(31);
 
-subplot(1, 2, 1);
 loglog(num_docs);
 xlim([0, length(num_docs)]);
 xlabel('rank');
 ylabel('number of documents');
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'num_docs_1', 'pdf');
 
-subplot(1, 2, 2);
+fig = figure(32);
 plot(cumsum(num_docs));
 hold on;
 plot([426, 426], [0, 10000000], 'r--');         % threshold = 128: 99.45% documents
@@ -147,9 +167,9 @@ ylim([0, sum(num_docs)]);
 xlabel('rank');
 ylabel('cumulative number of documents');
 
-set(gcf, 'PaperPosition', [0 0 5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
-set(gcf, 'PaperSize', [5 2.5]); %Keep the same paper size
-saveas(gcf, 'num_docs', 'pdf');
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'num_docs_2', 'pdf');
 
 % ------------------ Time -----------------------
 time = dlmread('time.log');
@@ -166,17 +186,19 @@ saveas(gcf, 'time', 'pdf');
 
 % ----------------------- Threads ----------------------------
 
-fig = figure(7);
+fig = figure(71);
 hold off;
 thr = dlmread('threads/nytimes.log');
-subplot(1, 2, 1);
 boxplot(thr(:, 2), thr(:, 1));
 xlabel('Number of threads');
 ylabel('Perplexity');
 ylim([3700 4100]);
 set(gca, 'FontSize', 8);
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'threads_1', 'pdf');
 
-subplot(1, 2, 2);
+fig = figure(72);
 serial_time = mean(thr(thr(:, 1) == 1, 3));
 boxplot(serial_time ./ thr(:, 3), thr(:, 1));
 hold on;
@@ -189,22 +211,24 @@ c = get(gca, 'Children');
 hleg1 = legend(c(1), 'Ideal', 'Location', 'northwest');
 ylim([0, 12]);
 
-set(gcf, 'PaperPosition', [0 0 5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
-set(gcf, 'PaperSize', [5 2.5]); %Keep the same paper size
-saveas(gcf, 'threads', 'pdf');
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'threads_2', 'pdf');
 
 % ----------------------- Machines-small ----------------------------
-fig = figure(8);
+fig = figure(81);
 hold off;
 thr = dlmread('machines/pubmed.log');
-subplot(1, 2, 1);
 boxplot(thr(:, 2), thr(:, 1));
 xlabel('Number of machines');
 ylabel('Perplexity');
 ylim([2950 3350]);
 set(gca, 'FontSize', 8);
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'machines-small-1', 'pdf');
 
-subplot(1, 2, 2);
+fig = figure(82);
 serial_time = mean(thr(thr(:, 1) == 1, 3));
 boxplot(serial_time ./ thr(:, 3), thr(:, 1));
 hold on;
@@ -217,7 +241,7 @@ c = get(gca, 'Children');
 hleg1 = legend(c(1), 'Ideal', 'Location', 'northwest');
 ylim([0, 10]);
 
-set(gcf, 'PaperPosition', [0 0 5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
-set(gcf, 'PaperSize', [5 2.5]); %Keep the same paper size
-saveas(gcf, 'machines-small', 'pdf');
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'machines-small-2', 'pdf');
 
