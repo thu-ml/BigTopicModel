@@ -28,7 +28,7 @@ DEFINE_string(algo, "pcs", "Algorithm: pcs, is, or es");
 DEFINE_int32(L, 4, "number of levels");
 DEFINE_string(alpha, "0.3", "Prior on level assignment, delimited by comma");
 DEFINE_string(beta, "1,0.4,0.3,0.2", "Prior on topics, delimited by comma");
-DEFINE_string(gamma, "1e-40,1e-30,1e-20", "Parameter of nCRP, delimited by comma");
+DEFINE_string(log_gamma, "-92", "Parameter of nCRP, delimited by comma");
 DEFINE_int32(n_iters, 70, "Number of iterations");
 DEFINE_int32(n_mc_samples, 5, "Number of Monte-Carlo samples, -1 for none.");
 DEFINE_int32(n_mc_iters, 30, "Number of Monte-Carl iterations, -1 for none.");
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
     vector<TProb> beta;
     for (size_t i = 0; i < alpha_double.size(); i++) alpha.push_back((TProb)alpha_double[i]);
     for (size_t i = 0; i < beta_double.size(); i++) beta.push_back((TProb)beta_double[i]);
-    auto gamma = Parse(FLAGS_gamma, FLAGS_L-1, "gamma");
+    auto log_gamma = Parse(FLAGS_log_gamma, FLAGS_L-1, "log_gamma");
 
     if (FLAGS_threshold == -1) {
         LOG_IF(INFO, process_id == 0)
@@ -118,20 +118,20 @@ int main(int argc, char **argv) {
     BaseHLDA *model = nullptr;
     if (FLAGS_algo == "pcs") {
         model = new PartiallyCollapsedSampling(corpus, to_corpus, th_corpus,
-                                               FLAGS_L, alpha, beta, gamma,
+                                               FLAGS_L, alpha, beta, log_gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                                (size_t) FLAGS_minibatch_size,
                                                FLAGS_topic_limit, FLAGS_threshold, FLAGS_sample_phi, process_id, process_size, FLAGS_check, FLAGS_random_start);
     } else if (FLAGS_algo == "is") {
         model = new BlockGibbsSampling(corpus, to_corpus, th_corpus,
-                                               FLAGS_L, alpha, beta, gamma,
+                                               FLAGS_L, alpha, beta, log_gamma,
                                                FLAGS_n_iters, FLAGS_n_mc_samples, FLAGS_n_mc_iters,
                                                (size_t) FLAGS_minibatch_size,
                                                FLAGS_topic_limit, FLAGS_branching_factor, 
                                                FLAGS_sample_phi, process_id, process_size, FLAGS_check);
     } else {
         model = new ExternalSampling(corpus, to_corpus, th_corpus,
-                                     FLAGS_L, alpha, beta, gamma,
+                                     FLAGS_L, alpha, beta, log_gamma,
                                      process_id, process_size, FLAGS_check, FLAGS_model_path);
     }
 

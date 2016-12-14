@@ -11,7 +11,7 @@
 class BlockGibbsSampling : public BaseHLDA {
 public:
     BlockGibbsSampling(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus, int L,
-                       std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
+                       std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> log_gamma,
                        int num_iters, int mc_samples, int mc_iters, size_t minibatch_size,
                        int topic_limit, int branching_factor, bool sample_phi,  
                        int process_id, int process_size, bool check);

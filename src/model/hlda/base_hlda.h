@@ -26,7 +26,7 @@ class BaseHLDA {
 
 public:
     BaseHLDA(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus, int L,
-             std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> gamma,
+             std::vector<TProb> alpha, std::vector<TProb> beta, std::vector<double> log_gamma,
              int num_iters, int mc_samples, int mc_iters, size_t minibatch_size, int topic_limit,
              bool sample_phi,
              int process_id, int process_size, bool check, bool random_start = false);
@@ -80,7 +80,7 @@ protected:
     std::vector<TProb> alpha;
     double alpha_bar;
     std::vector<TProb> beta;        // Beta for each layer
-    std::vector<double> gamma;
+    std::vector<double> log_gamma;
     int num_iters, mc_samples;
     int current_it, mc_iters, topic_limit;
     size_t minibatch_size;

@@ -15,9 +15,9 @@ using namespace std;
 
 ExternalSampling::ExternalSampling(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_corpus,
                                    int L, vector<TProb> alpha, vector<TProb> beta,
-                                   vector<double> gamma,
+                                   vector<double> log_gamma,
                                    int process_id, int process_size, bool check, string prefix) :
-        BaseHLDA(corpus, to_corpus, th_corpus, L, alpha, beta, gamma, -1, -1, -1,
+        BaseHLDA(corpus, to_corpus, th_corpus, L, alpha, beta, log_gamma, -1, -1, -1,
                           -1, 1000000, false, process_id, process_size, check),
         prefix(prefix)
         {

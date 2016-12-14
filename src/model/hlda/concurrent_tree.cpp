@@ -5,9 +5,16 @@
 #include "glog/logging.h"
 #include "utils.h"
 
-ConcurrentTree::ConcurrentTree(int L, std::vector<double> gamma) :
+// log(a + exp(b))
+double lapeb(int a, double b) {
+    if (a == 0)
+        return b;
+    return LogSum(log(a), b);
+}
+
+ConcurrentTree::ConcurrentTree(int L, std::vector<double> log_gamma) :
     max_id(1), L(L), threshold(100000000), branching_factor(-1),
-    gamma(gamma), num_instantiated(L), num_nodes(L) {
+    log_gamma(log_gamma), num_instantiated(L), num_nodes(L) {
     memset(nodes.data(), 0, sizeof(Node)*MAX_NUM_TOPICS);
     auto &root = nodes[0];
     root.parent_id = -1;
@@ -81,7 +88,8 @@ ConcurrentTree::RetTree ConcurrentTree::GetTree() {
             auto &parent = ret.nodes[node.parent_id];
             if (branching_factor == -1)
                 node.log_path_weight = log(node.num_docs) 
-                    - log(parent.num_docs + gamma[parent.depth])
+                   // - log(parent.num_docs + gamma[parent.depth])
+                    - lapeb(parent.num_docs, log_gamma[parent.depth])
                     + parent.log_path_weight;
             else
                 node.log_path_weight = nodes[i].log_weight + 
@@ -99,8 +107,9 @@ ConcurrentTree::RetTree ConcurrentTree::GetTree() {
     for (int i = 0; i < current_max_id; i++) {
         auto &node = ret.nodes[i];
         if (node.depth + 1 < L) {
-            node.log_path_weight += log(gamma[node.depth]) -
-                                    log(node.num_docs + gamma[node.depth]);
+            node.log_path_weight += log_gamma[node.depth] -
+                                    lapeb(node.num_docs, log_gamma[node.depth]);
+                                    //log(node.num_docs + gamma[node.depth]);
         }
     }
 
@@ -167,6 +176,7 @@ std::vector<std::vector<int>> ConcurrentTree::Compress() {
     return std::move(pos_map);
 }
 
+// TODO I assume gamma is large for Instantiate, so no arithmetic safe routine
 void ConcurrentTree::Instantiate() {
     // Gather the children for each parent
     std::vector<std::vector<int>> children(MAX_NUM_TOPICS);
@@ -208,7 +218,7 @@ void ConcurrentTree::Instantiate() {
                     break;
                 }
                 double a = 1.0 + nodes[ch[n]].num_docs;
-                double b = gamma[nodes[i].depth] + m_gt_i[n];
+                double b = exp(log_gamma[nodes[i].depth]) + m_gt_i[n];
                 //LOG(INFO) << i << '-' << ch[n] << ' ' << a << ' ' << b;
 
                 nodes[ch[n]].log_weight = log_stick_length + log(a) - log(a + b);
