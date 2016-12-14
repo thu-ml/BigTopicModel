@@ -109,7 +109,8 @@ int main(int argc, char **argv) {
                     for (auto &ch: doc) if (ch == ':') ch = ' ';
                     istringstream sin(doc);
 
-                    int doc_id, k, v;
+                    size_t doc_id;
+                    int k, v;
                     sin >> doc_id;
                     while (sin >> k >> v) {
                         if (k < FLAGS_max_vocab_size)
