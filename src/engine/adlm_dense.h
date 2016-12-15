@@ -50,6 +50,7 @@ public:
 
         stop = 0;
         barrier = 0;
+        barrier_met = 0;
 
         MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
         MPI_Comm_size(MPI_COMM_WORLD, &process_size);
@@ -66,9 +67,12 @@ public:
                 MPI_Allreduce(&stop, &global_stop, 1, 
                         MPI_INT, MPI_SUM, my_comm);
 
-                auto num_updated = Sync();
-                //auto num_updated = 0;
-                if (global_barrier == process_size && num_updated == 0) {
+                size_t num_updated = Sync();
+                size_t global_num_updated;
+                MPI_Allreduce(&num_updated, &global_num_updated, 1, 
+                    MPI_UNSIGNED_LONG_LONG, MPI_SUM, my_comm);
+                LOG(INFO) << "Global barrier " << global_barrier << ' ' << global_num_updated;
+                if (global_barrier == process_size && global_num_updated == 0) {
                     barrier_met = 1;
                     cv.notify_all();
                 }
