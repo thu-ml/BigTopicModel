@@ -71,7 +71,7 @@ public:
                 size_t global_num_updated;
                 MPI_Allreduce(&num_updated, &global_num_updated, 1, 
                     MPI_UNSIGNED_LONG_LONG, MPI_SUM, my_comm);
-                LOG(INFO) << "Global barrier " << global_barrier << ' ' << global_num_updated;
+                //LOG(INFO) << "Global barrier " << global_barrier << ' ' << global_num_updated;
                 if (global_barrier == process_size && global_num_updated == 0) {
                     barrier_met = 1;
                     cv.notify_all();
@@ -91,7 +91,7 @@ public:
     }
 
     void Grow(int thread_id, size_t index, size_t new_num_columns) {
-        LOG(INFO) << "Grow " << thread_id << ' ' << index << ' ' << new_num_columns;
+        //LOG(INFO) << "Grow " << thread_id << ' ' << index << ' ' << new_num_columns;
         data[index].Grow(new_num_columns);
 
         LOG_IF(FATAL, new_num_columns > column_capacity[current][index])
@@ -118,7 +118,7 @@ public:
     }
 
     void Publish(int thread_id) {
-        LOG(INFO) << "Publish";
+        //LOG(INFO) << "Publish";
         std::lock_guard<std::mutex> lock(mutex_);
         auto &v = ops[thread_id];
         for (size_t i = 0; i < v.size(); i += 4) {
@@ -158,7 +158,7 @@ public:
     }
 
     size_t Sync() {
-        LOG(INFO) << "Syncing";
+        //LOG(INFO) << "Syncing";
         {
             std::lock_guard<std::mutex> lock(mutex_);
             // Switch
@@ -172,7 +172,7 @@ public:
         std::vector<int> sizes(N);
         MPI_Allreduce(column_size[syncing].data(), sizes.data(), 
                 N, MPI_INT, MPI_MAX, my_comm);
-        LOG(INFO) << sizes;
+        //LOG(INFO) << sizes;
         column_size[syncing] = sizes;
         for (size_t l = 0; l < N; l++) {
             data[l].Grow(sizes[l]);
@@ -209,7 +209,7 @@ public:
         // Prepare
         Initialize(syncing, sizes);
 
-        LOG(INFO) << sizes << ' ' << column_capacity[0] << ' ' << column_capacity[1];
+        //LOG(INFO) << sizes << ' ' << column_capacity[0] << ' ' << column_capacity[1];
 
         return num_updated;
     }
@@ -236,7 +236,7 @@ public:
     }
 
     void Compress() {
-        LOG(INFO) << "Compress";
+        //LOG(INFO) << "Compress";
         Barrier();
         for (auto &m: data)
             m.Compress();

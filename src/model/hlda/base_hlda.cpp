@@ -1097,7 +1097,8 @@ void BaseHLDA::OutputSizes() {
 
     size_t icount_size = icount.capacity();
 
-    size_t pub_sub_size = count.pub_sub.Capacity();
+    //size_t pub_sub_size = count.pub_sub.Capacity();
+    size_t pub_sub_size = 0;
 
     size_t G = (1<<30);
 
