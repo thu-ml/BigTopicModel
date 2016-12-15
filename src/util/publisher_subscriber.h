@@ -83,6 +83,10 @@ public:
 
     int ID() { return process_id; }
 
+    size_t Capacity() {
+        return sending.capacity() + to_send.capacity() + recv_buffer.capacity();
+    }
+
 private:
     void Start() {
         stop = false;

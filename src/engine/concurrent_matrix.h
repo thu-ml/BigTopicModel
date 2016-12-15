@@ -126,6 +126,13 @@ public:
         }
     }
 
+    size_t Capacity() {
+        size_t cap = 0;
+        for (int i = 0; i < num; i++)
+            cap += (1LL << (base_column_shift + row_shift + i));
+        return cap;
+    }
+
 private:
     std::atomic<T>& At(size_t r, size_t c) const {
         if (c < (1LL<<base_column_shift))

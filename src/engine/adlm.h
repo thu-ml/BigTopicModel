@@ -102,6 +102,13 @@ public:
         return pub_sub.GetBytesCommunicated(); 
     }
 
+    size_t Capacity() {
+        size_t cap = 0;
+        for (auto &d: data)
+            cap += d.Capacity();
+        return cap;
+    }
+
 private:
     struct TOnRecv {
         TOnRecv(ADLM &l): l(l) {}
@@ -150,6 +157,8 @@ private:
     std::vector<ConcurrentMatrix<TCount>> data;
     std::vector<std::vector<int>> send_buffer;
     TOnRecv on_recv;
+
+public:
     PublisherSubscriber<TOnRecv> pub_sub;
 };
 

@@ -181,6 +181,7 @@ void BaseHLDA::Initialize() {
         auto ret = tree.GetTree();
         LOG_IF(INFO, process_id==0) << ANSI_YELLOW << "Num nodes: " << ret.num_nodes
                                     << "    Num instantiated: " << num_instantiated << ANSI_NOCOLOR;
+        OutputSizes();
     }
     omp_set_num_threads(num_threads);
 
@@ -294,6 +295,7 @@ void BaseHLDA::Estimate() {
                   << " cnt:" << count_time
                   << " sync:" << sync_time
                   << " set:" << set_time;
+        OutputSizes();
 
         /*LOG_IF(INFO, process_id == 0) 
             << t1_time.Sum() << ' '
@@ -1076,3 +1078,35 @@ void BaseHLDA::ComputePhi() {
         }
     }
 }
+
+// TODO output the size of corpus, docs, phi + log_phi, icount, pub_sub
+void BaseHLDA::OutputSizes() {
+    size_t corpus1_size = 0;
+    for (auto &d: corpus.w) 
+        corpus1_size += d.capacity();
+
+    size_t corpus2_size = 0;
+    for (auto &d: docs) 
+        corpus2_size += d.z.size() + d.w.size() + d.reordered_w.size() + d.c_offsets.size();
+
+    size_t phi_size = 0;
+    for (auto &p: phi) phi_size += p.GetR() * p.GetC();
+    for (auto &p: log_phi) phi_size += p.GetR() * p.GetC();
+
+    size_t count_size = count.Capacity();
+
+    size_t icount_size = icount.capacity();
+
+    size_t pub_sub_size = count.pub_sub.Capacity();
+
+    size_t G = (1<<30);
+
+    LOG_IF(INFO, process_id == 0)
+        << " C1: " << (double)corpus1_size / G 
+        << " C2: " << (double)corpus2_size / G 
+        << " Phi: " << (double)phi_size / G 
+        << " Count: " << (double)count_size / G 
+        << " ICount: " << (double)icount_size / G 
+        << " PubSub: " << (double)pub_sub_size / G;
+}
+

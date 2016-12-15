@@ -46,6 +46,8 @@ public:
 		column_size = new_column_size;
 	}
 
+    size_t capacity() { return rbuff.capacity() + wbuff_capacity; }
+
 	void sync() {
 		rbuff.resize(row_size * column_size);
 		row_marginal_partition.resize(column_size);

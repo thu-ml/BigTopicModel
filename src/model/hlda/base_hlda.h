@@ -39,6 +39,8 @@ public:
 
     double PredictivePerplexity();
 
+    void OutputSizes();
+
 protected:
     std::string TopWords(int l, int id, int max_font_size, int min_font_size);
 
