@@ -1,5 +1,4 @@
 #ifndef __LDA_ADLM
-                //l.data[i].Grow(max_c_indices[i] + 1);
 #define __LDA_ADLM
 
 #include "concurrent_matrix.h"

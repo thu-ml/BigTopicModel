@@ -126,6 +126,12 @@ public:
         }
     }
 
+    void Clear() {
+        for (int i = 0; i < num; i++)
+            memset(data[i].get(), 0, 
+                    sizeof(T) * (1LL << (base_column_shift + row_shift + i)));
+    }
+
     size_t Capacity() {
         size_t cap = 0;
         for (int i = 0; i < num; i++)

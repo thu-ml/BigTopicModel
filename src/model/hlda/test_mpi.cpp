@@ -16,7 +16,7 @@
 #include "concurrent_matrix.h"
 #include "concurrent_tree.h"
 #include "matrix.h"
-#include "adlm.h"
+#include "adlm_dense.h"
 
 using namespace std;
 
@@ -267,64 +267,71 @@ int main(int argc, char **argv) {
 //        MPI_Barrier(MPI_COMM_WORLD);
 //    }
 
-    //{
-    //    ADLM m(1, 2, 1, 1);
-    //    auto PrintMatrix = [&]() {
-    //        m.Barrier();
-    //        for (int p = 0; p < process_size; p++) {
-    //            if (p == process_id) {
-    //                cout << "Node " << p << " Matrix of " 
-    //                    << m.GetC(0) << " columns." << endl;
-    //                for (int r = 0; r < 2; r++) {
-    //                    for (int c = 0; c < m.GetC(0); c++)
-    //                        cout << m.Get(0, r, c) << ' ';
-    //                    cout << endl;
-    //                }
-    //                cout << "Sum"  << endl;
-    //                for (int c = 0; c < m.GetC(0); c++)
-    //                    cout << m.GetSum(0, c) << ' ';
-    //                cout << endl;
-    //            }
-    //            MPI_Barrier(MPI_COMM_WORLD);
-    //        }
-    //    };
+    {
+        ADLMDense m(1, 2, 1, 1);
+        auto PrintMatrix = [&]() {
+            m.Barrier();
+            LOG(INFO) << "Barrier";
+            for (int p = 0; p < process_size; p++) {
+                if (p == process_id) {
+                    cout << "Node " << p << " Matrix of " 
+                        << m.GetC(0) << " columns." << endl;
+                    for (int r = 0; r < 2; r++) {
+                        for (int c = 0; c < m.GetC(0); c++)
+                            cout << m.Get(0, r, c) << ' ';
+                        cout << endl;
+                    }
+                    cout << "Sum"  << endl;
+                    for (int c = 0; c < m.GetC(0); c++)
+                        cout << m.GetSum(0, c) << ' ';
+                    cout << endl;
+                }
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
+        };
 
-    //    m.Grow(0, 0, 3);
-    //    m.Inc(0, 0, 0, 1); 
-    //    m.Inc(0, 0, 1, 2);
-    //    m.Inc(0, 0, 0, 1);
-    //    PrintMatrix();
+        m.Grow(0, 0, 3);
+        LOG(INFO) << "Grown";
+        m.Inc(0, 0, 0, 1); 
+        m.Inc(0, 0, 1, 2);
+        m.Inc(0, 0, 0, 1);
+        m.Publish(0);
+        LOG(INFO) << "Published";
+        PrintMatrix();
 
-    //    m.Grow(0, 0, 7);
-    //    m.Inc(0, 0, 0, 4);
-    //    m.Inc(0, 0, 0, 6);
-    //    PrintMatrix();
+        m.Grow(0, 0, 7);
+        m.Inc(0, 0, 0, 4);
+        m.Inc(0, 0, 0, 6);
+        m.Publish(0);
+        PrintMatrix();
 
-    //    m.Compress();
-    //    PrintMatrix();
+        m.Compress();
+        PrintMatrix();
 
-    //    m.Grow(0, 0, 10);
-    //    m.Inc(0, 0, 1, 9);
-    //    PrintMatrix();
+        m.Grow(0, 0, 10);
+        m.Inc(0, 0, 1, 9);
+        m.Publish(0);
+        PrintMatrix();
 
-    //    m.Grow(0, 0, 20);
-    //    m.Inc(0, 0, 1, 19);
-    //    PrintMatrix();
+        m.Grow(0, 0, 20);
+        m.Inc(0, 0, 1, 19);
+        m.Publish(0);
+        PrintMatrix();
 
-    //    m.Compress();
-    //    PrintMatrix();
-    //}
+        m.Compress();
+        PrintMatrix();
+    }
 
     //{
     //    int num_rows = 100;
     //    int num_cols = 1;
-    //    int num_ops = 1000000;
-    //    float grow_prob = 0.01;
-    //    float compress_prob = 0.0001;
+    //    int num_ops = 10000000;
+    //    float grow_prob = 0.00001;
+    //    float compress_prob = 0.000005;
     //    float inc_prob = 0.8;
 
     //    Matrix<int> mat(num_rows, num_cols);
-    //    ADLM con_mat(1, num_rows, 1);
+    //    ADLMDense con_mat(1, num_rows, 1);
     //    if (process_id == 0)
     //        con_mat.Grow(0, 0, num_cols);
 
@@ -371,45 +378,45 @@ int main(int argc, char **argv) {
     //        LOG_IF(FATAL, con_mat.GetSum(0, c) != sum[c]) << "Incorrect sum";
     //}
 
-    {
-        ConcurrentTree tree(3, std::vector<double>{1, 2});
-        cout << tree.GetTree() << endl;
+    //{
+    //    ConcurrentTree tree(3, std::vector<double>{1, 2});
+    //    cout << tree.GetTree() << endl;
 
-        cout << tree.AddNodes(0) << endl;
-        cout << tree.GetTree() << endl;
+    //    cout << tree.AddNodes(0) << endl;
+    //    cout << tree.GetTree() << endl;
 
-        cout << tree.IncNumDocs(2) << endl;
-        cout << tree.GetTree() << endl;
+    //    cout << tree.IncNumDocs(2) << endl;
+    //    cout << tree.GetTree() << endl;
 
-        cout << tree.AddNodes(1) << endl;
-        cout << tree.IncNumDocs(3) << endl;
-        cout << tree.GetTree() << endl;
+    //    cout << tree.AddNodes(1) << endl;
+    //    cout << tree.IncNumDocs(3) << endl;
+    //    cout << tree.GetTree() << endl;
 
-        cout << tree.AddNodes(0) << endl;
-        cout << tree.IncNumDocs(5) << endl;
-        cout << tree.GetTree() << endl;
+    //    cout << tree.AddNodes(0) << endl;
+    //    cout << tree.IncNumDocs(5) << endl;
+    //    cout << tree.GetTree() << endl;
 
-        tree.IncNumDocs(2);
-        tree.IncNumDocs(3);
-        tree.IncNumDocs(3);
-        tree.IncNumDocs(3);
-        tree.IncNumDocs(5);
-        tree.IncNumDocs(5);
+    //    tree.IncNumDocs(2);
+    //    tree.IncNumDocs(3);
+    //    tree.IncNumDocs(3);
+    //    tree.IncNumDocs(3);
+    //    tree.IncNumDocs(5);
+    //    tree.IncNumDocs(5);
 
-        ConcurrentTree::IDPos idpos[2] = {{4, 2}, {7, 5}};
-        tree.AddNodes(idpos, 2);
-        cout << tree.IncNumDocs(7) << endl;
-        cout << tree.GetTree() << endl;
-        tree.SetThreshold(2);
+    //    ConcurrentTree::IDPos idpos[2] = {{4, 2}, {7, 5}};
+    //    tree.AddNodes(idpos, 2);
+    //    cout << tree.IncNumDocs(7) << endl;
+    //    cout << tree.GetTree() << endl;
+    //    tree.SetThreshold(2);
 
-        cout << tree.Compress() << endl;
-        cout << tree.GetNumInstantiated() << endl;
-        cout << tree.GetTree() << endl;
+    //    cout << tree.Compress() << endl;
+    //    cout << tree.GetNumInstantiated() << endl;
+    //    cout << tree.GetTree() << endl;
 
-        tree.SetBranchingFactor(1);
-        tree.Instantiate();
-        cout << tree.GetTree() << endl;
-    }
+    //    tree.SetBranchingFactor(1);
+    //    tree.Instantiate();
+    //    cout << tree.GetTree() << endl;
+    //}
 
     MPI_Finalize();
 }
