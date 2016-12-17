@@ -17,6 +17,7 @@
 #include "concurrent_tree.h"
 #include "matrix.h"
 #include "adlm_dense.h"
+#include "adlm_sparse.h"
 
 using namespace std;
 
@@ -267,60 +268,60 @@ int main(int argc, char **argv) {
 //        MPI_Barrier(MPI_COMM_WORLD);
 //    }
 
-    {
-        ADLMDense m(1, 2, 1, 1);
-        auto PrintMatrix = [&]() {
-            m.Barrier();
-            LOG(INFO) << "Barrier";
-            for (int p = 0; p < process_size; p++) {
-                if (p == process_id) {
-                    cout << "Node " << p << " Matrix of " 
-                        << m.GetC(0) << " columns." << endl;
-                    for (int r = 0; r < 2; r++) {
-                        for (int c = 0; c < m.GetC(0); c++)
-                            cout << m.Get(0, r, c) << ' ';
-                        cout << endl;
-                    }
-                    cout << "Sum"  << endl;
-                    for (int c = 0; c < m.GetC(0); c++)
-                        cout << m.GetSum(0, c) << ' ';
-                    cout << endl;
-                }
-                MPI_Barrier(MPI_COMM_WORLD);
-            }
-        };
+    //{
+    //    ADLMDense m(1, 2, 1, 1);
+    //    auto PrintMatrix = [&]() {
+    //        m.Barrier();
+    //        LOG(INFO) << "Barrier";
+    //        for (int p = 0; p < process_size; p++) {
+    //            if (p == process_id) {
+    //                cout << "Node " << p << " Matrix of " 
+    //                    << m.GetC(0) << " columns." << endl;
+    //                for (int r = 0; r < 2; r++) {
+    //                    for (int c = 0; c < m.GetC(0); c++)
+    //                        cout << m.Get(0, r, c) << ' ';
+    //                    cout << endl;
+    //                }
+    //                cout << "Sum"  << endl;
+    //                for (int c = 0; c < m.GetC(0); c++)
+    //                    cout << m.GetSum(0, c) << ' ';
+    //                cout << endl;
+    //            }
+    //            MPI_Barrier(MPI_COMM_WORLD);
+    //        }
+    //    };
 
-        m.Grow(0, 0, 3);
-        LOG(INFO) << "Grown";
-        m.Inc(0, 0, 0, 1); 
-        m.Inc(0, 0, 1, 2);
-        m.Inc(0, 0, 0, 1);
-        m.Publish(0);
-        LOG(INFO) << "Published";
-        PrintMatrix();
+    //    m.Grow(0, 0, 3);
+    //    LOG(INFO) << "Grown";
+    //    m.Inc(0, 0, 0, 1); 
+    //    m.Inc(0, 0, 1, 2);
+    //    m.Inc(0, 0, 0, 1);
+    //    m.Publish(0);
+    //    LOG(INFO) << "Published";
+    //    PrintMatrix();
 
-        m.Grow(0, 0, 7);
-        m.Inc(0, 0, 0, 4);
-        m.Inc(0, 0, 0, 6);
-        m.Publish(0);
-        PrintMatrix();
+    //    m.Grow(0, 0, 7);
+    //    m.Inc(0, 0, 0, 4);
+    //    m.Inc(0, 0, 0, 6);
+    //    m.Publish(0);
+    //    PrintMatrix();
 
-        m.Compress();
-        PrintMatrix();
+    //    m.Compress();
+    //    PrintMatrix();
 
-        m.Grow(0, 0, 10);
-        m.Inc(0, 0, 1, 9);
-        m.Publish(0);
-        PrintMatrix();
+    //    m.Grow(0, 0, 10);
+    //    m.Inc(0, 0, 1, 9);
+    //    m.Publish(0);
+    //    PrintMatrix();
 
-        m.Grow(0, 0, 20);
-        m.Inc(0, 0, 1, 19);
-        m.Publish(0);
-        PrintMatrix();
+    //    m.Grow(0, 0, 20);
+    //    m.Inc(0, 0, 1, 19);
+    //    m.Publish(0);
+    //    PrintMatrix();
 
-        m.Compress();
-        PrintMatrix();
-    }
+    //    m.Compress();
+    //    PrintMatrix();
+    //}
 
     //{
     //    int num_rows = 100;
@@ -417,6 +418,43 @@ int main(int argc, char **argv) {
     //    tree.Instantiate();
     //    cout << tree.GetTree() << endl;
     //}
+
+    {
+        int N = 2;
+        int R = 3;
+        std::vector<int> msgs;
+        if (process_id == 0) {
+            msgs.insert(msgs.end(), {0, 0, 0, 1});
+            msgs.insert(msgs.end(), {1, 2, 2, 1});
+            msgs.insert(msgs.end(), {1, 2, 2, -1});
+            msgs.insert(msgs.end(), {1, 2, 2, 1});
+            msgs.insert(msgs.end(), {1, 2, 0, 1});
+            msgs.insert(msgs.end(), {0, 1, 1, 0});
+        } else {
+            msgs.insert(msgs.end(), {1, 0, 1, 1});
+            msgs.insert(msgs.end(), {1, 2, 1, 1});
+        }
+        CVA<SpEntry> cva(N * R);
+        ADLMSparse::ComputeDelta(N, R, 
+                MPI_COMM_WORLD, process_id, process_size, msgs, cva);
+
+        auto PrintMatrices = [&]() {
+            for (int p = 0; p < process_size; p++) {
+                if (p == process_id) {
+                    cout << "Node " << p << endl;
+                    for (int r = 0; r < cva.R; r++) {
+                        auto row = cva.Get(r);
+                        for (auto &entry: row)
+                            cout << entry.k << ':' << entry.v << ' ';
+                        cout << endl;
+                    }
+                }
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
+        };
+
+        PrintMatrices();
+    }
 
     MPI_Finalize();
 }

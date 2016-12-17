@@ -18,3 +18,6 @@ target_link_libraries(test_mpi hlda_lib util ${MPI_LIBRARIES} ${GLOG} ${GFLAGS})
 #
 add_executable(test_parallel_tree test_parallel_tree.cpp)
 target_link_libraries(test_parallel_tree hlda_lib util ${MPI_LIBRARIES} ${GLOG} ${GFLAGS} mkl_intel_lp64 mkl_core mkl_sequential m dl)
+
+add_executable(test_nested_threads test_nested_threads.cpp)
+target_link_libraries(test_nested_threads ${GLOG})
