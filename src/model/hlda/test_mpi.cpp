@@ -435,7 +435,7 @@ int main(int argc, char **argv) {
     //        msgs.insert(msgs.end(), {1, 2, 1, 1});
     //    }
     //    CVA<SpEntry> cva(N * R);
-    //    ADLMSparse::ComputeDelta(N, R, 
+    //    auto sizes = ADLMSparse::ComputeDelta(N, R, 
     //            MPI_COMM_WORLD, process_id, process_size, msgs, cva);
 
     //    auto PrintMatrices = [&]() {
@@ -454,72 +454,83 @@ int main(int argc, char **argv) {
     //    };
 
     //    PrintMatrices();
+    //    LOG(INFO) << process_id << " " << sizes;
+    //}
+
+    //{
+    //    // Large scale test of ADLMSparse::ComputeDelta
+    //    std::vector<int> msgs;
+    //    int N = 1;
+    //    int R = 100000;
+    //    int C = 100;
+    //    int ops = 1e7;
+    //    msgs.reserve(ops * 4);
+
+    //    std::vector<Matrix<int>> oracle(N);
+    //    std::vector<Matrix<int>> result(N);
+    //    for (auto &m: oracle)
+    //        m.Resize(R, C);
+    //    for (auto &m: result)
+    //        m.Resize(R, C);
+
+    //    //ADLMSparse adlm(N, R, omp_get_max_threads());
+
+    //    LOG(INFO) << "Start generating data";
+    //    xorshift generator;
+    //    for (int p = 0; p < process_size; p++) {
+    //        generator.seed(p, p);
+    //        for (int o = 0; o < ops; o++) {
+    //            int n = generator() % N;
+    //            int r = generator() % R;
+    //            int c = generator() % C;
+    //            int delta = generator() % 3 - 1;
+
+    //            if (p == process_id)
+    //                msgs.insert(msgs.end(), {n, r, c, delta});
+    //            else 
+    //                oracle[n](r, c) += delta;
+    //        }
+    //    }
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    //std::this_thread::sleep_for(10s);
+
+    //    LOG(INFO) << "Start communicating";
+    //    CVA<SpEntry> delta(N * R);
+    //    Clock clk;
+    //    ADLMSparse::ComputeDelta(N, R, 
+    //            MPI_COMM_WORLD, process_id, process_size, msgs, delta);
+    //    LOG(INFO) << "Elapsed " << clk.toc() << " seconds";
+
+    //    for (int n = 0; n < N; n ++)
+    //        for (int r = 0; r < R; r++) {
+    //            auto row = delta.Get(n * R + r);
+    //            for (auto &entry: row)
+    //                result[n](r, entry.k) += entry.v;
+    //        }
+
+    //    for (int n = 0; n < N; n ++)
+    //        for (int r = 0; r < R; r++) {
+    //            auto row = delta.Get(n * R + r);
+    //            for (int c = 0; c < C; c++)
+    //                if (result[n](r, c) != oracle[n](r, c))
+    //                    LOG(FATAL) <<
+    //                        "The result is incorrect at (" 
+    //                        << process_id << ", " << n << ", " << r << ", " <<
+    //                        c << ") expected " << oracle[n](r, c) << " get "
+    //                        << result[n](r, c);
+    //        }
+
+    //    //std::this_thread::sleep_for(10s);
     //}
 
     {
-        // Large scale test of ADLMSparse::ComputeDelta
-        std::vector<int> msgs;
-        int N = 3;
-        int R = 100000;
-        int C = 100;
-        int ops = 1e8;
-        msgs.reserve(ops * 4);
-
-        std::vector<Matrix<int>> oracle(N);
-        std::vector<Matrix<int>> result(N);
-        for (auto &m: oracle)
-            m.Resize(R, C);
-        for (auto &m: result)
-            m.Resize(R, C);
-
+        int N = 2;
+        int R = 3;
         ADLMSparse adlm(N, R, omp_get_max_threads());
-
-        LOG(INFO) << "Start generating data";
-        xorshift generator;
-        for (int p = 0; p < process_size; p++) {
-            generator.seed(p, p);
-            for (int o = 0; o < ops; o++) {
-                int n = generator() % N;
-                int r = generator() % R;
-                int c = generator() % C;
-                int delta = generator() % 3 - 1;
-
-                if (p == process_id)
-                    msgs.insert(msgs.end(), {n, r, c, delta});
-                else 
-                    oracle[n](r, c) += delta;
-            }
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-        //std::this_thread::sleep_for(10s);
-
-        LOG(INFO) << "Start communicating";
-        CVA<SpEntry> delta(N * R);
-        Clock clk;
-        ADLMSparse::ComputeDelta(N, R, 
-                MPI_COMM_WORLD, process_id, process_size, msgs, delta);
-        LOG(INFO) << "Elapsed " << clk.toc() << " seconds";
-
-        for (int n = 0; n < N; n ++)
-            for (int r = 0; r < R; r++) {
-                auto row = delta.Get(n * R + r);
-                for (auto &entry: row)
-                    result[n](r, entry.k) += entry.v;
-            }
-
-        for (int n = 0; n < N; n ++)
-            for (int r = 0; r < R; r++) {
-                auto row = delta.Get(n * R + r);
-                for (int c = 0; c < C; c++)
-                    if (result[n](r, c) != oracle[n](r, c))
-                        LOG(FATAL) <<
-                            "The result is incorrect at (" 
-                            << process_id << ", " << n << ", " << r << ", " <<
-                            c << ") expected " << oracle[n](r, c) << " get "
-                            << result[n](r, c);
-            }
-
-        //std::this_thread::sleep_for(10s);
+        
+        adlm.Grow(0, 0, 3);
+        adlm.Publish(0);
+        adlm.Barrier();
     }
 
     MPI_Finalize();

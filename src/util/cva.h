@@ -10,6 +10,7 @@
 #include <mpi.h>
 #include "mpi_helpers.h"
 #include <memory.h>
+#include "glog/logging.h"
 
 #include <unistd.h>
 
@@ -45,10 +46,10 @@ public:
     bool should_delete;
 
 public:
-    CVA(const size_t R = 0, T *data = nullptr,
-        size_t *offsets = nullptr, size_t *sizes = nullptr) : R(R) {
+    CVA(const size_t R = 0, T *data = (T*)-1,
+        size_t *offsets = (size_t*)-1, size_t *sizes = (size_t*)-1) : R(R) {
         this->R = R;
-        if (data == nullptr) {
+        if (data == (T*)-1) {
             should_delete = true;
             this->data = nullptr;
             this->offsets = (size_t *) _mm_malloc((R + 1) * sizeof(size_t), ALIGN_SIZE);
@@ -169,7 +170,10 @@ public:
         //std::cout << "Recv data " << data_recv_buffer << std::endl;
         //exit(0);
 
+        LOG(INFO) << offset_recv_offsets;
+        LOG(INFO) << recv_offsets;
         std::vector<CVA<T>> recv_cva_s(num_nodes);
+        LOG(INFO) << data_recv_buffer.data();
         for (int i = 0; i < num_nodes; i++) {
             size_t myOffsetBegin = offset_recv_offsets[i];
             size_t myOffsetEnd = offset_recv_offsets[i + 1];
@@ -177,6 +181,8 @@ public:
                                 data_recv_buffer.data() + data_recv_offsets[i],
                                 recv_offsets.data() + myOffsetBegin,
                                 nullptr);
+            for (int j = 0; j < myOffsetEnd - myOffsetBegin - 1; j++)
+                LOG(INFO) << recv_cva_s[i].offsets[j];
         }
         return recv_cva_s;
     }
