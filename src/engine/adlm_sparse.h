@@ -18,7 +18,7 @@
 class ADLMSparse {
 public:
     static void ComputeDelta(int N, int R, MPI_Comm comm, int process_id, int process_size,
-            const std::vector<int> &msg, CVA<SpEntry> &delta) {
+            std::vector<int> &msg, CVA<SpEntry> &delta) {
         // TODO release some memory
         // delta: RI: 32 bits, C: 30 bits, delta: 2 bits
         // Encode msg
@@ -31,8 +31,8 @@ public:
         std::shuffle(ri_to_code.begin(), ri_to_code.end(), generator);
         for (int i = 0; i < NR; i++) code_to_ri[ri_to_code[i]] = i;
 
-        LOG(INFO) << "Ri to code " << ri_to_code;
-        LOG(INFO) << "Code to ri " << code_to_ri;
+        //LOG(INFO) << "Ri to code " << ri_to_code;
+        //LOG(INFO) << "Code to ri " << code_to_ri;
 
         std::vector<long long> sorted_msg(msg.size() / 4);
 #pragma omp parallel for
@@ -45,11 +45,12 @@ public:
             long long data = (((long long)ri) << 32) + (c << 2) + (delta + 1);
             sorted_msg[i] = data;
         }
-        LOG(INFO) << "Encoded " << sorted_msg;
+        //LOG(INFO) << "Encoded " << sorted_msg;
 
         // Sort msg
         Sort::RadixSort(sorted_msg.data(), msg.size() / 4, 64);
-        LOG(INFO) << "Sorted " << sorted_msg;
+        std::vector<int>().swap(msg);
+        //LOG(INFO) << "Sorted " << sorted_msg;
 
         // Decode and form delta
         CVA<SpEntry> local_delta(NR);
@@ -119,7 +120,7 @@ public:
                     row[num_keys++] = SpEntry{last_col, cnt};
             }
         }
-        //decltype(sorted_msg)().swap(sorted_msg);
+        decltype(sorted_msg)().swap(sorted_msg);
         //return local_delta;
 
         // Alltoall
@@ -205,11 +206,13 @@ public:
                 last = (entry >> 32);
             }
         }
-
+        for (auto &cva: cvas)
+            cva.Free();
 
         // Allgather
         CVA<SpEntry> global_delta(NR);
         global_delta.Allgather(comm, process_size, delta_slice);
+        delta_slice.Free();
 
         //return global_delta;
 

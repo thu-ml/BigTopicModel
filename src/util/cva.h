@@ -94,6 +94,15 @@ public:
         }
     }
 
+    void Free() {
+        if (should_delete) {
+            if (data) _mm_free(data);
+            if (offsets) _mm_free(offsets);
+            if (sizes) _mm_free(sizes);
+        }
+        should_delete = false;
+    }
+
     void SetSize(const size_t idx, const size_t size) {
         sizes[idx] = size;
     }
