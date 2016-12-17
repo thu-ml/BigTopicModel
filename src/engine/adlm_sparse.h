@@ -34,8 +34,10 @@ public:
         //LOG(INFO) << "Ri to code " << ri_to_code;
         //LOG(INFO) << "Code to ri " << code_to_ri;
 
+        Clock clk;
         std::vector<long long> sorted_msg(msg.size() / 4);
-#pragma omp parallel for
+        //LOG(INFO) << "Encoded " << clk.toc() << " " << msg.size() * 2 / 1024 / 1024;
+#pragma omp parallel for schedule(static, 10000)
         for (size_t i = 0; i < msg.size()/4; i++) {
             auto I = msg[i * 4];
             auto r = msg[i * 4 + 1];
@@ -45,12 +47,12 @@ public:
             long long data = (((long long)ri) << 32) + (c << 2) + (delta + 1);
             sorted_msg[i] = data;
         }
-        //LOG(INFO) << "Encoded " << sorted_msg;
+        //LOG(INFO) << "Encoded " << clk.toc();
 
         // Sort msg
         Sort::RadixSort(sorted_msg.data(), msg.size() / 4, 64);
         std::vector<int>().swap(msg);
-        //LOG(INFO) << "Sorted " << sorted_msg;
+        //LOG(INFO) << "Sorted";
 
         // Decode and form delta
         CVA<SpEntry> local_delta(NR);
@@ -121,6 +123,7 @@ public:
             }
         }
         decltype(sorted_msg)().swap(sorted_msg);
+        //LOG(INFO) << "Local merged";
         //return local_delta;
 
         // Alltoall
@@ -128,7 +131,7 @@ public:
         std::vector<size_t> recv_offsets;
         auto cvas = local_delta.Alltoall(comm, process_size, 
                 recv_offsets, data_recv_buffer);
-        //decltype(data_recv_buffer)().swap(data_recv_buffer);
+        //LOG(INFO) << "Alltoall";
 
         CVA<SpEntry> delta_slice(cvas[0].R);
         ThreadLocal<vector<long long>> local_thread_kv;
@@ -208,11 +211,13 @@ public:
         }
         for (auto &cva: cvas)
             cva.Free();
+        //LOG(INFO) << "Merged";
 
         // Allgather
         CVA<SpEntry> global_delta(NR);
         global_delta.Allgather(comm, process_size, delta_slice);
         delta_slice.Free();
+        //LOG(INFO) << "Allgather";
 
         //return global_delta;
 

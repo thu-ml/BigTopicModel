@@ -35,6 +35,7 @@ include_directories(src)
 #set(BIGMPI ${BigTopicModel_SOURCE_DIR}/third_party/BigMPI/build/src/libbigmpi.so)
 set(GLOG ${BigTopicModel_SOURCE_DIR}/third_party/glog/build/lib/libglog.a)
 set(GFLAGS ${BigTopicModel_SOURCE_DIR}/third_party/gflags/build/lib/libgflags.a)
+set(TCMALLOC ${BigTopicModel_SOURCE_DIR}/third_party/gperftools/build/lib/libtcmalloc.so)
 
 add_subdirectory(src/util)
 add_subdirectory(src/engine)

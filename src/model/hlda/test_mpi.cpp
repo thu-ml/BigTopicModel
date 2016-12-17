@@ -459,10 +459,11 @@ int main(int argc, char **argv) {
     {
         // Large scale test of ADLMSparse::ComputeDelta
         std::vector<int> msgs;
-        int N = 1;
+        int N = 3;
         int R = 100000;
         int C = 100;
-        int ops = 3e7;
+        int ops = 1e8;
+        msgs.reserve(ops * 4);
 
         std::vector<Matrix<int>> oracle(N);
         std::vector<Matrix<int>> result(N);
@@ -473,6 +474,7 @@ int main(int argc, char **argv) {
 
         ADLMSparse adlm(N, R, omp_get_max_threads());
 
+        LOG(INFO) << "Start generating data";
         xorshift generator;
         for (int p = 0; p < process_size; p++) {
             generator.seed(p, p);
@@ -489,7 +491,7 @@ int main(int argc, char **argv) {
             }
         }
         MPI_Barrier(MPI_COMM_WORLD);
-        std::this_thread::sleep_for(10s);
+        //std::this_thread::sleep_for(10s);
 
         LOG(INFO) << "Start communicating";
         CVA<SpEntry> delta(N * R);
@@ -517,7 +519,7 @@ int main(int argc, char **argv) {
                             << result[n](r, c);
             }
 
-        std::this_thread::sleep_for(10s);
+        //std::this_thread::sleep_for(10s);
     }
 
     MPI_Finalize();

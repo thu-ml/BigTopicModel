@@ -50,6 +50,16 @@ if [ ! -d "$CUR/third_party" ]; then
 		unzip 3.2.10.zip
 		mv eigen-eigen-b9cd8366d4e8 eigen3
 	fi
+	if [ ! -d "$DEP/gperftools" ]; then
+        wget https://github.com/gperftools/gperftools/releases/download/gperftools-2.5/gperftools-2.5.zip
+        unzip gperftools-2.5.zip
+		ln -s gperftools-2.5 gperftools
+		pushd gperftools
+		mkdir -p build
+        ./configure --prefix=$PWD/build
+        make -j install
+		popd
+	fi
 	popd
 else
 	echo "$CUR/third_party already exists, please make sure the code is set up correctly!"
