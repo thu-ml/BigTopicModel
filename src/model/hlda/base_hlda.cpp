@@ -43,6 +43,8 @@ BaseHLDA::BaseHLDA(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_cor
                process_size, process_id),
         new_topic(true), check(check) {
 
+    MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+
     generators.resize(omp_get_max_threads());
     if (random_start) {
         std::random_device rd;
@@ -68,6 +70,7 @@ BaseHLDA::BaseHLDA(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_cor
     }
     LOG_IF(FATAL, to_corpus.D != th_corpus.D) 
         << "The size of to and th corpus are different";
+    //LOG(INFO) << "Doc";
 
     to_docs.resize(to_corpus.D);
     th_docs.resize(th_corpus.D);
@@ -81,6 +84,7 @@ BaseHLDA::BaseHLDA(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_cor
         th_docs[d].theta.resize(L);
     }
     //shuffle(docs.begin(), docs.end(), generator);
+    //LOG(INFO) << "TODoc";
 
     alpha_bar = accumulate(alpha.begin(), alpha.end(), 0.0);
 
@@ -92,17 +96,21 @@ BaseHLDA::BaseHLDA(HLDACorpus &corpus, HLDACorpus &to_corpus, HLDACorpus &th_cor
         m.SetR(corpus.V, true);
         m.SetC(1, true);
     }
+    //LOG(INFO) << "M";
 
-    MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
-    MPI_Comm_size(MPI_COMM_WORLD, &process_size);
+    MPI_Comm_rank(comm, &process_id);
+    MPI_Comm_size(comm, &process_size);
+    //LOG(INFO) << "Comm";
 
     for (int l = 0; l < L; l++) 
         topic_mutexes.emplace_back(new std::mutex[MAX_NUM_TOPICS]);
 
     log_work = decltype(log_work)(omp_get_max_threads(), std::vector<TProb>(VECTOR_LENGTH));
+    //LOG(INFO) << "Done";
 }
 
 void BaseHLDA::Initialize() {
+    //LOG(INFO) << "Initialize";
     //CollapsedSampling::Initialize();
     current_it = -1;
 
@@ -123,7 +131,7 @@ void BaseHLDA::Initialize() {
     size_t local_num_mbs, num_mbs;
     local_num_mbs = (docs.size() - 1) / local_mb_size + 1;
     MPI_Allreduce(&local_num_mbs, &num_mbs, 1, MPI_UNSIGNED_LONG_LONG,
-                  MPI_MAX, MPI_COMM_WORLD);
+                  MPI_MAX, comm);
     LOG_IF(INFO, process_id == 0) << "Each node has " << num_mbs << " minibatches.";
 
     int processed_node = 0, next_processed_node;
@@ -177,7 +185,7 @@ void BaseHLDA::Initialize() {
                 //Check();
             }
         }
-        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(comm);
         auto ret = tree.GetTree();
         LOG_IF(INFO, process_id==0) << ANSI_YELLOW << "Num nodes: " << ret.num_nodes
                                     << "    Num instantiated: " << num_instantiated << ANSI_NOCOLOR;
@@ -793,8 +801,8 @@ double BaseHLDA::Perplexity() {
 
     double global_log_likelihood;
     size_t global_T;
-    MPI_Allreduce(&log_likelihood, &global_log_likelihood, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&T, &global_T, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&log_likelihood, &global_log_likelihood, 1, MPI_DOUBLE, MPI_SUM, comm);
+    MPI_Allreduce(&T, &global_T, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
     return exp(-global_log_likelihood / global_T);
 }
 
@@ -813,7 +821,7 @@ void BaseHLDA::Check() {
     for (auto &doc: docs) if (doc.initialized) local_size += doc.w.size();
     int global_size;
     MPI_Allreduce(&local_size, &global_size, 1, MPI_INT,
-            MPI_SUM, MPI_COMM_WORLD);
+            MPI_SUM, comm);
     //if (sum != global_size)
     //    throw runtime_error("Total token error! expected " +
     //                        to_string(corpus.T) + ", got " + to_string(sum));
@@ -835,7 +843,7 @@ void BaseHLDA::Check() {
         }
     }
     MPI_Allreduce(num_docs.data(), total_num_docs.data(), 10000,
-            MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            MPI_INT, MPI_SUM, comm);
     for (int id = 0; id < ret.nodes.size(); id++)
         LOG_IF(FATAL, total_num_docs[id] != nodes[id].num_docs) 
             << "Num docs error at " << id 
@@ -874,10 +882,10 @@ void BaseHLDA::Check() {
     for (int l=0; l<L; l++) {
         MPI_Allreduce(count2[l].Data(), global_count2[l].Data(), 
                       count2[l].GetR() * count2[l].GetC(), 
-                      MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+                      MPI_INT, MPI_SUM, comm);
         MPI_Allreduce(ck2[l].data(), global_ck2[l].data(),
                       ck2[l].size(), 
-                      MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+                      MPI_INT, MPI_SUM, comm);
     }
 
     size_t sum_2 = std::accumulate(ck_dense, ck_dense+icount_offset.back(), 0);
@@ -919,7 +927,7 @@ void BaseHLDA::Check() {
     }
 
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(comm);
     if (if_error)
         throw std::runtime_error("Check error");
 }
@@ -1021,9 +1029,9 @@ double BaseHLDA::PredictivePerplexity() {
     double global_log_likelihood;
     size_t global_T;
     MPI_Allreduce(&local_log_likelihood, &global_log_likelihood, 
-            1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            1, MPI_DOUBLE, MPI_SUM, comm);
     MPI_Allreduce(&local_T, &global_T, 
-            1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+            1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
     //LOG(INFO) <<  local_log_likelihood << " " << local_T <<  " " << 
     //    global_log_likelihood << " " << global_T;
     return exp(-global_log_likelihood / global_T);

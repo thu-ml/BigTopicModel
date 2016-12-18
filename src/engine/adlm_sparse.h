@@ -327,9 +327,10 @@ public:
         stop = 0;
         barrier = 0;
         barrier_met = 0;
+        num_syncs = 0;
 
-        MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
-        MPI_Comm_size(MPI_COMM_WORLD, &process_size);
+        MPI_Comm_rank(comm, &process_id);
+        MPI_Comm_size(comm, &process_size);
 
         sync_thread = std::move(std::thread([&]()
         {
@@ -353,6 +354,7 @@ public:
                 auto sending_bak = sending;
                 auto sizes = ComputeDelta(N, R, comm, process_id, process_size, sending, delta);
                 sending.clear(); 
+                ++num_syncs;
 
                 for (int n = 0; n < N; n++)
                     for (int r = 0; r < R; r++) {
@@ -459,6 +461,7 @@ public:
         cv.wait(lock, [&](){ return barrier_met; });
         barrier = 0;
         barrier_met = 0;
+        num_syncs = 0;
     }
 
     void Compress() {
@@ -468,7 +471,7 @@ public:
     }
 
     int GetNumSyncs() {
-        return 0;
+        return num_syncs;
     }
 
     size_t GetBytesCommunicated() {
@@ -495,7 +498,7 @@ private:
     std::mutex mutex_;
     std::condition_variable cv;
 
-    int stop, barrier, barrier_met;
+    int stop, barrier, barrier_met, num_syncs;
 
     MPI_Comm comm;
     int process_id, process_size;

@@ -11,9 +11,13 @@ project (BigTopicModel)
 add_subdirectory(third_party/googletest)
 enable_testing()
 
-set(CMAKE_CXX_FLAGS "-Wall -std=c++14 -g -pthread -Ofast -march=native -inline-factor=400")
+set(CMAKE_CXX_FLAGS "-Wall -std=c++14 -g -pthread -Ofast -march=native -inline-factor=400 -mt_mpi -qopenmp")
 
-find_package(MPI)
+#find_package(MPI)
+
+#set(MPI_LIBRARIES "/HOME/intel/impi/5.0.2.044/lib64/release_mt/libmpi.so.12.0")
+#set(MPI_INCLUDE_PATH "/HOME/intel/impi/5.0.2.044/include64")
+
 find_package(ZLIB) 
 find_package(OpenMP)
 if(OPENMP_FOUND)

@@ -117,6 +117,7 @@ protected:
     double compute_phi_time, count_time, sync_time, set_time;
 
     bool sample_phi;
+    MPI_Comm comm;
 
     std::vector<std::vector<TProb>> log_work;
 };
