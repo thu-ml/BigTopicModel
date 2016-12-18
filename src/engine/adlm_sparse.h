@@ -347,20 +347,11 @@ public:
                 }
                 //LOG(INFO) << sending.size() << " " << N << " " << R;
 
+                //LOG(INFO) << "Sync " << Capacity() * 4 / 1048576 << " " << sending.size();
                 CVA<SpEntry> delta(N * R);
                 size_t num_updated = sending.size();
                 auto sending_bak = sending;
                 auto sizes = ComputeDelta(N, R, comm, process_id, process_size, sending, delta);
-
-                //int cond = delta.Get(3).size() != 0;
-                //int global_cond = 0;
-                //MPI_Allreduce(&cond, &global_cond, 1, MPI_INT, MPI_SUM, comm);
-                //if (global_cond) {
-                //    LOG(INFO) << "Id " << sending_bak.size() << " " << sending_bak;
-                //}
-                //LOG(
-                //cout << "Id " << process_id << " " << sending_bak.size() << " " << sending_bak << endl;
-
                 sending.clear(); 
 
                 for (int n = 0; n < N; n++)
@@ -488,6 +479,9 @@ public:
         size_t cap = 0;
         for (auto &d: data)
             cap += d.Capacity();
+        for (auto &buff: send_buffer)
+            cap += send_buffer.capacity();
+        cap += to_send.capacity() + sending.capacity();
         return cap;
     }
 
