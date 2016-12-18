@@ -18,7 +18,7 @@
 #include "document.h"
 #include "dcm_dense.h"
 #include "adlm.h"
-#include "adlm_dense.h"
+#include "adlm_sparse.h"
 #include "statistics.h"
 
 class HLDACorpus;
@@ -98,8 +98,8 @@ protected:
     std::vector<Matrix<TProb> > phi;        // Depth * V * K
     std::vector<Matrix<TProb> > log_phi;
 
-    //ADLMDense count;
-    ADLM count;
+    ADLMSparse count;
+    //ADLM count;
 
     DCMDense<TCount> icount;
     TCount *ck_dense;

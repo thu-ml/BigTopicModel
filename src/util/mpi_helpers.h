@@ -737,8 +737,9 @@ public:
         MPI_Allgather(&send_count, 1, MPI_UNSIGNED_LONG_LONG,
                       recv_offsets.data()+1, 1, MPI_UNSIGNED_LONG_LONG, comm);
 
-        std::vector<MPI_Count> recv_counts(num_nodes);
-        std::vector<MPI_Aint> recv_displs(num_nodes);
+        // TODO
+        std::vector<int> recv_counts(num_nodes);
+        std::vector<int> recv_displs(num_nodes);
         for (int i=1; i<=num_nodes; i++) {
             recv_counts[i-1] = recv_offsets[i] * sizeof(T);
             recv_offsets[i] += recv_offsets[i-1];
@@ -746,7 +747,8 @@ public:
         }
         recv_buffer.resize(recv_offsets.back());
 
-        MPIX_Allgatherv_x((char*)send_buffer, send_count * sizeof(T), MPI_CHAR,
+        // TODO BigMPI do not support MPI_Init_thread...
+        MPI_Allgatherv((char*)send_buffer, send_count * sizeof(T), MPI_CHAR,
                           (char*)recv_buffer.data(), recv_counts.data(), recv_displs.data(), MPI_CHAR,
                           comm);
     }
@@ -762,8 +764,8 @@ public:
         MPI_Allgather(&send_count, 1, MPI_UNSIGNED_LONG_LONG,
                       recv_offsets.data()+1, 1, MPI_UNSIGNED_LONG_LONG, comm);
 
-        std::vector<MPI_Count> recv_counts(num_nodes);
-        std::vector<MPI_Aint> recv_displs(num_nodes);
+        std::vector<int> recv_counts(num_nodes); //TODO
+        std::vector<int> recv_displs(num_nodes);
         for (int i=1; i<=num_nodes; i++) {
             recv_counts[i-1] = recv_offsets[i] * sizeof(T);
             recv_offsets[i] += recv_offsets[i-1];
@@ -774,7 +776,8 @@ public:
             std::cout << "Insufficient buffer size " << sum << ' ' << buff_size << std::endl;
         }
 
-        MPIX_Allgatherv_x((char*)send_buffer, send_count * sizeof(T), MPI_CHAR,
+        // TODO BigMPI do not support MPI_Init_thread...
+        MPI_Allgatherv((char*)send_buffer, send_count * sizeof(T), MPI_CHAR,
                           (char*)recv_buffer, recv_counts.data(), recv_displs.data(), MPI_CHAR,
                           comm);
     }
