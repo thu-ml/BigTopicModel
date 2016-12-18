@@ -20,6 +20,7 @@
 #include "adlm_sparse.h"
 
 using namespace std;
+using namespace std::chrono;
 
 struct Operation {
     int pos, delta;
@@ -515,7 +516,7 @@ int main(int argc, char **argv) {
     //                if (result[n](r, c) != oracle[n](r, c))
     //                    LOG(FATAL) <<
     //                        "The result is incorrect at (" 
-    //                        << process_id << ", " << n << ", " << r << ", " <<
+    //  s                     << process_id << ", " << n << ", " << r << ", " <<
     //                        c << ") expected " << oracle[n](r, c) << " get "
     //                        << result[n](r, c);
     //        }
@@ -526,12 +527,69 @@ int main(int argc, char **argv) {
     {
         int N = 2;
         int R = 3;
+        int C = 3;
+        LOG_IF(FATAL, process_size != 2) << "Process size must be 2";
+
+        //vector<int> msgs;
+        //if (process_id == 0) msgs.insert(msgs.end(), {1, 1, 1, 1});
+        //CVA<SpEntry> cva(6);
+        //ADLMSparse::ComputeDelta(N, R, MPI_COMM_WORLD, process_id, process_size,
+        //        msgs, cva);
+
+        //auto PrintMatrices = [&]() {
+        //    for (int p = 0; p < process_size; p++) {
+        //        if (p == process_id) {
+        //            cout << "Node " << p << endl;
+        //            for (int r = 0; r < cva.R; r++) {
+        //                auto row = cva.Get(r);
+        //                for (auto &entry: row)
+        //                    cout << entry.k << ':' << entry.v << ' ';
+        //                cout << endl;
+        //            }
+        //        }
+        //        MPI_Barrier(MPI_COMM_WORLD);
+        //    }
+        //};
+
+        //PrintMatrices();
+        
+
         ADLMSparse adlm(N, R, omp_get_max_threads());
         
-        adlm.Grow(0, 0, 3);
+        auto PrintMatrices = [&]() {
+            for (int p = 0; p < process_size; p++) {
+                if (p == process_id) {
+                    cout << "Node " << p << endl;
+                    for (int n = 0; n <N; n++) {
+                        for (int r = 0; r < R; r++) {
+                            for (int c = 0; c < adlm.GetC(n); c++)
+                                cout << adlm.Get(n, r, c) << ' ';
+                            cout << endl;
+                        }
+                        cout << endl;
+                    }
+                }
+               MPI_Barrier(MPI_COMM_WORLD);
+            }
+        };
+
+        adlm.Grow(0, process_id, C);
         adlm.Publish(0);
         adlm.Barrier();
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+        if (process_id == 0) {
+            adlm.Inc(0, 1, 1, 1);
+        } else {
+            adlm.Inc(0, 0, 2, 1);
+        }
+        adlm.Publish(0);
+        adlm.Barrier();
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+        PrintMatrices();
     }
 
     MPI_Finalize();
+    google::ShutdownGoogleLogging();
 }

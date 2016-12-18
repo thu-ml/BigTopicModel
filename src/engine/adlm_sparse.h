@@ -29,6 +29,7 @@ public:
 
         //LOG(INFO) << "Ri to code " << ri_to_code;
         //LOG(INFO) << "Code to ri " << code_to_ri;
+        //LOG(INFO) << NR;
 
         Clock clk;
         std::vector<long long> sorted_msg(msg.size() / 4);
@@ -47,7 +48,7 @@ public:
 
         // Sort msg
         Sort::RadixSort(sorted_msg.data(), msg.size() / 4, 64);
-        std::vector<int>().swap(msg);
+        std::vector<int>().swap(msg); 
 
         // Decode and form delta
         CVA<SpEntry> local_delta(NR);
@@ -65,12 +66,14 @@ public:
                         sorted_msg.end(), ((long long)blk_start) << 32) - sorted_msg.begin();
                 size_t msg_end = std::lower_bound(sorted_msg.begin(), 
                         sorted_msg.end(), ((long long)blk_end) << 32) - sorted_msg.begin();
+
                 //LOG(INFO) << "blk start " << blk_start << " blk end " << blk_end 
                 //    << " msg start " << msg_start << " msg end " << msg_end;
                 size_t ptr = msg_start;
                 size_t ptr_next;
                 for (int ri = blk_start; ri < blk_end; ri++, ptr = ptr_next) {
-                    for (ptr_next = ptr; (sorted_msg[ptr_next]>>32) == ri; ptr_next++);
+                    for (ptr_next = ptr; ptr_next < msg_end 
+                            && (sorted_msg[ptr_next]>>32) == ri; ptr_next++);
                     int num_keys = 0;
                     int last_col = -1;
                     for (size_t j = ptr; j < ptr_next; j++) {
@@ -105,7 +108,8 @@ public:
                 size_t ptr = msg_start;
                 size_t ptr_next;
                 for (int ri = blk_start; ri < blk_end; ri++, ptr = ptr_next) {
-                    for (ptr_next = ptr; (sorted_msg[ptr_next]>>32) == ri; ptr_next++);
+                    for (ptr_next = ptr; ptr_next < msg_end 
+                            && (sorted_msg[ptr_next]>>32) == ri; ptr_next++);
                     auto row = local_delta.Get(ri);
                     int num_keys = 0;
                     int last_col = -1;
@@ -127,34 +131,32 @@ public:
             }
         }
         decltype(sorted_msg)().swap(sorted_msg);
-        LOG(INFO) << "Local merged " << local_delta.R;
+        //LOG(INFO) << "Local merged " << local_delta.R;
 
         //return local_delta;
-        for (int i = 0; i < local_delta.R; i++)
-            LOG(INFO) << "Sz " << local_delta.Get(i).size();
+        //for (int i = 0; i < local_delta.R; i++)
+        //    LOG(INFO) << "Sz " << local_delta.Get(i).size();
 
         // Alltoall
         std::vector<SpEntry> data_recv_buffer;
         std::vector<size_t> recv_offsets;
         auto cvas = local_delta.Alltoall(comm, process_size, 
                 recv_offsets, data_recv_buffer);
-        LOG(INFO) << recv_offsets;
-        LOG(INFO) << "Alltoall";
+        //LOG(INFO) << recv_offsets;
+        //LOG(INFO) << "Alltoall";
 
-        for (int i = 0; i < local_delta.R; i++)
-            LOG(INFO) << "OFfset " << cvas[0].offsets[i];
-        for (int i = 0; i < local_delta.R; i++)
-            LOG(INFO) << "Sz " << cvas[0].Get(i).size();
+        //for (int i = 0; i < local_delta.R; i++)
+        //    LOG(INFO) << "OFfset " << cvas[0].offsets[i];
+        //for (int i = 0; i < local_delta.R; i++)
+        //    LOG(INFO) << "Sz " << cvas[0].Get(i).size();
 
         CVA<SpEntry> delta_slice(cvas[0].R);
         ThreadLocal<vector<long long>> local_thread_kv;
         ThreadLocal<vector<long long>> local_thread_temp;
         ThreadLocal<vector<size_t>> local_thread_begin;
         ThreadLocal<vector<size_t>> local_thread_end;
-//#pragma omp parallel for
-        LOG(INFO) << cvas[0].R;
+#pragma omp parallel for
         for (int r = 0; r < cvas[0].R; r++) {
-            LOG(INFO) << "R " << r;
             int tid = omp_get_thread_num();
             auto &kv = local_thread_kv.Get();
             auto &temp = local_thread_temp.Get();
@@ -169,17 +171,17 @@ public:
             size = 0;
             for (auto &cva: cvas) {
                 auto row = cva.Get(r);
-                LOG(INFO) << row.size();
+                //LOG(INFO) << row.size();
                 for (int i = 0; i < row.size(); i++)
                     kv[size + i] = ((long long) row[i].k << 32) + row[i].v;
-                LOG(INFO) << size;
+                //LOG(INFO) << size;
                 begin.push_back(size);
                 end.push_back(size += row.size());
             }
-            LOG(INFO) << "Before MM " << begin;
+            //LOG(INFO) << "Before MM " << begin;
             Sort::MultiwayMerge(kv.data(), temp.data(),
                                 begin, end);
-            LOG(INFO) << "After MM";
+            //LOG(INFO) << "After MM";
             // Write back
             int Kd = 0;
             int last = -1;
@@ -188,9 +190,9 @@ public:
                 last = (entry >> 32);
             }
             delta_slice.SetSize(r, Kd);
-            LOG(INFO) << "After set " << Kd;
+            //LOG(INFO) << "After set " << Kd;
         }
-        LOG(INFO) << "Finished";
+        //LOG(INFO) << "Finished";
         delta_slice.Init();
 #pragma omp parallel for
         for (int r = 0; r < cvas[0].R; r++) {
@@ -343,13 +345,23 @@ public:
                     std::lock_guard<std::mutex> lock(mutex_);
                     to_send.swap(sending);
                 }
-                LOG(INFO) << sending.size() << " " << N << " " << R;
+                //LOG(INFO) << sending.size() << " " << N << " " << R;
 
                 CVA<SpEntry> delta(N * R);
                 size_t num_updated = sending.size();
+                auto sending_bak = sending;
                 auto sizes = ComputeDelta(N, R, comm, process_id, process_size, sending, delta);
-                sending.clear();
-                LOG(INFO) << "Sizes: " << sizes;
+
+                //int cond = delta.Get(3).size() != 0;
+                //int global_cond = 0;
+                //MPI_Allreduce(&cond, &global_cond, 1, MPI_INT, MPI_SUM, comm);
+                //if (global_cond) {
+                //    LOG(INFO) << "Id " << sending_bak.size() << " " << sending_bak;
+                //}
+                //LOG(
+                //cout << "Id " << process_id << " " << sending_bak.size() << " " << sending_bak << endl;
+
+                sending.clear(); 
 
                 for (int n = 0; n < N; n++)
                     for (int r = 0; r < R; r++) {
@@ -370,17 +382,17 @@ public:
                 if (global_stop == process_size)
                     break;
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }));
     }
 
     ~ADLMSparse() {
         Barrier();
-        LOG(INFO) << "Barrier";
+        //LOG(INFO) << "Barrier";
         stop = 1;
         sync_thread.join();
-        LOG(INFO) << "Join";
+        //LOG(INFO) << "Join";
     }
 
     // Note: concurrent call must have different thread_id
