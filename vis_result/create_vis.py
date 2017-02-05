@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import pandas as pd
 
 prefix='tree'
 num_top_words = 5
@@ -15,11 +16,13 @@ def calc_font_ratio(min_size, max_size, current_size):
 def font_size(x):
     return int(min_font_size + (max_font_size - min_font_size) * x)
 
+print('Reading meta data')
 meta = json.loads(open('%s.meta.json'%prefix).read())
 vocab = meta["vocab"]
 nodes = meta["nodes"]
 
-count = np.loadtxt('%s.count'%prefix)
+print('Reading count')
+count = np.array(pd.read_csv('%s.count'%prefix, delimiter='\t', header=None))[:, :-1]
 V = count.shape[1]
 ck = np.sum(count, 1)
 min_ck = np.min(ck)
@@ -29,6 +32,7 @@ with open('%s.dot'%prefix, 'w') as dot_file:
     dot_file.write('graph tree {\nnode[shape=rectangle]\n')
     # Vertex
     for id, node in enumerate(nodes):
+        print('Topic %d' % id)
         vertex_font_ratio = calc_font_ratio(min_ck, max_ck, ck[id])
         current_count = count[id, :]
         min_count = np.mean(current_count)
