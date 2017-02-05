@@ -245,3 +245,76 @@ set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left
 set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
 saveas(gcf, 'machines-small-2', 'pdf');
 
+% ----------------------- Machines-large ----------------------------
+fig = figure(101);
+hold off;
+thr = dlmread('machines-large.log');
+boxplot(thr(:, 2), thr(:, 1));
+xlabel('Number of machines');
+ylabel('Perplexity');
+ylim([2900 3700]);
+set(gca, 'FontSize', 8);
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'machines-large-1', 'pdf');
+
+fig = figure(102);
+serial_time = mean(thr(thr(:, 1) == 10, 3));
+boxplot(serial_time ./ thr(:, 3), thr(:, 1));
+hold on;
+xlabel('Number of machines');
+ylabel('SpeedUp');
+set(gca, 'FontSize', 8);
+
+plot(1:10, 1:10, 'r--');
+c = get(gca, 'Children');
+hleg1 = legend(c(1), 'Ideal', 'Location', 'northwest');
+ylim([0, 10]);
+
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'machines-large-2', 'pdf');
+
+% ---------------------- MC Samples ----------------------------
+
+files = {'n_mc_samples/result_n_mc_samples_1.log',...
+'n_mc_samples/result_n_mc_samples_2.log',...
+'n_mc_samples/result_n_mc_samples_4.log',...
+'n_mc_samples/result_n_mc_samples_8.log',...
+'n_mc_samples/result_n_mc_samples_16.log',...
+'n_mc_samples/result_n_mc_samples_32.log',...
+'n_mc_samples/result_n_mc_samples_64.log',...
+'n_mc_samples/result_n_mc_samples_128.log'};
+
+num_topics = [];
+groups = [];
+perplexity = [];
+
+num_files = numel(files);
+for i = 1:num_files
+    dat = dlmread(files{i});
+    num_topics = [num_topics; dat(:, 7)];
+    perplexity = [perplexity; dat(:, 8)];
+    groups = [groups; repmat([2^(i-1)], 10, 1)];
+end
+
+fig = figure(91);
+hold off;
+boxplot(num_topics, groups);
+xlabel('$S$');
+ylabel('Number of topics');
+
+set(gca, 'FontSize', 8);
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'n-mc-samples-1', 'pdf');
+
+fig = figure(92);
+hold off;
+boxplot(perplexity, groups);
+xlabel('$S$');
+ylabel('Perplexity');
+set(gca, 'FontSize', 8);
+set(gcf, 'PaperPosition', [0 0 2.5 2.5]); %Position the plot further to the left and down. Extend the plot to fill entire paper.
+set(gcf, 'PaperSize', [2.5 2.5]); %Keep the same paper size
+saveas(gcf, 'n-mc-samples-2', 'pdf');

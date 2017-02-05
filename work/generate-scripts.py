@@ -24,12 +24,14 @@ for setting in vals:
     file_name = 'scripts/%s.sh' % id
     file_names.append(file_name)
     with open(file_name, 'w') as fout:
-        fout.write('(' + bin + ' --topic_limit=100 --prefix=' + data + ' ')
+        fout.write('(' + bin + ' --random_start --topic_limit=100 --prefix=' + data + ' ')
         for k, v in zip(Ks, setting):
             if k == 'gamma':
                 v = '1e' + str(v)
             if k == 'beta':
                 v = '%f,%f,%f,%f' % generate_beta(v)
+            if k == 'run':
+                continue
             fout.write(' --' + k + '=' + str(v))
         fout.write(' >results/' + id + '.log 2>&1 || true)\necho "%s is completed"\n' % file_name)
 

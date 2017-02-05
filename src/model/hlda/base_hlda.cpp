@@ -359,6 +359,60 @@ void BaseHLDA::Visualize(std::string fileName, int threshold) {
     }
 
     fout << "}";
+
+    std::string metaJsonFileName = fileName + ".meta.json";
+    ofstream fmetaJson(metaJsonFileName.c_str());
+    fmetaJson << "{\"vocab\": [";
+    for (int v = 0; v < corpus.V; v++) {
+        auto wd = corpus.vocab[v];
+        if (wd[0] == 'z' && wd[1] == 'z' && wd[2] == 'z') {
+            std::string new_str;
+            for (size_t i = 4; i < wd.size(); ) {
+                size_t next_ = i;
+                while (next_ < wd.size() && wd[next_] != '_') next_++;
+                new_str += toupper(wd[i]);
+                for (int j = i+1; j < next_; j++) new_str += wd[j];
+                if (next_ < wd.size()) new_str += ' ';
+                i = next_ + 1;
+            }
+            wd = new_str;
+        }
+        fmetaJson << "\"" << wd << "\"";
+        if (v + 1 < corpus.V)
+            fmetaJson << ", ";
+    }
+    fmetaJson << "],\n\"nodes\": [";
+    for (size_t i = 0; i < ret.nodes.size(); i++) {
+        auto &node = ret.nodes[i];
+        fmetaJson << "{\"id\": " << i 
+                  << ", \"parent\": " << node.parent_id
+                  << ", \"frequency\": " << node.num_docs << "}";
+        if (i + 1 < ret.nodes.size())
+            fmetaJson << ",\n";
+    }
+    fmetaJson << "]}";
+
+    std::string cntFileName = fileName + ".count";
+    ofstream fcount(cntFileName.c_str());
+    std::string distFileName = fileName + ".dist";
+    ofstream fdist(distFileName.c_str());
+    fdist.precision(5);
+    fdist << std::scientific;
+    for (size_t k = 0; k < ret.nodes.size(); k++) {
+        auto &node = ret.nodes[k];
+        int kk = icount_offset[node.depth] + node.pos;
+        size_t sum = 0;
+        for (int v = 0; v < corpus.V; v++) {
+            fcount << icount(v, kk) << '\t';
+            sum += icount(v, kk);
+        }
+        double b = beta[node.depth];
+        double inv_normalization = 1. / (sum + b * corpus.V);
+        for (int v = 0; v < corpus.V; v++)
+            fdist << (icount(v, kk) + b) * inv_normalization << '\t';
+        fcount << '\n';
+        fdist << '\n';
+    }
 }
 
 std::string BaseHLDA::TopWords(int l, int id, int max_font_size, int min_font_size) {

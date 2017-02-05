@@ -18,6 +18,7 @@ g_vals = list(set(g_vals))
 print('Unique values = {}'.format(g_vals))
 
 for g_setting in g_vals:
+    print g_setting
     g_id = 'result'
     for k, v in zip(gKs, g_setting):
         g_id = g_id + '_' + str(k) + '_' + str(v)
@@ -44,8 +45,9 @@ for g_setting in g_vals:
             try:
                 data = open(file_name).readlines()
                 result = data[-1].split()[-1]
+                print result
                 result = str(float(result))
-                topic = str(int(data[-6].split()[6]))
+                topic = str(int(data[-7].split()[6]))
                 fout.write(' '.join(map(lambda x: str(x), setting)) 
                         + ' ' + topic + ' ' + result + '\n')
             except:
