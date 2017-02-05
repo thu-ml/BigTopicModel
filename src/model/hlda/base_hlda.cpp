@@ -394,10 +394,10 @@ void BaseHLDA::Visualize(std::string fileName, int threshold) {
 
     std::string cntFileName = fileName + ".count";
     ofstream fcount(cntFileName.c_str());
-    std::string distFileName = fileName + ".dist";
-    ofstream fdist(distFileName.c_str());
-    fdist.precision(5);
-    fdist << std::scientific;
+    //std::string distFileName = fileName + ".dist";
+    //ofstream fdist(distFileName.c_str());
+    //fdist.precision(5);
+    //fdist << std::scientific;
     for (size_t k = 0; k < ret.nodes.size(); k++) {
         auto &node = ret.nodes[k];
         int kk = icount_offset[node.depth] + node.pos;
@@ -408,10 +408,10 @@ void BaseHLDA::Visualize(std::string fileName, int threshold) {
         }
         double b = beta[node.depth];
         double inv_normalization = 1. / (sum + b * corpus.V);
-        for (int v = 0; v < corpus.V; v++)
-            fdist << (icount(v, kk) + b) * inv_normalization << '\t';
+        //for (int v = 0; v < corpus.V; v++)
+        //    fdist << (icount(v, kk) + b) * inv_normalization << '\t';
         fcount << '\n';
-        fdist << '\n';
+        //fdist << '\n';
     }
 }
 
