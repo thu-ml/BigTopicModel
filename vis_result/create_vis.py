@@ -1,6 +1,5 @@
 import json
 import numpy as np
-import pandas as pd
 
 prefix='tree'
 num_top_words = 5
@@ -8,9 +7,9 @@ min_font_size = 6
 max_font_size = 30
 
 def calc_font_ratio(min_size, max_size, current_size):
-    cr = np.log(current_size)
-    min_r = np.log(min_size)
-    max_r = np.log(max_size)
+    cr = np.log(current_size + 1)
+    min_r = np.log(min_size + 1)
+    max_r = np.log(max_size + 1)
     return (cr - min_r) / (max_r - min_r)
 
 def font_size(x):
@@ -22,7 +21,7 @@ vocab = meta["vocab"]
 nodes = meta["nodes"]
 
 print('Reading count')
-count = np.array(pd.read_csv('%s.count'%prefix, delimiter='\t', header=None))[:, :-1]
+count = np.load('%s.np_count.npy' % prefix)
 V = count.shape[1]
 ck = np.sum(count, 1)
 min_ck = np.min(ck)
@@ -46,9 +45,10 @@ with open('%s.dot'%prefix, 'w') as dot_file:
 
         for j in range(num_top_words):
             vid = rank[j][1]
-            font_ratio = vertex_font_ratio * calc_font_ratio(min_count, max_count, current_count[vid])
-            dot_file.write('<FONT POINT-SIZE="%d">%s</FONT><BR/>\n' 
-                    % (font_size(font_ratio), vocab[vid]))
+            if current_count[vid] > 0:
+                font_ratio = vertex_font_ratio * calc_font_ratio(min_count, max_count, current_count[vid])
+                dot_file.write('<FONT POINT-SIZE="%d">%s</FONT><BR/>\n' 
+                        % (font_size(font_ratio), vocab[vid]))
 
         dot_file.write('>]\n')
 
