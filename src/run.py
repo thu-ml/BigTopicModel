@@ -87,6 +87,29 @@ word_part = 2
 medlda = "OMP_NUM_THREADS=%d "%thread_size + mpi_cmd + hosts + " ./src/model/MedLDA/med_lda" 
 medlda += " -prefix=" + prefix+ " -K=" + str(k) + " -alpha=" + str(alpha) + " -beta=" + str(beta) + " -iter=" + str(iter_number) + " -doc_part=" + str(doc_part) + " -word_part=" + str(word_part)
 
+####################     RTM    ####################
+mpi_cmd = "mpirun -n "
+exe_file = " ./src/model/rtm/rtm" 
+params = {
+'prefix': "../data/WebKB4/WebKB",
+'K': 20,
+'iter': 50,
+'beta': 0.005,
+'mu': 1.0,
+'cpos': 40,
+'cneg': 4,
+'negratio': 0.01,
+'doc_part': 1,
+'word_part': 4
+}
+params['alpha'] = 50.0 / params['K']
+proc_number = params['doc_part'] * params['word_part']
+rtm = mpi_cmd + str(proc_number) + hosts + exe_file
+for p, v in params.iteritems():
+    rtm += " --%s=%s" % (p, str(v))
+
+thread_size = 1
+
 ####################    Execute     ####################
 cmd = "OMP_NUM_THREADS=%d "%thread_size + medlda
 print cmd
