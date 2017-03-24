@@ -1,6 +1,6 @@
 # BigTopicModel
 
-Big Topic Model is a fast engine for running large-scale Topic Models. It uses a hybrid data and model parallel mechanism to accelerate and performs 3~5 times faster than the state-of-the-art ones on some general dataset.
+Big Topic Model is a fast engine for running large-scale Topic Models. It uses a hybrid data and model parallel mechanism to accelerate and performs 3~5 times faster than the state-of-the-art ones on some general dataset. It supports a set of tpoic models including LDA, DTM, MedLDA and RTM.
 
 ### Getting Intel software Toolkit (Intel® Parallel Studio XE Professional Edition for C++ Linux* 2016???)
 
